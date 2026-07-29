@@ -79,22 +79,32 @@ export async function testConnection(): Promise<boolean> {
 }
 
 // Anonymous Auth Helper
+let authInitPromise: Promise<User | null> | null = null;
+
 export const initAuth = (): Promise<User | null> => {
-  return new Promise((resolve) => {
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        resolve(user);
-      } else {
-        try {
-          const userCred = await signInAnonymously(auth);
-          resolve(userCred.user);
-        } catch (err) {
-          console.error('Anonymous auth failed:', err);
-          resolve(null);
+  if (auth.currentUser) {
+    return Promise.resolve(auth.currentUser);
+  }
+  if (!authInitPromise) {
+    authInitPromise = new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        unsubscribe();
+        if (user) {
+          resolve(user);
+        } else {
+          try {
+            const userCred = await signInAnonymously(auth);
+            resolve(userCred.user);
+          } catch (err) {
+            // Anonymous auth disabled or restricted in Firebase project (auth/admin-restricted-operation)
+            // Proceed as unauthenticated since Firestore security rules allow open access.
+            resolve(null);
+          }
         }
-      }
+      });
     });
-  });
+  }
+  return authInitPromise;
 };
 
 // Collections
