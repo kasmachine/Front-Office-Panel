@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "cash_counts": {
+      "title": "Shift Cash Counts",
+      "description": "Shift cash count reconciliation records for Front Office Panel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "shift": { "type": "string" },
+        "denominations": { "type": "array" },
+        "beerPrevBalance": { "type": "number" },
+        "beerShiftDiff": { "type": "number" },
+        "staffIn": { "type": "string" },
+        "staffOut": { "type": "string" },
+        "expensesIn": { "type": "array" },
+        "expensesOut": { "type": "array" },
+        "remarks": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["date", "shift"]
+    },
+    "receipt_substitutes": {
+      "title": "Receipt Substitutes",
+      "description": "Receipt substitute vouchers with ID card copy attachments for Front Office Panel",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyName": { "type": "string" },
+        "companyAddress": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "items": { "type": "array" },
+        "requesterName": { "type": "string" },
+        "requesterPosition": { "type": "string" },
+        "approverName": { "type": "string" },
+        "approverPosition": { "type": "string" },
+        "idCardImage": { "type": "string" },
+        "watermarkText": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["startDate", "items"]
+    }
+  }
+}
