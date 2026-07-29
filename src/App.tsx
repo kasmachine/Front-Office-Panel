@@ -16,6 +16,7 @@ import {
   deleteReceiptFromFirebase,
   testConnection,
   saveActiveDraftToFirebase,
+  subscribeActiveDraft,
 } from './lib/firebase';
 import { syncMinusExpensesToReceipt } from './utils/syncUtils';
 import { CheckCircle2, Info } from 'lucide-react';
@@ -56,15 +57,11 @@ export default function App() {
   // Subscribe to Firebase Firestore real-time updates for history records
   useEffect(() => {
     const unsubCash = subscribeCashCounts((firebaseItems) => {
-      if (firebaseItems && firebaseItems.length > 0) {
-        setSavedCashCounts(firebaseItems);
-      }
+      setSavedCashCounts(firebaseItems || []);
     });
 
     const unsubReceipts = subscribeReceipts((firebaseItems) => {
-      if (firebaseItems && firebaseItems.length > 0) {
-        setSavedReceipts(firebaseItems);
-      }
+      setSavedReceipts(firebaseItems || []);
     });
 
     return () => {
@@ -73,12 +70,43 @@ export default function App() {
     };
   }, []);
 
-  // Auto save draft to localStorage & Firebase real-time draft
+  // Realtime subscription for Active Draft (Cash Count) across devices
+  useEffect(() => {
+    const unsub = subscribeActiveDraft('cashCount', (remoteData) => {
+      if (!remoteData) return;
+      const { lastModifiedAt, ...cleanData } = remoteData;
+      setCashCountData((prev) => {
+        // Deep compare stringified objects to prevent unnecessary re-renders
+        if (JSON.stringify(prev) !== JSON.stringify(cleanData)) {
+          return cleanData as CashCountData;
+        }
+        return prev;
+      });
+    });
+    return () => unsub();
+  }, []);
+
+  // Realtime subscription for Active Draft (Receipt Substitute) across devices
+  useEffect(() => {
+    const unsub = subscribeActiveDraft('receiptSubstitute', (remoteData) => {
+      if (!remoteData) return;
+      const { lastModifiedAt, ...cleanData } = remoteData;
+      setReceiptData((prev) => {
+        if (JSON.stringify(prev) !== JSON.stringify(cleanData)) {
+          return cleanData as ReceiptSubstituteData;
+        }
+        return prev;
+      });
+    });
+    return () => unsub();
+  }, []);
+
+  // Auto save draft to localStorage & Firebase real-time draft (500ms debounce)
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('cashCount', cashCountData);
-    }, 1500);
+    }, 500);
     return () => clearTimeout(timer);
   }, [cashCountData]);
 
@@ -86,7 +114,7 @@ export default function App() {
     localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('receiptSubstitute', receiptData);
-    }, 1500);
+    }, 500);
     return () => clearTimeout(timer);
   }, [receiptData]);
 
