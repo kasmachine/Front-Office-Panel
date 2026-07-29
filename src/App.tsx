@@ -14,6 +14,8 @@ import {
   saveReceiptToFirebase,
   subscribeReceipts,
   deleteReceiptFromFirebase,
+  testConnection,
+  saveActiveDraftToFirebase,
 } from './lib/firebase';
 import { syncMinusExpensesToReceipt } from './utils/syncUtils';
 import { CheckCircle2, Info } from 'lucide-react';
@@ -46,7 +48,12 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isFirebaseSyncing, setIsFirebaseSyncing] = useState(false);
 
-  // Subscribe to Firebase Firestore real-time updates
+  // Test Firestore Connection on Boot
+  useEffect(() => {
+    testConnection();
+  }, []);
+
+  // Subscribe to Firebase Firestore real-time updates for history records
   useEffect(() => {
     const unsubCash = subscribeCashCounts((firebaseItems) => {
       if (firebaseItems && firebaseItems.length > 0) {
@@ -66,13 +73,21 @@ export default function App() {
     };
   }, []);
 
-  // Auto save draft to localStorage
+  // Auto save draft to localStorage & Firebase real-time draft
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
+    const timer = setTimeout(() => {
+      saveActiveDraftToFirebase('cashCount', cashCountData);
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [cashCountData]);
 
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
+    const timer = setTimeout(() => {
+      saveActiveDraftToFirebase('receiptSubstitute', receiptData);
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [receiptData]);
 
   // Automatically pull minus expenses (-) from CashCountSheet to ReceiptSubstituteSheet

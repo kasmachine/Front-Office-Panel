@@ -46,11 +46,15 @@ export const Header: React.FC<HeaderProps> = ({
             <NanSeasonsLogo className="h-18 md:h-20" />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
+            <h1 className="text-base font-bold tracking-tight text-white flex flex-wrap items-center gap-2">
               ระบบการเงิน & เอกสาร Front Office Panel
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                <Cloud className="w-3 h-3" />
-                Firebase Connected
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full shadow-xs">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <Cloud className="w-3 h-3 text-emerald-400" />
+                Firebase Real-time Synced
               </span>
             </h1>
             <p className="text-xs text-slate-400">

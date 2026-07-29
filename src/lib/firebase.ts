@@ -8,7 +8,8 @@ import {
   deleteDoc,
   query,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  getDocFromServer
 } from 'firebase/firestore';
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -23,6 +24,59 @@ export const db = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestore
   : getFirestore(app);
 
 export const auth = getAuth(app);
+
+// Operational Error Logging Interface as required by Firebase skill
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  return errInfo;
+}
+
+// Test Connection on Boot
+export async function testConnection(): Promise<boolean> {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn('Firebase client is offline or project unreachable.');
+    }
+    return false;
+  }
+}
 
 // Anonymous Auth Helper
 export const initAuth = (): Promise<User | null> => {
@@ -46,6 +100,7 @@ export const initAuth = (): Promise<User | null> => {
 // Collections
 const CASH_COUNTS_COLLECTION = 'cash_counts';
 const RECEIPTS_COLLECTION = 'receipt_substitutes';
+const DRAFTS_COLLECTION = 'active_drafts';
 
 /**
  * Save Cash Count Record to Firebase Firestore
@@ -53,14 +108,20 @@ const RECEIPTS_COLLECTION = 'receipt_substitutes';
 export async function saveCashCountToFirebase(data: CashCountData): Promise<string> {
   await initAuth();
   const docId = data.id || `cash-${Date.now()}`;
-  const docRef = doc(db, CASH_COUNTS_COLLECTION, docId);
-  const payload = {
-    ...data,
-    id: docId,
-    updatedAt: new Date().toISOString(),
-  };
-  await setDoc(docRef, payload, { merge: true });
-  return docId;
+  const path = `${CASH_COUNTS_COLLECTION}/${docId}`;
+  try {
+    const docRef = doc(db, CASH_COUNTS_COLLECTION, docId);
+    const payload = {
+      ...data,
+      id: docId,
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return docId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+    throw error;
+  }
 }
 
 /**
@@ -68,12 +129,16 @@ export async function saveCashCountToFirebase(data: CashCountData): Promise<stri
  */
 export function subscribeCashCounts(callback: (items: CashCountData[]) => void) {
   const q = query(collection(db, CASH_COUNTS_COLLECTION), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snapshot) => {
-    const list: CashCountData[] = snapshot.docs.map((d) => d.data() as CashCountData);
-    callback(list);
-  }, (err) => {
-    console.warn('Firestore subscription warning:', err);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const list: CashCountData[] = snapshot.docs.map((d) => d.data() as CashCountData);
+      callback(list);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, CASH_COUNTS_COLLECTION);
+    }
+  );
 }
 
 /**
@@ -86,7 +151,7 @@ export async function fetchCashCountsFromFirebase(): Promise<CashCountData[]> {
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => d.data() as CashCountData);
   } catch (err) {
-    console.error('Error fetching cash counts:', err);
+    handleFirestoreError(err, OperationType.GET, CASH_COUNTS_COLLECTION);
     return [];
   }
 }
@@ -96,8 +161,14 @@ export async function fetchCashCountsFromFirebase(): Promise<CashCountData[]> {
  */
 export async function deleteCashCountFromFirebase(docId: string): Promise<void> {
   await initAuth();
-  const docRef = doc(db, CASH_COUNTS_COLLECTION, docId);
-  await deleteDoc(docRef);
+  const path = `${CASH_COUNTS_COLLECTION}/${docId}`;
+  try {
+    const docRef = doc(db, CASH_COUNTS_COLLECTION, docId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+    throw err;
+  }
 }
 
 /**
@@ -106,14 +177,20 @@ export async function deleteCashCountFromFirebase(docId: string): Promise<void> 
 export async function saveReceiptToFirebase(data: ReceiptSubstituteData): Promise<string> {
   await initAuth();
   const docId = data.id || `receipt-${Date.now()}`;
-  const docRef = doc(db, RECEIPTS_COLLECTION, docId);
-  const payload = {
-    ...data,
-    id: docId,
-    updatedAt: new Date().toISOString(),
-  };
-  await setDoc(docRef, payload, { merge: true });
-  return docId;
+  const path = `${RECEIPTS_COLLECTION}/${docId}`;
+  try {
+    const docRef = doc(db, RECEIPTS_COLLECTION, docId);
+    const payload = {
+      ...data,
+      id: docId,
+      updatedAt: new Date().toISOString(),
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return docId;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+    throw error;
+  }
 }
 
 /**
@@ -121,12 +198,16 @@ export async function saveReceiptToFirebase(data: ReceiptSubstituteData): Promis
  */
 export function subscribeReceipts(callback: (items: ReceiptSubstituteData[]) => void) {
   const q = query(collection(db, RECEIPTS_COLLECTION), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, (snapshot) => {
-    const list: ReceiptSubstituteData[] = snapshot.docs.map((d) => d.data() as ReceiptSubstituteData);
-    callback(list);
-  }, (err) => {
-    console.warn('Firestore subscription warning:', err);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const list: ReceiptSubstituteData[] = snapshot.docs.map((d) => d.data() as ReceiptSubstituteData);
+      callback(list);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, RECEIPTS_COLLECTION);
+    }
+  );
 }
 
 /**
@@ -139,7 +220,7 @@ export async function fetchReceiptsFromFirebase(): Promise<ReceiptSubstituteData
     const snapshot = await getDocs(q);
     return snapshot.docs.map((d) => d.data() as ReceiptSubstituteData);
   } catch (err) {
-    console.error('Error fetching receipts:', err);
+    handleFirestoreError(err, OperationType.GET, RECEIPTS_COLLECTION);
     return [];
   }
 }
@@ -149,6 +230,42 @@ export async function fetchReceiptsFromFirebase(): Promise<ReceiptSubstituteData
  */
 export async function deleteReceiptFromFirebase(docId: string): Promise<void> {
   await initAuth();
-  const docRef = doc(db, RECEIPTS_COLLECTION, docId);
-  await deleteDoc(docRef);
+  const path = `${RECEIPTS_COLLECTION}/${docId}`;
+  try {
+    const docRef = doc(db, RECEIPTS_COLLECTION, docId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+    throw err;
+  }
 }
+
+/**
+ * Realtime Active Draft Sync (Syncs draft state live across team members)
+ */
+export async function saveActiveDraftToFirebase(draftType: 'cashCount' | 'receiptSubstitute', data: any): Promise<void> {
+  await initAuth();
+  const path = `${DRAFTS_COLLECTION}/${draftType}`;
+  try {
+    const docRef = doc(db, DRAFTS_COLLECTION, draftType);
+    await setDoc(docRef, { ...data, lastModifiedAt: new Date().toISOString() }, { merge: true });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export function subscribeActiveDraft(draftType: 'cashCount' | 'receiptSubstitute', callback: (data: any) => void) {
+  const docRef = doc(db, DRAFTS_COLLECTION, draftType);
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data());
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, `${DRAFTS_COLLECTION}/${draftType}`);
+    }
+  );
+}
+
