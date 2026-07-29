@@ -297,8 +297,8 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
         className="bg-white p-6 md:p-8 rounded-xl border border-slate-300 shadow-md font-sans text-slate-900 max-w-5xl mx-auto print:shadow-none print:border-none print:p-0"
       >
         {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-300">
-          <NanSeasonsLogo className="h-24" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 print:pb-1.5 print:mb-1.5 border-b border-slate-300">
+          <NanSeasonsLogo className="h-20 print:h-12" />
 
           <div className="flex flex-wrap items-center gap-3 font-semibold text-slate-800 text-base md:text-lg">
             <div className="flex items-center gap-2">
@@ -338,20 +338,20 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
         </div>
 
         {/* Staff Information Bar (Required fields for IN and OUT) */}
-        <div className="mb-4 bg-slate-50 border border-slate-300 p-3.5 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mb-4 print:mb-2 bg-slate-50 border border-slate-300 p-3.5 print:p-1.5 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2">
           {/* Staff IN (นับเงินเข้า) */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 print:gap-0.5">
             <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
                 ชื่อพนักงานนับเงินเข้า (Staff IN): <span className="text-red-500 font-extrabold text-sm">*</span>
               </span>
               {!data.staffIn?.trim() ? (
-                <span className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">
+                <span className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded no-print">
                   จำเป็นต้องระบุ
                 </span>
               ) : (
-                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded no-print">
                   ระบุแล้ว
                 </span>
               )}
@@ -363,22 +363,22 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
               hasError={!data.staffIn?.trim()}
               size="md"
             />
-            <span className="hidden print:inline font-bold underline text-sm">{data.staffIn || '-'}</span>
+            <span className="hidden print:inline font-bold underline text-xs">{data.staffIn || '-'}</span>
           </div>
 
           {/* Staff OUT (นับเงินออกเมื่อเลิกงาน) */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 print:gap-0.5">
             <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <span className="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
                 ชื่อพนักงานนับเงินออกเมื่อเลิกงาน (Staff OUT): <span className="text-red-500 font-extrabold text-sm">*</span>
               </span>
               {!data.staffOut?.trim() ? (
-                <span className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">
+                <span className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded no-print">
                   จำเป็นต้องระบุ
                 </span>
               ) : (
-                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded no-print">
                   ระบุแล้ว
                 </span>
               )}
@@ -390,21 +390,21 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
               hasError={!data.staffOut?.trim()}
               size="md"
             />
-            <span className="hidden print:inline font-bold underline text-sm">{data.staffOut || '-'}</span>
+            <span className="hidden print:inline font-bold underline text-xs">{data.staffOut || '-'}</span>
           </div>
         </div>
 
         {/* Cash Count Main Grid (Exact replica of Numbers template) */}
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-slate-800 text-sm">
+          <table className="w-full border-collapse border border-slate-800 text-sm print:text-xs">
             <thead>
               <tr className="bg-slate-700 text-white font-bold text-center">
-                <th className="border border-slate-800 px-3 py-2 w-1/6">IN</th>
-                <th className="border border-slate-800 px-3 py-2 w-1/6">Count</th>
-                <th className="border border-slate-800 px-3 py-2 w-1/6">฿ Worth</th>
-                <th className="border border-slate-800 px-3 py-2 w-1/6">OUT</th>
-                <th className="border border-slate-800 px-3 py-2 w-1/6">Count</th>
-                <th className="border border-slate-800 px-3 py-2 w-1/6">฿ Worth</th>
+                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">IN</th>
+                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">Count</th>
+                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">฿ Worth</th>
+                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">OUT</th>
+                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">Count</th>
+                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">฿ Worth</th>
               </tr>
             </thead>
             <tbody>
@@ -417,12 +417,12 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
                 return (
                   <tr key={denom.value} className={`${rowBg} hover:bg-slate-200/50 transition-colors`}>
                     {/* IN Label */}
-                    <td className="border border-slate-400 px-3 py-1.5 font-medium text-slate-800 text-center">
+                    <td className="border border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-800 text-center">
                       {denom.label}
                     </td>
 
                     {/* IN Count Input */}
-                    <td className="border border-slate-400 px-2 py-1 text-center">
+                    <td className="border border-slate-400 px-2 py-1 print:px-1 print:py-0.5 text-center">
                       <input
                         type="number"
                         min="0"
@@ -435,17 +435,17 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
                     </td>
 
                     {/* IN Worth */}
-                    <td className="border border-slate-400 px-3 py-1.5 font-medium text-slate-900 text-right font-mono">
+                    <td className="border border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-900 text-right font-mono">
                       {formatCurrency(worthIn)}
                     </td>
 
                     {/* OUT Label */}
-                    <td className="border border-slate-400 px-3 py-1.5 font-medium text-slate-800 text-center">
+                    <td className="border border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-800 text-center">
                       {denom.label}
                     </td>
 
                     {/* OUT Count Input */}
-                    <td className="border border-slate-400 px-2 py-1 text-center">
+                    <td className="border border-slate-400 px-2 py-1 print:px-1 print:py-0.5 text-center">
                       <input
                         type="number"
                         min="0"
@@ -458,7 +458,7 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
                     </td>
 
                     {/* OUT Worth */}
-                    <td className="border border-slate-400 px-3 py-1.5 font-medium text-slate-900 text-right font-mono">
+                    <td className="border border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-900 text-right font-mono">
                       {formatCurrency(worthOut)}
                     </td>
                   </tr>
@@ -467,35 +467,35 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
 
               {/* Subtotal Green Highlight Bar */}
               <tr>
-                <td colSpan={2} className="border border-slate-800 bg-[#55ff33] text-black font-extrabold px-3 py-2.5">
+                <td colSpan={2} className="border border-slate-800 bg-[#55ff33] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-xs font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
                     <span className="text-xs font-bold text-slate-900">THB</span>
                   </div>
                 </td>
-                <td className="border border-slate-800 bg-[#55ff33] text-black font-extrabold text-right px-3 py-2.5 text-base font-mono">
+                <td className="border border-slate-800 bg-[#55ff33] text-black font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
                   {formatCurrency(totalCashIn)}
                 </td>
-                <td colSpan={2} className="border border-slate-800 bg-[#55ff33] text-black font-extrabold px-3 py-2.5">
+                <td colSpan={2} className="border border-slate-800 bg-[#55ff33] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-xs font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
                     <span className="text-xs font-bold text-slate-900">THB</span>
                   </div>
                 </td>
-                <td className="border border-slate-800 bg-[#55ff33] text-black font-extrabold text-right px-3 py-2.5 text-base font-mono">
+                <td className="border border-slate-800 bg-[#55ff33] text-black font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
                   {formatCurrency(totalCashOut)}
                 </td>
               </tr>
 
               {/* Previous balance & Reconciliation Section */}
               <tr>
-                <td colSpan={2} className="border border-slate-800 bg-[#00aaff] text-black font-extrabold px-3 py-2.5">
+                <td colSpan={2} className="border border-slate-800 bg-[#00aaff] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-xs font-extrabold uppercase tracking-wider">Previous balance</span>
                     <span className="text-xs font-bold text-slate-900">THB</span>
                   </div>
                 </td>
-                <td className="border border-slate-800 bg-[#00aaff] text-black font-extrabold px-3 py-2.5 text-base font-mono">
+                <td className="border border-slate-800 bg-[#00aaff] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
                   <div className="flex items-center justify-between gap-1 no-print">
                     <span className="text-xs text-slate-900 font-bold shrink-0">THB</span>
                     <input
@@ -509,59 +509,59 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
                   <span className="hidden print:inline font-mono font-bold text-right block">{formatCurrency(data.beerPrevBalance)}</span>
                 </td>
 
-                <td colSpan={2} className="border border-slate-800 bg-[#00aaff] text-black font-extrabold px-3 py-2.5">
+                <td colSpan={2} className="border border-slate-800 bg-[#00aaff] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-xs font-extrabold uppercase tracking-wider">Previous balance</span>
                     <span className="text-xs font-bold text-slate-900">THB</span>
                   </div>
                 </td>
-                <td className="border border-slate-800 bg-[#00aaff] text-black font-extrabold text-right px-3 py-2.5 text-base font-mono">
+                <td className="border border-slate-800 bg-[#00aaff] text-black font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
                   {formatCurrency(prevBalanceOut)}
                 </td>
               </tr>
 
               {/* Different Row */}
               <tr>
-                <td colSpan={2} className="border border-slate-800 bg-[#ff0000] text-white font-extrabold px-3 py-2.5">
+                <td colSpan={2} className="border border-slate-800 bg-[#ff0000] text-white font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-xs font-extrabold uppercase tracking-wider">Different</span>
                     <span className="text-xs font-bold text-white">THB</span>
                   </div>
                 </td>
-                <td className="border border-slate-800 bg-[#ff0000] text-white font-extrabold text-right px-3 py-2.5 text-base font-mono">
+                <td className="border border-slate-800 bg-[#ff0000] text-white font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
                   {formatSignedCurrency(redInDiff)}
                 </td>
 
-                <td colSpan={2} className="border border-slate-800 bg-[#ff0000] text-white font-extrabold px-3 py-2.5">
+                <td colSpan={2} className="border border-slate-800 bg-[#ff0000] text-white font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-xs font-extrabold uppercase tracking-wider">Different</span>
                     <span className="text-xs font-bold text-white">THB</span>
                   </div>
                 </td>
-                <td className="border border-slate-800 bg-[#ff0000] text-white font-extrabold text-right px-3 py-2.5 text-base font-mono">
+                <td className="border border-slate-800 bg-[#ff0000] text-white font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
                   {formatSignedCurrency(redOutDiff)}
                 </td>
               </tr>
 
               {/* Final Result Row (Brown) */}
               <tr>
-                <td colSpan={2} className="border border-slate-800 bg-[#8B4513] text-white font-extrabold px-3 py-2.5">
+                <td colSpan={2} className="border border-slate-800 bg-[#8B4513] text-white font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-sm font-extrabold uppercase tracking-wider">Final</span>
+                    <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider">Final</span>
                     <span className="text-xs font-bold text-white">THB</span>
                   </div>
                 </td>
-                <td className="border border-slate-800 bg-[#8B4513] text-white font-extrabold text-right px-3 py-2.5 text-lg font-mono tracking-wider">
+                <td className="border border-slate-800 bg-[#8B4513] text-white font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-base print:text-xs font-mono tracking-wider">
                   {formatSignedCurrency(finalIn)}
                 </td>
 
-                <td colSpan={2} className="border border-slate-800 bg-[#8B4513] text-white font-extrabold px-3 py-2.5">
+                <td colSpan={2} className="border border-slate-800 bg-[#8B4513] text-white font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-sm font-extrabold uppercase tracking-wider">Final</span>
+                    <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider">Final</span>
                     <span className="text-xs font-bold text-white">THB</span>
                   </div>
                 </td>
-                <td className="border border-slate-800 bg-[#8B4513] text-white font-extrabold text-right px-3 py-2.5 text-lg font-mono tracking-wider">
+                <td className="border border-slate-800 bg-[#8B4513] text-white font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-base print:text-xs font-mono tracking-wider">
                   {formatSignedCurrency(finalOut)}
                 </td>
               </tr>
@@ -572,11 +572,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
         </div>
 
         {/* Expenses Section (Side-by-side tables) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-3 mt-4 print:mt-2">
           {/* Expenses & Incomes IN */}
           <div className="border border-slate-800 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between bg-[#ffff00] px-3 py-2 border-b border-slate-800">
-              <span className="font-extrabold text-slate-900 text-base">Expenses & Incomes IN</span>
+            <div className="flex items-center justify-between bg-[#ffff00] px-3 py-1.5 print:py-0.5 border-b border-slate-800">
+              <span className="font-extrabold text-slate-900 text-sm print:text-xs">Expenses & Incomes IN</span>
               <button
                 type="button"
                 onClick={() => addExpenseRow('expensesIn')}
@@ -586,46 +586,46 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
               </button>
             </div>
 
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full text-xs print:text-[11px] border-collapse">
               <thead>
                 <tr className="bg-[#ffffaa] border-b border-slate-800 text-slate-900 font-bold">
-                  <th className="border-r border-slate-800 px-3 py-1.5 text-left w-1/2">Items:</th>
-                  <th className="border-r border-slate-800 px-3 py-1.5 text-right w-1/3">฿ Amount:</th>
-                  <th className="px-3 py-1.5 text-left">Staff:</th>
+                  <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-left w-1/2">Items:</th>
+                  <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-right w-1/3">฿ Amount:</th>
+                  <th className="px-2 py-1 print:py-0.5 text-left">Staff:</th>
                   <th className="no-print w-8"></th>
                 </tr>
               </thead>
               <tbody>
                 {data.expensesIn.map((exp, idx) => (
                   <tr key={exp.id || idx} className="border-b border-slate-300 hover:bg-slate-50">
-                    <td className="border-r border-slate-300 p-1">
+                    <td className="border-r border-slate-300 p-0.5">
                       <ExpenseCategorySelect
                         value={exp.item}
                         onChange={(val) => handleExpenseChange('expensesIn', idx, 'item', val)}
                         placeholder="เลือก/ใส่หัวข้อ"
                       />
-                      <span className="hidden print:inline font-medium text-xs px-2">{exp.item}</span>
+                      <span className="hidden print:inline font-medium text-xs px-1">{exp.item}</span>
                     </td>
-                    <td className="border-r border-slate-300 p-1">
+                    <td className="border-r border-slate-300 p-0.5">
                       <input
                         type="number"
                         value={exp.amount === 0 ? '' : exp.amount}
                         onChange={(e) => handleExpenseChange('expensesIn', idx, 'amount', Number(e.target.value))}
                         placeholder="0.00"
-                        className="w-full text-right border border-slate-200 rounded px-2 py-1 text-xs font-mono focus:outline-none no-print"
+                        className="w-full text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none no-print"
                       />
-                      <span className="hidden print:inline font-mono text-xs px-2">{formatCurrency(exp.amount)}</span>
+                      <span className="hidden print:inline font-mono text-xs px-1">{formatCurrency(exp.amount)}</span>
                     </td>
-                    <td className="p-1">
+                    <td className="p-0.5">
                       <StaffSelect
                         value={exp.staff}
                         onChange={(val) => handleExpenseChange('expensesIn', idx, 'staff', val)}
                         placeholder="ผู้รับ"
                         size="sm"
                       />
-                      <span className="hidden print:inline text-xs px-2">{exp.staff}</span>
+                      <span className="hidden print:inline text-xs px-1">{exp.staff}</span>
                     </td>
-                    <td className="no-print p-1 text-center">
+                    <td className="no-print p-0.5 text-center">
                       {data.expensesIn.length > 1 && (
                         <button
                           type="button"
@@ -642,10 +642,10 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
               </tbody>
               <tfoot>
                 <tr className="bg-[#ffff00] font-extrabold text-slate-900 border-t border-slate-800">
-                  <td className="px-2 py-2 border-r border-slate-800 text-right text-xs sm:text-sm whitespace-nowrap font-bold">
+                  <td className="px-2 py-1 print:py-0.5 border-r border-slate-800 text-right text-xs whitespace-nowrap font-bold">
                     รวม Expenses & Incomes IN:
                   </td>
-                  <td className="px-2 py-2 text-right font-mono text-sm sm:text-base font-extrabold whitespace-nowrap" colSpan={3}>
+                  <td className="px-2 py-1 print:py-0.5 text-right font-mono text-xs font-extrabold whitespace-nowrap" colSpan={3}>
                     {formatCurrency(totalExpensesIn)}
                   </td>
                 </tr>
@@ -655,8 +655,8 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
 
           {/* Expenses & Incomes OUT */}
           <div className="border border-slate-800 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between bg-[#ffff00] px-3 py-2 border-b border-slate-800">
-              <span className="font-extrabold text-slate-900 text-base">Expenses & Incomes OUT</span>
+            <div className="flex items-center justify-between bg-[#ffff00] px-3 py-1.5 print:py-0.5 border-b border-slate-800">
+              <span className="font-extrabold text-slate-900 text-sm print:text-xs">Expenses & Incomes OUT</span>
               <button
                 type="button"
                 onClick={() => addExpenseRow('expensesOut')}
@@ -666,46 +666,46 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
               </button>
             </div>
 
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full text-xs print:text-[11px] border-collapse">
               <thead>
                 <tr className="bg-[#ffffaa] border-b border-slate-800 text-slate-900 font-bold">
-                  <th className="border-r border-slate-800 px-3 py-1.5 text-left w-1/2">Items:</th>
-                  <th className="border-r border-slate-800 px-3 py-1.5 text-right w-1/3">฿ Amount:</th>
-                  <th className="px-3 py-1.5 text-left">Staff:</th>
+                  <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-left w-1/2">Items:</th>
+                  <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-right w-1/3">฿ Amount:</th>
+                  <th className="px-2 py-1 print:py-0.5 text-left">Staff:</th>
                   <th className="no-print w-8"></th>
                 </tr>
               </thead>
               <tbody>
                 {data.expensesOut.map((exp, idx) => (
                   <tr key={exp.id || idx} className="border-b border-slate-300 hover:bg-slate-50">
-                    <td className="border-r border-slate-300 p-1">
+                    <td className="border-r border-slate-300 p-0.5">
                       <ExpenseCategorySelect
                         value={exp.item}
                         onChange={(val) => handleExpenseChange('expensesOut', idx, 'item', val)}
                         placeholder="เลือก/ใส่หัวข้อ"
                       />
-                      <span className="hidden print:inline font-medium text-xs px-2">{exp.item}</span>
+                      <span className="hidden print:inline font-medium text-xs px-1">{exp.item}</span>
                     </td>
-                    <td className="border-r border-slate-300 p-1">
+                    <td className="border-r border-slate-300 p-0.5">
                       <input
                         type="number"
                         value={exp.amount === 0 ? '' : exp.amount}
                         onChange={(e) => handleExpenseChange('expensesOut', idx, 'amount', Number(e.target.value))}
                         placeholder="0.00"
-                        className="w-full text-right border border-slate-200 rounded px-2 py-1 text-xs font-mono focus:outline-none no-print"
+                        className="w-full text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none no-print"
                       />
-                      <span className="hidden print:inline font-mono text-xs px-2">{formatCurrency(exp.amount)}</span>
+                      <span className="hidden print:inline font-mono text-xs px-1">{formatCurrency(exp.amount)}</span>
                     </td>
-                    <td className="p-1">
+                    <td className="p-0.5">
                       <StaffSelect
                         value={exp.staff}
                         onChange={(val) => handleExpenseChange('expensesOut', idx, 'staff', val)}
                         placeholder="ผู้จ่าย"
                         size="sm"
                       />
-                      <span className="hidden print:inline text-xs px-2">{exp.staff}</span>
+                      <span className="hidden print:inline text-xs px-1">{exp.staff}</span>
                     </td>
-                    <td className="no-print p-1 text-center">
+                    <td className="no-print p-0.5 text-center">
                       {data.expensesOut.length > 1 && (
                         <button
                           type="button"
@@ -722,10 +722,10 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
               </tbody>
               <tfoot>
                 <tr className="bg-[#ffff00] font-extrabold text-slate-900 border-t border-slate-800">
-                  <td className="px-2 py-2 border-r border-slate-800 text-right text-xs sm:text-sm whitespace-nowrap font-bold">
+                  <td className="px-2 py-1 print:py-0.5 border-r border-slate-800 text-right text-xs whitespace-nowrap font-bold">
                     รวม Expenses & Incomes OUT:
                   </td>
-                  <td className="px-2 py-2 text-right font-mono text-sm sm:text-base font-extrabold whitespace-nowrap" colSpan={3}>
+                  <td className="px-2 py-1 print:py-0.5 text-right font-mono text-xs font-extrabold whitespace-nowrap" colSpan={3}>
                     {formatCurrency(totalExpensesOut)}
                   </td>
                 </tr>
@@ -735,39 +735,18 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
         </div>
 
         {/* Remarks Box */}
-        <div className="mt-6 border border-slate-400 rounded-lg p-3 bg-slate-50">
-          <label className="block text-sm font-bold text-slate-800 mb-1">หมายเหตุ:</label>
+        <div className="mt-4 print:mt-2 border border-slate-400 rounded-lg p-2.5 print:p-1.5 bg-slate-50">
+          <label className="block text-xs font-bold text-slate-800 mb-1">หมายเหตุ:</label>
           <textarea
             value={data.remarks}
             onChange={(e) => onChange({ ...data, remarks: e.target.value })}
             placeholder="บันทึกเพิ่มเติมเกี่ยวกับกะ ยอดเงินเกิน/ขาด หรือหมายเหตุอื่นๆ..."
             rows={2}
-            className="w-full bg-white border border-slate-300 rounded p-2 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 no-print"
+            className="w-full bg-white border border-slate-300 rounded p-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500 no-print"
           />
-          <p className="hidden print:block text-sm text-slate-800 whitespace-pre-wrap">
+          <p className="hidden print:block text-xs text-slate-800 whitespace-pre-wrap">
             {data.remarks || '-'}
           </p>
-        </div>
-
-        {/* Staff Signatures Block (Print & Record) */}
-        <div className="mt-8 pt-4 border-t border-slate-300 grid grid-cols-2 gap-8 text-center text-xs text-slate-800">
-          <div className="flex flex-col items-center gap-1.5">
-            <span className="font-bold">ลงชื่อ พนักงานส่งมอบ/นับเงินเข้า (Staff IN):</span>
-            <div className="h-10 border-b border-dotted border-slate-500 w-48 my-1 flex items-end justify-center font-bold text-sm text-slate-900 pb-0.5">
-              {data.staffIn || ''}
-            </div>
-            <span className="font-semibold text-slate-700">( {data.staffIn || '...........................................'} )</span>
-            <span className="text-slate-500 text-[11px]">วันที่ ....... / ....... / .......</span>
-          </div>
-
-          <div className="flex flex-col items-center gap-1.5">
-            <span className="font-bold">ลงชื่อ พนักงานรับมอบ/นับเงินออกเมื่อเลิกงาน (Staff OUT):</span>
-            <div className="h-10 border-b border-dotted border-slate-500 w-48 my-1 flex items-end justify-center font-bold text-sm text-slate-900 pb-0.5">
-              {data.staffOut || ''}
-            </div>
-            <span className="font-semibold text-slate-700">( {data.staffOut || '...........................................'} )</span>
-            <span className="text-slate-500 text-[11px]">วันที่ ....... / ....... / .......</span>
-          </div>
         </div>
       </div>
     </div>

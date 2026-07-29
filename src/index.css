@@ -5,18 +5,38 @@
     .no-print {
       display: none !important;
     }
-    body {
+    html, body {
       background-color: #ffffff !important;
       color: #000000 !important;
-      font-size: 12pt;
+      font-size: 11px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: auto !important;
     }
     * {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
+      box-shadow: none !important;
     }
     @page {
       size: A4 portrait;
-      margin: 10mm;
+      margin: 5mm 6mm;
+    }
+    #cash-count-document, #receipt-substitute-document {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+    table {
+      page-break-inside: avoid;
+    }
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
     }
   }
 }
