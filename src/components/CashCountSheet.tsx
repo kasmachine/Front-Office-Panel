@@ -21,7 +21,7 @@ function fromIsoDate(isoStr: string): string {
   if (!isoStr) return '';
   const parts = isoStr.split('-');
   if (parts.length === 3) {
-    const year = parts[0].slice(-2);
+    const year = parts[0];
     const month = parts[1];
     const day = parts[2];
     return `${day}/${month}/${year}`;
@@ -154,7 +154,7 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
       )
     ) {
       const today = new Date();
-      const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
+      const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
 
       const resetDenoms = data.denominations.map((d) => ({
         ...d,

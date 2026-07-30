@@ -14,7 +14,7 @@ export const DEFAULT_DENOMINATIONS = [
 
 export function getInitialCashCountData(): CashCountData {
   const today = new Date();
-  const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
+  const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
 
   return {
     id: `cash-${Date.now()}`,

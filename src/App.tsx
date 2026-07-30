@@ -30,7 +30,7 @@ export default function App() {
   // Active form states
   const [cashCountData, setCashCountData] = useState<CashCountData>(() => {
     const today = new Date();
-    const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
+    const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     const saved = localStorage.getItem('nan_seasons_current_cash');
     if (saved) {
       try {
@@ -88,7 +88,7 @@ export default function App() {
   // Ensure date is set to current date (today) on load
   useEffect(() => {
     const today = new Date();
-    const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
+    const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     const todayReceiptDate = today.toISOString().split('T')[0];
 
     setCashCountData((prev) => {
@@ -144,9 +144,12 @@ export default function App() {
     const unsub = subscribeActiveDraft('cashCount', (remoteData) => {
       if (!remoteData) return;
       const { lastModifiedAt, ...cleanData } = remoteData;
+      const today = new Date();
+      const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
       setCashCountData((prev) => {
-        if (JSON.stringify(prev) !== JSON.stringify(cleanData)) {
-          return cleanData as CashCountData;
+        const updated = { ...(cleanData as CashCountData), date: todayCashDate };
+        if (JSON.stringify(prev) !== JSON.stringify(updated)) {
+          return updated;
         }
         return prev;
       });
@@ -159,9 +162,16 @@ export default function App() {
     const unsub = subscribeActiveDraft('receiptSubstitute', (remoteData) => {
       if (!remoteData) return;
       const { lastModifiedAt, ...cleanData } = remoteData;
+      const today = new Date();
+      const todayReceiptDate = today.toISOString().split('T')[0];
       setReceiptData((prev) => {
-        if (JSON.stringify(prev) !== JSON.stringify(cleanData)) {
-          return cleanData as ReceiptSubstituteData;
+        const updated = {
+          ...(cleanData as ReceiptSubstituteData),
+          startDate: todayReceiptDate,
+          endDate: todayReceiptDate,
+        };
+        if (JSON.stringify(prev) !== JSON.stringify(updated)) {
+          return updated;
         }
         return prev;
       });
