@@ -28,17 +28,31 @@ export default function App() {
 
   // Active form states
   const [cashCountData, setCashCountData] = useState<CashCountData>(() => {
+    const today = new Date();
+    const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
     const saved = localStorage.getItem('nan_seasons_current_cash');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...parsed, date: todayCashDate };
+      } catch (e) { /* ignore */ }
     }
     return getInitialCashCountData();
   });
 
   const [receiptData, setReceiptData] = useState<ReceiptSubstituteData>(() => {
+    const today = new Date();
+    const todayReceiptDate = today.toISOString().split('T')[0];
     const saved = localStorage.getItem('nan_seasons_current_receipt');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          startDate: todayReceiptDate,
+          endDate: todayReceiptDate,
+        };
+      } catch (e) { /* ignore */ }
     }
     return getInitialReceiptData();
   });
@@ -68,6 +82,27 @@ export default function App() {
   // Test Firestore Connection on Boot
   useEffect(() => {
     testConnection();
+  }, []);
+
+  // Ensure date is set to current date (today) on load
+  useEffect(() => {
+    const today = new Date();
+    const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
+    const todayReceiptDate = today.toISOString().split('T')[0];
+
+    setCashCountData((prev) => {
+      if (prev.date !== todayCashDate) {
+        return { ...prev, date: todayCashDate };
+      }
+      return prev;
+    });
+
+    setReceiptData((prev) => {
+      if (prev.startDate !== todayReceiptDate || prev.endDate !== todayReceiptDate) {
+        return { ...prev, startDate: todayReceiptDate, endDate: todayReceiptDate };
+      }
+      return prev;
+    });
   }, []);
 
   // Sync saved history to LocalStorage backup

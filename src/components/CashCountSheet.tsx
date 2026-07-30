@@ -239,7 +239,6 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
       {/* Top Action Control Toolbar */}
       <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-5xl mx-auto">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-slate-700">เครื่องมือกะ:</span>
           <button
             type="button"
             onClick={handleClearForNewShift}
@@ -248,15 +247,6 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
           >
             <RotateCcw className="w-3.5 h-3.5" />
             ลบข้อมูลเก่า & เริ่มกะใหม่
-          </button>
-          <button
-            type="button"
-            onClick={handleSetTodayDate}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
-            title="ตั้งค่าวันที่ของตารางนับเงินเป็นวันปัจจุบัน"
-          >
-            <Calendar className="w-3.5 h-3.5 text-orange-600" />
-            ตั้งเป็นวันปัจจุบัน
           </button>
         </div>
 
@@ -313,6 +303,14 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                   className="border border-slate-300 rounded pl-8 pr-2 py-1 text-sm bg-slate-50 font-semibold text-slate-900 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer"
                 />
               </div>
+              <button
+                type="button"
+                onClick={handleSetTodayDate}
+                className="no-print text-xs font-bold px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded border border-orange-300 transition-colors shrink-0"
+                title="ตั้งค่าเป็นวันปัจจุบัน"
+              >
+                วันนี้
+              </button>
               <span className="hidden print:inline font-bold underline px-1">{data.date}</span>
             </div>
           </div>
@@ -377,181 +375,215 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
           </div>
         </div>
 
-        {/* Cash Count Main Grid (Exact replica of Numbers template) */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-slate-800 text-sm print:text-xs">
-            <thead>
-              <tr className="bg-slate-700 text-white font-bold text-center">
-                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">IN</th>
-                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">Count</th>
-                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">฿ Worth</th>
-                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">OUT</th>
-                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">Count</th>
-                <th className="border border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/6">฿ Worth</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.denominations.map((denom, idx) => {
-                const worthIn = denom.value * (denom.countIn || 0);
-                const worthOut = denom.value * (denom.countOut || 0);
-                const isEven = idx % 2 === 0;
-                const rowBg = isEven ? 'bg-white' : 'bg-slate-100';
+        {/* Cash Count Main Grid - Separated into 2 distinct tables for IN and OUT */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 print:grid-cols-2 print:gap-3">
+          {/* LEFT TABLE: IN Section */}
+          <div className="border border-slate-800 rounded-lg overflow-hidden shadow-xs">
+            <table className="w-full border-collapse text-sm print:text-xs">
+              <thead>
+                <tr className="bg-slate-700 text-white font-bold text-center">
+                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">IN</th>
+                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">Count</th>
+                  <th className="border-b border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">฿ Worth</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.denominations.map((denom, idx) => {
+                  const worthIn = denom.value * (denom.countIn || 0);
+                  const isEven = idx % 2 === 0;
+                  const rowBg = isEven ? 'bg-white' : 'bg-slate-100';
 
-                return (
-                  <tr key={denom.value} className={`${rowBg} hover:bg-slate-200/50 transition-colors`}>
-                    {/* IN Label */}
-                    <td className="border border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-800 text-center">
-                      {denom.label}
-                    </td>
+                  return (
+                    <tr key={`in-${denom.value}`} className={`${rowBg} hover:bg-slate-200/50 transition-colors`}>
+                      {/* IN Label */}
+                      <td className="border-b border-r border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-800 text-center">
+                        {denom.label}
+                      </td>
 
-                    {/* IN Count Input */}
-                    <td className="border border-slate-400 px-2 py-1 print:px-1 print:py-0.5 text-center">
+                      {/* IN Count Input */}
+                      <td className="border-b border-r border-slate-400 px-2 py-1 print:px-1 print:py-0.5 text-center">
+                        <input
+                          type="number"
+                          min="0"
+                          value={denom.countIn === 0 ? '' : denom.countIn}
+                          onChange={(e) => handleDenominationChange(idx, 'countIn', e.target.value)}
+                          placeholder="0"
+                          className="w-full text-center bg-sky-50 focus:bg-white font-semibold text-slate-900 border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded py-0.5 outline-none no-print"
+                        />
+                        <span className="hidden print:inline font-bold">{denom.countIn || 0}</span>
+                      </td>
+
+                      {/* IN Worth */}
+                      <td className="border-b border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-900 text-right font-mono">
+                        {formatCurrency(worthIn)}
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {/* Cash Drawer Balance */}
+                <tr className="bg-[#55ff33] text-black font-extrabold border-t border-slate-800">
+                  <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
+                      <span className="text-xs font-bold text-slate-900">THB</span>
+                    </div>
+                  </td>
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                    {formatCurrency(totalCashIn)}
+                  </td>
+                </tr>
+
+                {/* Previous balance */}
+                <tr className="bg-[#00aaff] text-black font-extrabold">
+                  <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-extrabold uppercase tracking-wider">Previous balance</span>
+                      <span className="text-xs font-bold text-slate-900">THB</span>
+                    </div>
+                  </td>
+                  <td className="border-b border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                    <div className="flex items-center justify-between gap-1 no-print">
+                      <span className="text-xs text-slate-900 font-bold shrink-0">THB</span>
                       <input
                         type="number"
-                        min="0"
-                        value={denom.countIn === 0 ? '' : denom.countIn}
-                        onChange={(e) => handleDenominationChange(idx, 'countIn', e.target.value)}
-                        placeholder="0"
-                        className="w-full text-center bg-sky-50 focus:bg-white font-semibold text-slate-900 border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded py-0.5 outline-none no-print"
+                        value={data.beerPrevBalance || ''}
+                        onChange={(e) => onChange({ ...data, beerPrevBalance: Number(e.target.value) || 0 })}
+                        placeholder="0.00"
+                        className="w-24 text-right bg-white/90 font-mono font-bold text-slate-900 border border-blue-400 rounded px-1.5 py-0.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
                       />
-                      <span className="hidden print:inline font-bold">{denom.countIn || 0}</span>
-                    </td>
+                    </div>
+                    <span className="hidden print:inline font-mono font-bold text-right block">{formatCurrency(data.beerPrevBalance)}</span>
+                  </td>
+                </tr>
 
-                    {/* IN Worth */}
-                    <td className="border border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-900 text-right font-mono">
-                      {formatCurrency(worthIn)}
-                    </td>
+                {/* Different */}
+                <tr className="bg-[#ff0000] text-white font-extrabold">
+                  <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-extrabold uppercase tracking-wider">Different</span>
+                      <span className="text-xs font-bold text-white">THB</span>
+                    </div>
+                  </td>
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                    {formatSignedCurrency(redInDiff)}
+                  </td>
+                </tr>
 
-                    {/* OUT Label */}
-                    <td className="border border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-800 text-center">
-                      {denom.label}
-                    </td>
+                {/* Final */}
+                <tr className="bg-[#8B4513] text-white font-extrabold">
+                  <td colSpan={2} className="border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider">Final</span>
+                      <span className="text-xs font-bold text-white">THB</span>
+                    </div>
+                  </td>
+                  <td className="text-right px-3 py-2 print:px-1.5 print:py-0.5 text-base print:text-xs font-mono tracking-wider">
+                    {formatSignedCurrency(finalIn)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-                    {/* OUT Count Input */}
-                    <td className="border border-slate-400 px-2 py-1 print:px-1 print:py-0.5 text-center">
-                      <input
-                        type="number"
-                        min="0"
-                        value={denom.countOut === 0 ? '' : denom.countOut}
-                        onChange={(e) => handleDenominationChange(idx, 'countOut', e.target.value)}
-                        placeholder="0"
-                        className="w-full text-center bg-sky-50 focus:bg-white font-semibold text-slate-900 border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded py-0.5 outline-none no-print"
-                      />
-                      <span className="hidden print:inline font-bold">{denom.countOut || 0}</span>
-                    </td>
+          {/* RIGHT TABLE: OUT Section */}
+          <div className="border border-slate-800 rounded-lg overflow-hidden shadow-xs">
+            <table className="w-full border-collapse text-sm print:text-xs">
+              <thead>
+                <tr className="bg-slate-700 text-white font-bold text-center">
+                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">OUT</th>
+                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">Count</th>
+                  <th className="border-b border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">฿ Worth</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.denominations.map((denom, idx) => {
+                  const worthOut = denom.value * (denom.countOut || 0);
+                  const isEven = idx % 2 === 0;
+                  const rowBg = isEven ? 'bg-white' : 'bg-slate-100';
 
-                    {/* OUT Worth */}
-                    <td className="border border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-900 text-right font-mono">
-                      {formatCurrency(worthOut)}
-                    </td>
-                  </tr>
-                );
-              })}
+                  return (
+                    <tr key={`out-${denom.value}`} className={`${rowBg} hover:bg-slate-200/50 transition-colors`}>
+                      {/* OUT Label */}
+                      <td className="border-b border-r border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-800 text-center">
+                        {denom.label}
+                      </td>
 
-              {/* Subtotal Green Highlight Bar */}
-              <tr>
-                <td colSpan={2} className="border border-slate-800 bg-[#55ff33] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
-                    <span className="text-xs font-bold text-slate-900">THB</span>
-                  </div>
-                </td>
-                <td className="border border-slate-800 bg-[#55ff33] text-black font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
-                  {formatCurrency(totalCashIn)}
-                </td>
-                <td colSpan={2} className="border border-slate-800 bg-[#55ff33] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
-                    <span className="text-xs font-bold text-slate-900">THB</span>
-                  </div>
-                </td>
-                <td className="border border-slate-800 bg-[#55ff33] text-black font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
-                  {formatCurrency(totalCashOut)}
-                </td>
-              </tr>
+                      {/* OUT Count Input */}
+                      <td className="border-b border-r border-slate-400 px-2 py-1 print:px-1 print:py-0.5 text-center">
+                        <input
+                          type="number"
+                          min="0"
+                          value={denom.countOut === 0 ? '' : denom.countOut}
+                          onChange={(e) => handleDenominationChange(idx, 'countOut', e.target.value)}
+                          placeholder="0"
+                          className="w-full text-center bg-sky-50 focus:bg-white font-semibold text-slate-900 border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded py-0.5 outline-none no-print"
+                        />
+                        <span className="hidden print:inline font-bold">{denom.countOut || 0}</span>
+                      </td>
 
-              {/* Previous balance & Reconciliation Section */}
-              <tr>
-                <td colSpan={2} className="border border-slate-800 bg-[#00aaff] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider">Previous balance</span>
-                    <span className="text-xs font-bold text-slate-900">THB</span>
-                  </div>
-                </td>
-                <td className="border border-slate-800 bg-[#00aaff] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
-                  <div className="flex items-center justify-between gap-1 no-print">
-                    <span className="text-xs text-slate-900 font-bold shrink-0">THB</span>
-                    <input
-                      type="number"
-                      value={data.beerPrevBalance || ''}
-                      onChange={(e) => onChange({ ...data, beerPrevBalance: Number(e.target.value) || 0 })}
-                      placeholder="0.00"
-                      className="w-24 text-right bg-white/90 font-mono font-bold text-slate-900 border border-blue-400 rounded px-1.5 py-0.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
-                    />
-                  </div>
-                  <span className="hidden print:inline font-mono font-bold text-right block">{formatCurrency(data.beerPrevBalance)}</span>
-                </td>
+                      {/* OUT Worth */}
+                      <td className="border-b border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-900 text-right font-mono">
+                        {formatCurrency(worthOut)}
+                      </td>
+                    </tr>
+                  );
+                })}
 
-                <td colSpan={2} className="border border-slate-800 bg-[#00aaff] text-black font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider">Previous balance</span>
-                    <span className="text-xs font-bold text-slate-900">THB</span>
-                  </div>
-                </td>
-                <td className="border border-slate-800 bg-[#00aaff] text-black font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
-                  {formatCurrency(prevBalanceOut)}
-                </td>
-              </tr>
+                {/* Cash Drawer Balance */}
+                <tr className="bg-[#55ff33] text-black font-extrabold border-t border-slate-800">
+                  <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
+                      <span className="text-xs font-bold text-slate-900">THB</span>
+                    </div>
+                  </td>
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                    {formatCurrency(totalCashOut)}
+                  </td>
+                </tr>
 
-              {/* Different Row */}
-              <tr>
-                <td colSpan={2} className="border border-slate-800 bg-[#ff0000] text-white font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider">Different</span>
-                    <span className="text-xs font-bold text-white">THB</span>
-                  </div>
-                </td>
-                <td className="border border-slate-800 bg-[#ff0000] text-white font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
-                  {formatSignedCurrency(redInDiff)}
-                </td>
+                {/* Previous balance */}
+                <tr className="bg-[#00aaff] text-black font-extrabold">
+                  <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-extrabold uppercase tracking-wider">Previous balance</span>
+                      <span className="text-xs font-bold text-slate-900">THB</span>
+                    </div>
+                  </td>
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                    {formatCurrency(prevBalanceOut)}
+                  </td>
+                </tr>
 
-                <td colSpan={2} className="border border-slate-800 bg-[#ff0000] text-white font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider">Different</span>
-                    <span className="text-xs font-bold text-white">THB</span>
-                  </div>
-                </td>
-                <td className="border border-slate-800 bg-[#ff0000] text-white font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
-                  {formatSignedCurrency(redOutDiff)}
-                </td>
-              </tr>
+                {/* Different */}
+                <tr className="bg-[#ff0000] text-white font-extrabold">
+                  <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-extrabold uppercase tracking-wider">Different</span>
+                      <span className="text-xs font-bold text-white">THB</span>
+                    </div>
+                  </td>
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                    {formatSignedCurrency(redOutDiff)}
+                  </td>
+                </tr>
 
-              {/* Final Result Row (Brown) */}
-              <tr>
-                <td colSpan={2} className="border border-slate-800 bg-[#8B4513] text-white font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider">Final</span>
-                    <span className="text-xs font-bold text-white">THB</span>
-                  </div>
-                </td>
-                <td className="border border-slate-800 bg-[#8B4513] text-white font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-base print:text-xs font-mono tracking-wider">
-                  {formatSignedCurrency(finalIn)}
-                </td>
-
-                <td colSpan={2} className="border border-slate-800 bg-[#8B4513] text-white font-extrabold px-3 py-2 print:px-1.5 print:py-0.5">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider">Final</span>
-                    <span className="text-xs font-bold text-white">THB</span>
-                  </div>
-                </td>
-                <td className="border border-slate-800 bg-[#8B4513] text-white font-extrabold text-right px-3 py-2 print:px-1.5 print:py-0.5 text-base print:text-xs font-mono tracking-wider">
-                  {formatSignedCurrency(finalOut)}
-                </td>
-              </tr>
-
-
-            </tbody>
-          </table>
+                {/* Final */}
+                <tr className="bg-[#8B4513] text-white font-extrabold">
+                  <td colSpan={2} className="border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider">Final</span>
+                      <span className="text-xs font-bold text-white">THB</span>
+                    </div>
+                  </td>
+                  <td className="text-right px-3 py-2 print:px-1.5 print:py-0.5 text-base print:text-xs font-mono tracking-wider">
+                    {formatSignedCurrency(finalOut)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Expenses Section (Side-by-side tables) */}

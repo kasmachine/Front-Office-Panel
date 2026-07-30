@@ -59,12 +59,14 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   if (
     errStr.includes('resource-exhausted') ||
     errStr.includes('Quota limit exceeded') ||
-    errStr.includes('quota')
+    errStr.includes('quota') ||
+    errStr.includes('429')
   ) {
     if (!isQuotaExceeded) {
       isQuotaExceeded = true;
-      console.warn('[Firebase] Write quota limit exceeded. Falling back to local offline mode.');
+      console.warn('[Firebase] Write quota limit exceeded. Falling back to local storage.');
     }
+    return;
   }
   const errInfo: FirestoreErrorInfo = {
     error: errStr,
@@ -133,8 +135,9 @@ const DRAFTS_COLLECTION = 'active_drafts';
  * Save Cash Count Record to Firebase Firestore
  */
 export async function saveCashCountToFirebase(data: CashCountData): Promise<string> {
-  await initAuth();
   const docId = data.id || `cash-${Date.now()}`;
+  if (isQuotaExceeded) return docId;
+  await initAuth();
   const path = `${CASH_COUNTS_COLLECTION}/${docId}`;
   try {
     const docRef = doc(db, CASH_COUNTS_COLLECTION, docId);
@@ -147,7 +150,7 @@ export async function saveCashCountToFirebase(data: CashCountData): Promise<stri
     return docId;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
+    return docId;
   }
 }
 
@@ -187,6 +190,7 @@ export async function fetchCashCountsFromFirebase(): Promise<CashCountData[]> {
  * Delete Cash Count from Firestore
  */
 export async function deleteCashCountFromFirebase(docId: string): Promise<void> {
+  if (isQuotaExceeded) return;
   await initAuth();
   const path = `${CASH_COUNTS_COLLECTION}/${docId}`;
   try {
@@ -194,7 +198,6 @@ export async function deleteCashCountFromFirebase(docId: string): Promise<void> 
     await deleteDoc(docRef);
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
-    throw err;
   }
 }
 
@@ -202,8 +205,9 @@ export async function deleteCashCountFromFirebase(docId: string): Promise<void> 
  * Save Receipt Substitute Record to Firebase Firestore
  */
 export async function saveReceiptToFirebase(data: ReceiptSubstituteData): Promise<string> {
-  await initAuth();
   const docId = data.id || `receipt-${Date.now()}`;
+  if (isQuotaExceeded) return docId;
+  await initAuth();
   const path = `${RECEIPTS_COLLECTION}/${docId}`;
   try {
     const docRef = doc(db, RECEIPTS_COLLECTION, docId);
@@ -216,7 +220,7 @@ export async function saveReceiptToFirebase(data: ReceiptSubstituteData): Promis
     return docId;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
-    throw error;
+    return docId;
   }
 }
 
@@ -256,6 +260,7 @@ export async function fetchReceiptsFromFirebase(): Promise<ReceiptSubstituteData
  * Delete Receipt Substitute from Firestore
  */
 export async function deleteReceiptFromFirebase(docId: string): Promise<void> {
+  if (isQuotaExceeded) return;
   await initAuth();
   const path = `${RECEIPTS_COLLECTION}/${docId}`;
   try {
@@ -263,7 +268,6 @@ export async function deleteReceiptFromFirebase(docId: string): Promise<void> {
     await deleteDoc(docRef);
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
-    throw err;
   }
 }
 

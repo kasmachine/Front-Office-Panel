@@ -73,7 +73,6 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
       {/* Control Bar */}
       <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-4xl mx-auto">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-slate-700">เครื่องมือ:</span>
           <button
             type="button"
             onClick={onReset}
@@ -82,15 +81,6 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
           >
             <RotateCcw className="w-3.5 h-3.5" />
             ลบข้อมูลเก่า & เริ่มใหม่
-          </button>
-          <button
-            type="button"
-            onClick={handleSetTodayDate}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
-            title="ตั้งค่าวันที่เริ่มต้นและสิ้นสุดเป็นวันปัจจุบัน"
-          >
-            <Calendar className="w-3.5 h-3.5 text-orange-600" />
-            ตั้งเป็นวันปัจจุบัน
           </button>
           {onManualSync && (
             <button
