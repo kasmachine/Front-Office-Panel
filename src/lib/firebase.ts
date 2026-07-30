@@ -9,8 +9,12 @@ import {
   query,
   orderBy,
   onSnapshot,
-  getDocFromServer
+  getDocFromServer,
+  setLogLevel
 } from 'firebase/firestore';
+
+// Silence internal Firestore console log noise
+setLogLevel('silent');
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { CashCountData, ReceiptSubstituteData } from '../types';

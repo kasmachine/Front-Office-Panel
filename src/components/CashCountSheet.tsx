@@ -303,14 +303,6 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                   className="border border-slate-300 rounded pl-8 pr-2 py-1 text-sm bg-slate-50 font-semibold text-slate-900 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer"
                 />
               </div>
-              <button
-                type="button"
-                onClick={handleSetTodayDate}
-                className="no-print text-xs font-bold px-2 py-1 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded border border-orange-300 transition-colors shrink-0"
-                title="ตั้งค่าเป็นวันปัจจุบัน"
-              >
-                วันนี้
-              </button>
               <span className="hidden print:inline font-bold underline px-1">{data.date}</span>
             </div>
           </div>

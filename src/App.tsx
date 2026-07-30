@@ -19,6 +19,7 @@ import {
   testConnection,
   saveActiveDraftToFirebase,
   subscribeActiveDraft,
+  getIsQuotaExceeded,
 } from './lib/firebase';
 import { syncMinusExpensesToReceipt } from './utils/syncUtils';
 import { CheckCircle2, Info } from 'lucide-react';
@@ -171,6 +172,7 @@ export default function App() {
   // Auto save draft to localStorage & Firebase real-time draft (2500ms debounce)
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
+    if (getIsQuotaExceeded()) return;
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('cashCount', cashCountData);
     }, 2500);
@@ -179,6 +181,7 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
+    if (getIsQuotaExceeded()) return;
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('receiptSubstitute', receiptData);
     }, 2500);
