@@ -3,6 +3,8 @@ import { Header } from './components/Header';
 import { CashCountSheet } from './components/CashCountSheet';
 import { ReceiptSubstituteSheet } from './components/ReceiptSubstituteSheet';
 import { HistoryModal } from './components/HistoryModal';
+import { SettingsModal } from './components/SettingsModal';
+import { StaffManagerModal } from './components/StaffManagerModal';
 import { CashCountData, ReceiptSubstituteData } from './types';
 import { getInitialCashCountData, getInitialReceiptData } from './data/defaults';
 import { exportToPdf, printDocument } from './utils/pdfExport';
@@ -46,6 +48,8 @@ export default function App() {
   const [savedReceipts, setSavedReceipts] = useState<ReceiptSubstituteData[]>([]);
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isStaffManagerOpen, setIsStaffManagerOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isFirebaseSyncing, setIsFirebaseSyncing] = useState(false);
 
@@ -274,11 +278,9 @@ export default function App() {
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         onExportPdf={handleExportPdf}
-        onDownloadJson={handleDownloadJson}
-        onImportJson={handleImportJson}
         onPrint={handlePrint}
         onSaveRecord={handleSaveRecord}
-        onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         isFirebaseSyncing={isFirebaseSyncing}
       />
 
@@ -290,6 +292,7 @@ export default function App() {
             onChange={setCashCountData}
             onReset={handleResetCashCount}
             savedCashCounts={savedCashCounts}
+            onOpenManageStaff={() => setIsStaffManagerOpen(true)}
           />
         ) : (
           <ReceiptSubstituteSheet
@@ -313,6 +316,12 @@ export default function App() {
         </div>
       </footer>
 
+      {/* Staff Manager Modal */}
+      <StaffManagerModal
+        isOpen={isStaffManagerOpen}
+        onClose={() => setIsStaffManagerOpen(false)}
+      />
+
       {/* History Modal */}
       <HistoryModal
         isOpen={isHistoryOpen}
@@ -323,6 +332,25 @@ export default function App() {
         onLoadReceipt={setReceiptData}
         onDeleteCashCount={handleDeleteCashCount}
         onDeleteReceipt={handleDeleteReceipt}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        activeTab={activeTab}
+        onDownloadJson={handleDownloadJson}
+        onImportJson={handleImportJson}
+        onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenManageStaff={() => setIsStaffManagerOpen(true)}
+        onClearDraft={() => {
+          if (activeTab === 'cashCount') {
+            handleResetCashCount();
+          } else {
+            handleResetReceipt();
+          }
+        }}
+        isFirebaseSyncing={isFirebaseSyncing}
       />
     </div>
   );

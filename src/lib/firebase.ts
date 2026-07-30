@@ -279,3 +279,36 @@ export function subscribeActiveDraft(draftType: 'cashCount' | 'receiptSubstitute
   );
 }
 
+/**
+ * Realtime Staff List Sync (Syncs staff names live across all devices)
+ */
+const CONFIG_COLLECTION = 'app_config';
+const STAFF_DOC = 'staff_list';
+
+export async function saveStaffListToFirebase(staffList: string[]): Promise<void> {
+  await initAuth();
+  const path = `${CONFIG_COLLECTION}/${STAFF_DOC}`;
+  try {
+    const docRef = doc(db, CONFIG_COLLECTION, STAFF_DOC);
+    await setDoc(docRef, { list: staffList, updatedAt: new Date().toISOString() });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export function subscribeStaffList(callback: (staffList: string[]) => void) {
+  const docRef = doc(db, CONFIG_COLLECTION, STAFF_DOC);
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists() && Array.isArray(snapshot.data().list)) {
+        callback(snapshot.data().list);
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, `${CONFIG_COLLECTION}/${STAFF_DOC}`);
+    }
+  );
+}
+
+

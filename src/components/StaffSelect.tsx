@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Check } from 'lucide-react';
+import { subscribeStaffList, saveStaffListToFirebase } from '../lib/firebase';
 
 export const INITIAL_STAFF_LIST = [
   'Aan',
@@ -21,8 +22,7 @@ export function getStoredStaffList(): string[] {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const set = new Set([...INITIAL_STAFF_LIST, ...parsed]);
-        return Array.from(set).sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
+        return parsed.sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }));
       }
     }
   } catch (e) {
@@ -46,6 +46,7 @@ interface StaffSelectProps {
   className?: string;
   hasError?: boolean;
   size?: 'sm' | 'md';
+  onOpenManageStaff?: () => void;
 }
 
 export const StaffSelect: React.FC<StaffSelectProps> = ({
@@ -55,17 +56,29 @@ export const StaffSelect: React.FC<StaffSelectProps> = ({
   className = '',
   hasError = false,
   size = 'md',
+  onOpenManageStaff,
 }) => {
   const [staffList, setStaffList] = useState<string[]>(getStoredStaffList);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customNameInput, setCustomNameInput] = useState('');
 
   useEffect(() => {
+    const unsub = subscribeStaffList((remoteList) => {
+      if (remoteList && remoteList.length > 0) {
+        setStaffList(remoteList);
+        saveStaffList(remoteList);
+      }
+    });
+
     const handleStorage = () => {
       setStaffList(getStoredStaffList());
     };
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+
+    return () => {
+      unsub();
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -73,6 +86,12 @@ export const StaffSelect: React.FC<StaffSelectProps> = ({
     if (val === '__ADD_NEW__') {
       setIsCustomMode(true);
       setCustomNameInput('');
+    } else if (val === '__MANAGE_STAFF__') {
+      if (onOpenManageStaff) {
+        onOpenManageStaff();
+      } else {
+        setIsCustomMode(true);
+      }
     } else {
       setIsCustomMode(false);
       onChange(val);
@@ -93,6 +112,7 @@ export const StaffSelect: React.FC<StaffSelectProps> = ({
         a.localeCompare(b, 'en', { sensitivity: 'base' })
       );
       saveStaffList(updated);
+      saveStaffListToFirebase(updated);
       setStaffList(updated);
     }
 
@@ -176,7 +196,13 @@ export const StaffSelect: React.FC<StaffSelectProps> = ({
         <option value="__ADD_NEW__" className="font-bold text-orange-600 bg-orange-50">
           ➕ เพิ่มชื่อพนักงานใหม่ (Add staff)...
         </option>
+        {onOpenManageStaff && (
+          <option value="__MANAGE_STAFF__" className="font-bold text-slate-700 bg-slate-100">
+            ⚙️ จัดการ/แก้ไข/ลบรายชื่อพนักงาน...
+          </option>
+        )}
       </select>
     </div>
   );
 };
+

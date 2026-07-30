@@ -1,16 +1,14 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { NanSeasonsLogo } from './NanSeasonsLogo';
-import { FileText, Calculator, Download, Printer, Save, History, Code2, Cloud, Upload } from 'lucide-react';
+import { FileText, Calculator, Download, Printer, Cloud, Settings } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'cashCount' | 'receiptSubstitute';
   onSelectTab: (tab: 'cashCount' | 'receiptSubstitute') => void;
   onExportPdf: () => void;
-  onDownloadJson: () => void;
-  onImportJson: (file: File) => void;
   onPrint: () => void;
   onSaveRecord: () => void;
-  onOpenHistory: () => void;
+  onOpenSettings: () => void;
   isSaving?: boolean;
   isFirebaseSyncing?: boolean;
 }
@@ -19,23 +17,12 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
   onExportPdf,
-  onDownloadJson,
-  onImportJson,
   onPrint,
   onSaveRecord,
-  onOpenHistory,
+  onOpenSettings,
   isSaving = false,
   isFirebaseSyncing = false,
 }) => {
-  const jsonFileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleJsonFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      onImportJson(file);
-      e.target.value = ''; // Reset input
-    }
-  };
 
   return (
     <header className="no-print bg-slate-900 text-white sticky top-0 z-40 shadow-md border-b border-slate-800">
@@ -107,44 +94,15 @@ export const Header: React.FC<HeaderProps> = ({
             {isSaving || isFirebaseSyncing ? 'กำลังบันทึก...' : 'บันทึก Firebase'}
           </button>
 
-          {/* Download JSON Button */}
+          {/* Settings Modal Trigger Button */}
           <button
             type="button"
-            onClick={onDownloadJson}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-sky-200 bg-sky-950/80 hover:bg-sky-900 border border-sky-800 rounded-lg transition-colors"
-            title="ดาวน์โหลดข้อมูลชุดนี้เป็นไฟล์ .json"
+            onClick={onOpenSettings}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-orange-200 bg-orange-950/80 hover:bg-orange-900 border border-orange-800 rounded-lg transition-colors shadow-xs"
+            title="ตั้งค่าระบบและเครื่องมือทางเทคนิค (Settings)"
           >
-            <Code2 className="w-3.5 h-3.5 text-sky-400" />
-            ดาวน์โหลด JSON
-          </button>
-
-          {/* Import JSON Button */}
-          <input
-            type="file"
-            ref={jsonFileInputRef}
-            onChange={handleJsonFileChange}
-            accept=".json,application/json"
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => jsonFileInputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
-            title="นำเข้าข้อมูลจากไฟล์ .json"
-          >
-            <Upload className="w-3.5 h-3.5 text-slate-400" />
-            นำเข้า JSON
-          </button>
-
-          {/* History Button */}
-          <button
-            type="button"
-            onClick={onOpenHistory}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
-            title="ดูประวัติบันทึกในระบบ"
-          >
-            <History className="w-3.5 h-3.5 text-amber-400" />
-            ประวัติ
+            <Settings className="w-3.5 h-3.5 text-orange-400" />
+            ตั้งค่า (Settings)
           </button>
 
           <div className="h-4 w-[1px] bg-slate-700 mx-1 hidden sm:block"></div>

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { CashCountData, ExpenseRow } from '../types';
 import { NanSeasonsLogo } from './NanSeasonsLogo';
-import { Plus, Trash2, RotateCcw, Sparkles, Calendar } from 'lucide-react';
+import { Plus, Trash2, RotateCcw, Calendar } from 'lucide-react';
 
 function toIsoDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -30,15 +30,23 @@ function fromIsoDate(isoStr: string): string {
 }
 import { StaffSelect } from './StaffSelect';
 import { ExpenseCategorySelect } from './ExpenseCategorySelect';
+import { Users } from 'lucide-react';
 
 interface CashCountSheetProps {
   data: CashCountData;
   onChange: (newData: CashCountData) => void;
   onReset: () => void;
   savedCashCounts?: CashCountData[];
+  onOpenManageStaff?: () => void;
 }
 
-export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, onReset, savedCashCounts = [] }) => {
+export const CashCountSheet: React.FC<CashCountSheetProps> = ({
+  data,
+  onChange,
+  onReset,
+  savedCashCounts = [],
+  onOpenManageStaff,
+}) => {
   // Calculations
   const totalCashIn = data.denominations.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0);
   const totalCashOut = data.denominations.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0);
@@ -107,38 +115,6 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
     if (amount > 0) return `+THB ${formatted}`;
     if (amount < 0) return `-THB ${formatted}`;
     return `THB ${formatted}`;
-  };
-
-  const fillSampleData = () => {
-    const sampleDenoms = data.denominations.map(d => {
-      if (d.value === 1000) return { ...d, countIn: 15, countOut: 18 };
-      if (d.value === 500) return { ...d, countIn: 8, countOut: 10 };
-      if (d.value === 100) return { ...d, countIn: 25, countOut: 20 };
-      if (d.value === 50) return { ...d, countIn: 12, countOut: 15 };
-      if (d.value === 20) return { ...d, countIn: 30, countOut: 35 };
-      if (d.value === 10) return { ...d, countIn: 15, countOut: 10 };
-      if (d.value === 5) return { ...d, countIn: 10, countOut: 5 };
-      return { ...d, countIn: 5, countOut: 5 };
-    });
-
-    onChange({
-      ...data,
-      shift: 'Early',
-      denominations: sampleDenoms,
-      staffIn: 'สมชาย (กะเช้า)',
-      staffOut: 'ขวัญทิชา (กะบ่าย)',
-      beerPrevBalance: 1200,
-      beerShiftDiff: 0,
-      expensesIn: [
-        { id: '1', item: 'รับเงินทอนย่อย', amount: 500, staff: 'สมชาย' },
-        { id: '2', item: 'เงินโอนมัดจำห้องพัก', amount: 1500, staff: 'สมชาย' },
-      ],
-      expensesOut: [
-        { id: '1', item: 'ปากกาไฮไลท์ & สมุด', amount: 185, staff: 'ขวัญทิชา' },
-        { id: '2', item: 'ค่าน้ำดื่มพนักงาน', amount: 240, staff: 'ขวัญทิชา' },
-      ],
-      remarks: 'นับยอดเงินกะเช้าถูกต้องเรียบร้อย ยอดเบียร์คงเหลือตรงตามสต็อก',
-    });
   };
 
   const handleClearForNewShift = () => {
@@ -252,43 +228,48 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
     });
   };
 
+  const handleSetTodayDate = () => {
+    const today = new Date();
+    const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
+    onChange({ ...data, date: dateStr });
+  };
+
   return (
     <div className="w-full space-y-4">
-      {/* Control Bar */}
-      <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+      {/* Top Action Control Toolbar */}
+      <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-5xl mx-auto">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-slate-700">เครื่องมือตารางนับเงิน:</span>
+          <span className="text-xs font-bold text-slate-700">เครื่องมือกะ:</span>
           <button
             type="button"
             onClick={handleClearForNewShift}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 shadow-xs border border-orange-600 rounded-lg transition-all transform active:scale-95"
-            title="ล้างข้อมูลทั้งหมดสำหรับรับกะใหม่ โดยยกยอดเงิน Previous balance จากยอดเงินสุทธิกะบ่าย/กะเดิม"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-xs transition-transform active:scale-95"
+            title="ลบข้อมูลเก่า นำยอดยกไปตั้งเป็นยอดยกมา และเริ่มนับกะใหม่"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-white" />
-            ล้างข้อมูลเพื่อรับกะใหม่ (Clear for New Shift)
+            <RotateCcw className="w-3.5 h-3.5" />
+            ลบข้อมูลเก่า & เริ่มกะใหม่
           </button>
           <button
             type="button"
-            onClick={fillSampleData}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"
+            onClick={handleSetTodayDate}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
+            title="ตั้งค่าวันที่ของตารางนับเงินเป็นวันปัจจุบัน"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            เติมข้อมูลตัวอย่าง (Sample)
-          </button>
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-            title="ล้างข้อมูลทั้งหมดรวมถึง Previous balance"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-slate-500" />
-            ล้างข้อมูลทั้งหมด
+            <Calendar className="w-3.5 h-3.5 text-orange-600" />
+            ตั้งเป็นวันปัจจุบัน
           </button>
         </div>
 
-        <div className="text-xs text-slate-500 italic">
-          * ระบบคำนวณยอดเงินรวม สรุปกะ และยอดต่างอัตโนมัติ
-        </div>
+        {onOpenManageStaff && (
+          <button
+            type="button"
+            onClick={onOpenManageStaff}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors"
+          >
+            <Users className="w-3.5 h-3.5 text-emerald-600" />
+            จัดการรายชื่อพนักงาน
+          </button>
+        )}
       </div>
 
       {/* Printable Sheet Container */}
@@ -362,6 +343,7 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
               placeholder="เลือกชื่อพนักงานนับเงินเข้า"
               hasError={!data.staffIn?.trim()}
               size="md"
+              onOpenManageStaff={onOpenManageStaff}
             />
             <span className="hidden print:inline font-bold underline text-xs">{data.staffIn || '-'}</span>
           </div>
@@ -389,6 +371,7 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({ data, onChange, 
               placeholder="เลือกชื่อพนักงานนับเงินออก"
               hasError={!data.staffOut?.trim()}
               size="md"
+              onOpenManageStaff={onOpenManageStaff}
             />
             <span className="hidden print:inline font-bold underline text-xs">{data.staffOut || '-'}</span>
           </div>

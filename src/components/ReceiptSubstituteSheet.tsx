@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { ReceiptSubstituteData, ReceiptSubstituteItem, CashCountData } from '../types';
 import { ArabicToBahtText } from '../utils/bahttext';
 import { extractMinusExpenses } from '../utils/syncUtils';
-import { Plus, Trash2, Upload, Sparkles, Image as ImageIcon, ShieldCheck, RotateCcw, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Upload, Image as ImageIcon, ShieldCheck, RotateCcw, RefreshCw, Calendar } from 'lucide-react';
 
 interface ReceiptSubstituteSheetProps {
   data: ReceiptSubstituteData;
@@ -24,6 +24,16 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
   const minusCount = cashCountData ? extractMinusExpenses(cashCountData).length : 0;
   const totalAmount = data.items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
   const bahtText = ArabicToBahtText(totalAmount);
+
+  const handleSetTodayDate = () => {
+    const today = new Date().toISOString().split('T')[0];
+    onChange({
+      ...data,
+      startDate: today,
+      endDate: today,
+      items: data.items.map((it) => ({ ...it, date: it.date || today })),
+    });
+  };
 
   const handleItemChange = (index: number, field: keyof ReceiptSubstituteItem, value: string | number) => {
     const newItems = [...data.items];
@@ -58,33 +68,30 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
     }
   };
 
-  const fillSampleData = () => {
-    const today = new Date().toISOString().split('T')[0];
-    onChange({
-      ...data,
-      companyName: 'บริษัท น่าน ซีซั่นส์ บูติก จำกัด',
-      companyAddress: 'เลขที่ 409 หมู่ 3 ตำบลม่วงตึ๊ด อำเภอภูเพียง จังหวัดน่าน 55000',
-      startDate: today,
-      endDate: today,
-      items: [
-        { id: '1', date: today, description: 'ค่าน้ำมันรถรับส่งลูกค้าไปสนามบินน่าน', amount: 450, remark: 'ไม่มีใบเสร็จรับเงิน' },
-        { id: '2', date: today, description: 'ค่าซื้อวัตถุดิบผักสดท้องถิ่นจากชาวบ้าน', amount: 320, remark: 'ซื้อตรงหน้าสวน' },
-        { id: '3', date: today, description: 'ค่าจ้างซ่อมท่อน้ำประปาฉุกเฉิน', amount: 600, remark: 'ช่างท้องถิ่น' },
-      ],
-      requesterName: 'นางสาว ขวัญทิชา ตั้งเสรีกล',
-      requesterPosition: 'หัวหน้าแผนกต้อนรับ',
-      approverName: 'นาย น่านฟ้า บริรักษ์',
-      approverPosition: 'เจ้าของกิจการ',
-      watermarkText: 'ใช้สำหรับใบรับรองแทนใบเสร็จรับเงิน น่าน ซีซั่นส์ บูติก รีสอร์ท เท่านี้',
-    });
-  };
-
   return (
     <div className="w-full space-y-4">
       {/* Control Bar */}
-      <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+      <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-4xl mx-auto">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-slate-700">เครื่องมือใบรับรองแทนใบเสร็จ:</span>
+          <span className="text-xs font-bold text-slate-700">เครื่องมือ:</span>
+          <button
+            type="button"
+            onClick={onReset}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-xs transition-transform active:scale-95"
+            title="ล้างข้อมูลในใบรับรองแทนใบเสร็จเพื่อทำรายการใหม่"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            ลบข้อมูลเก่า & เริ่มใหม่
+          </button>
+          <button
+            type="button"
+            onClick={handleSetTodayDate}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
+            title="ตั้งค่าวันที่เริ่มต้นและสิ้นสุดเป็นวันปัจจุบัน"
+          >
+            <Calendar className="w-3.5 h-3.5 text-orange-600" />
+            ตั้งเป็นวันปัจจุบัน
+          </button>
           {onManualSync && (
             <button
               type="button"
@@ -101,26 +108,10 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
               )}
             </button>
           )}
-          <button
-            type="button"
-            onClick={fillSampleData}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            เติมข้อมูลตัวอย่าง
-          </button>
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-            ล้างข้อมูลทั้งหมด
-          </button>
         </div>
 
-        <div className="text-xs text-slate-500 italic">
-          * แปลงยอดเงินเป็นตัวอักษรไทยอัตโนมัติ และรองรับแนบภาพบัตรประชาชนพร้อมลายน้ำรักษาความปลอดภัย
+        <div className="text-[11px] text-slate-500 italic">
+          * ระบบจะบันทึกและซิงค์ข้อมูล Real-Time อัตโนมัติทุกอุปกรณ์
         </div>
       </div>
 

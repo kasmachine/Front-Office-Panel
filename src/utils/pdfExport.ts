@@ -149,23 +149,32 @@ export async function exportToPdf(elementId: string, filename: string = 'documen
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
     // Calculate width and height in mm for A4 page
-    const imgWidth = 210; // A4 width in mm
+    const pageWidth = 210; // A4 width in mm
     const pageHeight = 297; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let imgWidth = pageWidth;
+    let imgHeight = (canvas.height * imgWidth) / canvas.width;
 
     const pdf = new jsPDF('p', 'mm', 'a4');
-    let heightLeft = imgHeight;
-    let position = 0;
 
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    // If height is slightly larger than page height (e.g. up to 320mm), scale it down so it fits on 1 page
+    if (imgHeight > pageHeight && imgHeight <= 320) {
+      imgHeight = pageHeight;
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+    } else {
+      let heightLeft = imgHeight;
+      let position = 0;
 
-    // Handle multi-page if document exceeds single A4 page
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
       pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
+
+      // Handle multi-page if document genuinely exceeds single A4 page by a large margin
+      while (heightLeft >= 10) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
     }
 
     pdf.save(filename);
