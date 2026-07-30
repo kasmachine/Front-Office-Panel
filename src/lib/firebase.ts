@@ -35,6 +35,12 @@ export enum OperationType {
   WRITE = 'write',
 }
 
+let isQuotaExceeded = false;
+
+export function getIsQuotaExceeded(): boolean {
+  return isQuotaExceeded;
+}
+
 export interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
@@ -49,8 +55,19 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errStr = error instanceof Error ? error.message : String(error);
+  if (
+    errStr.includes('resource-exhausted') ||
+    errStr.includes('Quota limit exceeded') ||
+    errStr.includes('quota')
+  ) {
+    if (!isQuotaExceeded) {
+      isQuotaExceeded = true;
+      console.warn('[Firebase] Write quota limit exceeded. Falling back to local offline mode.');
+    }
+  }
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errStr,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -59,7 +76,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
       tenantId: auth.currentUser?.tenantId,
     },
     operationType,
-    path
+    path,
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   return errInfo;
@@ -250,15 +267,22 @@ export async function deleteReceiptFromFirebase(docId: string): Promise<void> {
   }
 }
 
+const lastSavedDrafts: Record<string, string> = {};
+
 /**
  * Realtime Active Draft Sync (Syncs draft state live across team members)
  */
 export async function saveActiveDraftToFirebase(draftType: 'cashCount' | 'receiptSubstitute', data: any): Promise<void> {
-  await initAuth();
+  if (isQuotaExceeded) return;
+  const serialized = JSON.stringify(data);
+  if (lastSavedDrafts[draftType] === serialized) return;
+
   const path = `${DRAFTS_COLLECTION}/${draftType}`;
   try {
+    await initAuth();
     const docRef = doc(db, DRAFTS_COLLECTION, draftType);
     await setDoc(docRef, { ...data, lastModifiedAt: new Date().toISOString() }, { merge: true });
+    lastSavedDrafts[draftType] = serialized;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
   }
@@ -284,13 +308,19 @@ export function subscribeActiveDraft(draftType: 'cashCount' | 'receiptSubstitute
  */
 const CONFIG_COLLECTION = 'app_config';
 const STAFF_DOC = 'staff_list';
+let lastSavedStaffList = '';
 
 export async function saveStaffListToFirebase(staffList: string[]): Promise<void> {
-  await initAuth();
+  if (isQuotaExceeded) return;
+  const serialized = JSON.stringify(staffList);
+  if (lastSavedStaffList === serialized) return;
+
   const path = `${CONFIG_COLLECTION}/${STAFF_DOC}`;
   try {
+    await initAuth();
     const docRef = doc(db, CONFIG_COLLECTION, STAFF_DOC);
     await setDoc(docRef, { list: staffList, updatedAt: new Date().toISOString() });
+    lastSavedStaffList = serialized;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
   }

@@ -44,8 +44,20 @@ export default function App() {
   });
 
   // History storage states (Synced with Firebase Firestore & LocalStorage)
-  const [savedCashCounts, setSavedCashCounts] = useState<CashCountData[]>([]);
-  const [savedReceipts, setSavedReceipts] = useState<ReceiptSubstituteData[]>([]);
+  const [savedCashCounts, setSavedCashCounts] = useState<CashCountData[]>(() => {
+    try {
+      const local = localStorage.getItem('nan_seasons_history_cash');
+      if (local) return JSON.parse(local);
+    } catch (e) { /* ignore */ }
+    return [];
+  });
+  const [savedReceipts, setSavedReceipts] = useState<ReceiptSubstituteData[]>(() => {
+    try {
+      const local = localStorage.getItem('nan_seasons_history_receipt');
+      if (local) return JSON.parse(local);
+    } catch (e) { /* ignore */ }
+    return [];
+  });
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -58,14 +70,31 @@ export default function App() {
     testConnection();
   }, []);
 
+  // Sync saved history to LocalStorage backup
+  useEffect(() => {
+    try {
+      localStorage.setItem('nan_seasons_history_cash', JSON.stringify(savedCashCounts));
+    } catch (e) { /* ignore */ }
+  }, [savedCashCounts]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nan_seasons_history_receipt', JSON.stringify(savedReceipts));
+    } catch (e) { /* ignore */ }
+  }, [savedReceipts]);
+
   // Subscribe to Firebase Firestore real-time updates for history records
   useEffect(() => {
     const unsubCash = subscribeCashCounts((firebaseItems) => {
-      setSavedCashCounts(firebaseItems || []);
+      if (firebaseItems && firebaseItems.length > 0) {
+        setSavedCashCounts(firebaseItems);
+      }
     });
 
     const unsubReceipts = subscribeReceipts((firebaseItems) => {
-      setSavedReceipts(firebaseItems || []);
+      if (firebaseItems && firebaseItems.length > 0) {
+        setSavedReceipts(firebaseItems);
+      }
     });
 
     return () => {
@@ -80,7 +109,6 @@ export default function App() {
       if (!remoteData) return;
       const { lastModifiedAt, ...cleanData } = remoteData;
       setCashCountData((prev) => {
-        // Deep compare stringified objects to prevent unnecessary re-renders
         if (JSON.stringify(prev) !== JSON.stringify(cleanData)) {
           return cleanData as CashCountData;
         }
@@ -105,12 +133,12 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Auto save draft to localStorage & Firebase real-time draft (500ms debounce)
+  // Auto save draft to localStorage & Firebase real-time draft (2500ms debounce)
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('cashCount', cashCountData);
-    }, 500);
+    }, 2500);
     return () => clearTimeout(timer);
   }, [cashCountData]);
 
@@ -118,7 +146,7 @@ export default function App() {
     localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('receiptSubstitute', receiptData);
-    }, 500);
+    }, 2500);
     return () => clearTimeout(timer);
   }, [receiptData]);
 
