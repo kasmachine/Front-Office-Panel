@@ -8,7 +8,7 @@
     html, body {
       background-color: #ffffff !important;
       color: #000000 !important;
-      font-size: 11px !important;
+      font-size: 13px !important;
       margin: 0 !important;
       padding: 0 !important;
       width: 100% !important;
@@ -21,7 +21,7 @@
     }
     @page {
       size: A4 portrait;
-      margin: 5mm 6mm;
+      margin: 4mm 5mm;
     }
     #cash-count-document, #receipt-substitute-document {
       width: 100% !important;
