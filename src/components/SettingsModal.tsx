@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Settings, Download, Upload, History, RotateCcw, X, FileCode, Cloud, ShieldCheck, Users } from 'lucide-react';
+import { Settings, Download, Upload, History, RotateCcw, X, FileCode, Cloud, ShieldCheck, Users, FolderTree } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface SettingsModalProps {
   onOpenHistory: () => void;
   onClearDraft: () => void;
   onOpenManageStaff?: () => void;
+  onOpenManageCategories?: () => void;
   isFirebaseSyncing?: boolean;
 }
 
@@ -22,6 +23,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onOpenHistory,
   onClearDraft,
   onOpenManageStaff,
+  onOpenManageCategories,
   isFirebaseSyncing = false,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,7 +115,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           <div className="border-t border-slate-200 dark:border-slate-800"></div>
 
-          {/* Section: Staff Roster Management */}
+          {/* Section: Category/Topic Management */}
+          {onOpenManageCategories && (
+            <>
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <FolderTree className="w-4 h-4 text-orange-500" />
+                  จัดการหัวข้อรายการ (Expense & Income Topics)
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenManageCategories();
+                    onClose();
+                  }}
+                  className="w-full flex items-center justify-between p-3.5 rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50/50 dark:bg-orange-950/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-all text-left group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg group-hover:scale-105 transition-transform">
+                      <FolderTree className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-slate-100">แก้ไข / เพิ่ม / ลบหัวข้อรายการ</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">ปรับเปลี่ยนรายชื่อหัวข้อดรอปดาวน์สำหรับนับเงินสด</div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/60 px-2.5 py-1 rounded-full">
+                    จัดการหัวข้อ
+                  </span>
+                </button>
+              </div>
+
+              <div className="border-t border-slate-200 dark:border-slate-800"></div>
+            </>
+          )}
           {onOpenManageStaff && (
             <>
               <div className="space-y-3">

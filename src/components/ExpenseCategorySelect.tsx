@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Settings2 } from 'lucide-react';
 
 export const INITIAL_MINUS_CATEGORIES = [
   '-น้ำแข็ง',
@@ -19,11 +19,11 @@ export function getStoredCategories(): { minus: string[]; plus: string[] } {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && Array.isArray(parsed.minus) && Array.isArray(parsed.plus)) {
-        const minusSet = new Set([...INITIAL_MINUS_CATEGORIES, ...parsed.minus]);
-        const plusSet = new Set([...INITIAL_PLUS_CATEGORIES, ...parsed.plus]);
+        const minusArr = (parsed.minus as string[]).map(String);
+        const plusArr = (parsed.plus as string[]).map(String);
         return {
-          minus: Array.from(minusSet).sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
-          plus: Array.from(plusSet).sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
+          minus: Array.from(new Set(minusArr)).sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
+          plus: Array.from(new Set(plusArr)).sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
         };
       }
     }
@@ -49,6 +49,7 @@ interface ExpenseCategorySelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  onOpenManageCategories?: () => void;
 }
 
 export const ExpenseCategorySelect: React.FC<ExpenseCategorySelectProps> = ({
@@ -56,6 +57,7 @@ export const ExpenseCategorySelect: React.FC<ExpenseCategorySelectProps> = ({
   onChange,
   placeholder = 'เลือกหรือระบุหัวข้อ',
   className = '',
+  onOpenManageCategories,
 }) => {
   const [categories, setCategories] = useState<{ minus: string[]; plus: string[] }>(getStoredCategories);
   const [isCustomMode, setIsCustomMode] = useState(false);
@@ -74,6 +76,13 @@ export const ExpenseCategorySelect: React.FC<ExpenseCategorySelectProps> = ({
     if (val === '__ADD_NEW__') {
       setIsCustomMode(true);
       setCustomInput('');
+    } else if (val === '__MANAGE_CATEGORIES__') {
+      if (onOpenManageCategories) {
+        onOpenManageCategories();
+      } else {
+        // Fallback dispatch event if prop not passed
+        window.dispatchEvent(new CustomEvent('open-manage-categories'));
+      }
     } else {
       setIsCustomMode(false);
       onChange(val);
@@ -112,17 +121,12 @@ export const ExpenseCategorySelect: React.FC<ExpenseCategorySelectProps> = ({
           updatedMinus.sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' }));
         }
       }
-      saveCategories({ minus: updatedMinus, plus: updatedPlus });
-      setCategories({ minus: updatedMinus, plus: updatedPlus });
-      onChange(formatted);
-      setIsCustomMode(false);
-      setCustomInput('');
-      return;
     }
 
     saveCategories({ minus: updatedMinus, plus: updatedPlus });
     setCategories({ minus: updatedMinus, plus: updatedPlus });
-    onChange(trimmed);
+    window.dispatchEvent(new Event('storage'));
+    onChange(trimmed.startsWith('+') || trimmed.startsWith('-') ? trimmed : '+' + trimmed);
     setIsCustomMode(false);
     setCustomInput('');
   };
@@ -164,7 +168,7 @@ export const ExpenseCategorySelect: React.FC<ExpenseCategorySelectProps> = ({
             }
           }}
           placeholder="ใส่หัวข้อ (ใส่ - หรือ + ข้างหน้า)..."
-          className="w-full border border-orange-400 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white"
+          className="w-full border border-orange-400 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500 bg-white font-medium"
         />
         <button
           type="button"
@@ -185,29 +189,45 @@ export const ExpenseCategorySelect: React.FC<ExpenseCategorySelectProps> = ({
   }
 
   return (
-    <select
-      value={value || ''}
-      onChange={handleSelectChange}
-      className={`w-full border border-slate-300 hover:border-slate-400 rounded px-2 py-1 text-xs font-medium text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer no-print ${className}`}
-    >
-      <option value="">-- {placeholder} --</option>
-      <optgroup label="🔻 รายการหัก (-)">
-        {minusList.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
-        ))}
-      </optgroup>
-      <optgroup label="🟢 รายรับ/เติม (+)">
-        {plusList.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
-        ))}
-      </optgroup>
-      <option value="__ADD_NEW__" className="font-bold text-orange-600 bg-orange-50">
-        ➕ เพิ่มหัวข้อใหม่ (Add topic)...
-      </option>
-    </select>
+    <div className="relative flex items-center gap-1 w-full no-print">
+      <select
+        value={value || ''}
+        onChange={handleSelectChange}
+        className={`w-full border border-slate-300 hover:border-slate-400 rounded px-2 py-1 text-xs font-medium text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer ${className}`}
+      >
+        <option value="">-- {placeholder} --</option>
+        <optgroup label="🔻 รายการหัก (-)">
+          {minusList.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="🟢 รายรับ/เติม (+)">
+          {plusList.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </optgroup>
+        <option value="__ADD_NEW__" className="font-bold text-orange-600 bg-orange-50">
+          ➕ เพิ่มหัวข้อใหม่ (Add topic)...
+        </option>
+        <option value="__MANAGE_CATEGORIES__" className="font-bold text-blue-600 bg-blue-50">
+          ⚙️ จัดการ / แก้ไข / ลบหัวข้อ...
+        </option>
+      </select>
+      <button
+        type="button"
+        onClick={() => {
+          if (onOpenManageCategories) onOpenManageCategories();
+          else window.dispatchEvent(new CustomEvent('open-manage-categories'));
+        }}
+        className="p-1 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors shrink-0"
+        title="จัดการ/แก้ไข/ลบ หัวข้อรายการ"
+      >
+        <Settings2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
   );
 };

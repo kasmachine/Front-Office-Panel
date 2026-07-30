@@ -1,27 +1,17 @@
 import React from 'react';
 import { NanSeasonsLogo } from './NanSeasonsLogo';
-import { FileText, Calculator, Download, Printer, Cloud, Settings } from 'lucide-react';
+import { FileText, Calculator, Cloud, Settings } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'cashCount' | 'receiptSubstitute';
   onSelectTab: (tab: 'cashCount' | 'receiptSubstitute') => void;
-  onExportPdf: () => void;
-  onPrint: () => void;
-  onSaveRecord: () => void;
-  onOpenSettings: () => void;
-  isSaving?: boolean;
-  isFirebaseSyncing?: boolean;
+  onOpenSettings?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
-  onExportPdf,
-  onPrint,
-  onSaveRecord,
   onOpenSettings,
-  isSaving = false,
-  isFirebaseSyncing = false,
 }) => {
 
   return (
@@ -52,78 +42,46 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Tab Selector Buttons */}
-        <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700/80 self-start md:self-auto">
-          <button
-            type="button"
-            onClick={() => onSelectTab('cashCount')}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all ${
-              activeTab === 'cashCount'
-                ? 'bg-orange-600 text-white shadow-xs'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-            }`}
-          >
-            <Calculator className="w-4 h-4" />
-            ตารางนับเงินประจำกะ
-          </button>
-          <button
-            type="button"
-            onClick={() => onSelectTab('receiptSubstitute')}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all ${
-              activeTab === 'receiptSubstitute'
-                ? 'bg-orange-600 text-white shadow-xs'
-                : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            ใบรับรองแทนใบเสร็จ
-          </button>
-        </div>
+        {/* Tab Selector & Settings Buttons */}
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700/80">
+            <button
+              type="button"
+              onClick={() => onSelectTab('cashCount')}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all ${
+                activeTab === 'cashCount'
+                  ? 'bg-orange-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              <Calculator className="w-4 h-4" />
+              ตารางนับเงินประจำกะ
+            </button>
+            <button
+              type="button"
+              onClick={() => onSelectTab('receiptSubstitute')}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all ${
+                activeTab === 'receiptSubstitute'
+                  ? 'bg-orange-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              ใบรับรองแทนใบเสร็จ
+            </button>
+          </div>
 
-        {/* Export & Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Save to Firebase Button */}
-          <button
-            type="button"
-            onClick={onSaveRecord}
-            disabled={isSaving || isFirebaseSyncing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors shadow-xs"
-            title="บันทึกข้อมูลไปที่ Firebase และประวัติ"
-          >
-            <Cloud className={`w-3.5 h-3.5 ${isFirebaseSyncing ? 'animate-spin' : ''}`} />
-            {isSaving || isFirebaseSyncing ? 'กำลังบันทึก...' : 'บันทึก Firebase'}
-          </button>
-
-          {/* Settings Modal Trigger Button */}
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-orange-200 bg-orange-950/80 hover:bg-orange-900 border border-orange-800 rounded-lg transition-colors shadow-xs"
-            title="ตั้งค่าระบบและเครื่องมือทางเทคนิค (Settings)"
-          >
-            <Settings className="w-3.5 h-3.5 text-orange-400" />
-            ตั้งค่า (Settings)
-          </button>
-
-          <div className="h-4 w-[1px] bg-slate-700 mx-1 hidden sm:block"></div>
-
-          <button
-            type="button"
-            onClick={onPrint}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors"
-          >
-            <Printer className="w-3.5 h-3.5 text-sky-400" />
-            พิมพ์
-          </button>
-
-          <button
-            type="button"
-            onClick={onExportPdf}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors shadow-xs"
-          >
-            <Download className="w-3.5 h-3.5" />
-            ส่งออก PDF
-          </button>
+          {onOpenSettings && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold text-orange-200 bg-orange-950/80 hover:bg-orange-900 border border-orange-800/80 rounded-xl transition-all shadow-xs"
+              title="ตั้งค่าระบบและเครื่องมือทางเทคนิค (Settings)"
+            >
+              <Settings className="w-4 h-4 text-orange-400" />
+              <span>ตั้งค่า (Settings)</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

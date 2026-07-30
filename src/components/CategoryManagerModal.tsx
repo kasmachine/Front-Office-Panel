@@ -1,0 +1,333 @@
+import React, { useState, useEffect } from 'react';
+import { Tag, Plus, Edit2, Trash2, Check, X, FolderTree } from 'lucide-react';
+import {
+  getStoredCategories,
+  saveCategories,
+  INITIAL_MINUS_CATEGORIES,
+  INITIAL_PLUS_CATEGORIES,
+} from './ExpenseCategorySelect';
+
+interface CategoryManagerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCategoriesUpdated?: () => void;
+}
+
+export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
+  isOpen,
+  onClose,
+  onCategoriesUpdated,
+}) => {
+  const [categories, setCategories] = useState<{ minus: string[]; plus: string[] }>(getStoredCategories);
+  const [activeTab, setActiveTab] = useState<'minus' | 'plus'>('minus');
+  const [newTopicInput, setNewTopicInput] = useState('');
+  const [editingKey, setEditingKey] = useState<string | null>(null); // e.g. "minus-0"
+  const [editingValue, setEditingValue] = useState('');
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCategories(getStoredCategories());
+      setEditingKey(null);
+      setNewTopicInput('');
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const notifyUpdate = (updated: { minus: string[]; plus: string[] }) => {
+    saveCategories(updated);
+    setCategories(updated);
+    window.dispatchEvent(new Event('storage'));
+    if (onCategoriesUpdated) onCategoriesUpdated();
+  };
+
+  const handleAddTopic = () => {
+    const trimmed = newTopicInput.trim();
+    if (!trimmed) return;
+
+    let formatted = trimmed;
+    const isMinus = activeTab === 'minus';
+
+    if (isMinus) {
+      if (!formatted.startsWith('-')) formatted = '-' + formatted;
+      if (categories.minus.includes(formatted)) {
+        showToast('⚠️ มีหัวข้อนี้ในรายการแล้ว');
+        return;
+      }
+      const updatedMinus = [...categories.minus, formatted].sort((a, b) =>
+        a.localeCompare(b, 'th', { sensitivity: 'base' })
+      );
+      const updated = { ...categories, minus: updatedMinus };
+      notifyUpdate(updated);
+    } else {
+      if (!formatted.startsWith('+')) formatted = '+' + formatted;
+      if (categories.plus.includes(formatted)) {
+        showToast('⚠️ มีหัวข้อนี้ในรายการแล้ว');
+        return;
+      }
+      const updatedPlus = [...categories.plus, formatted].sort((a, b) =>
+        a.localeCompare(b, 'th', { sensitivity: 'base' })
+      );
+      const updated = { ...categories, plus: updatedPlus };
+      notifyUpdate(updated);
+    }
+
+    setNewTopicInput('');
+    showToast(`เพิ่มหัวข้อ "${formatted}" เรียบร้อยแล้ว`);
+  };
+
+  const handleStartEdit = (type: 'minus' | 'plus', index: number, value: string) => {
+    setEditingKey(`${type}-${index}`);
+    setEditingValue(value);
+  };
+
+  const handleSaveEdit = (type: 'minus' | 'plus', index: number) => {
+    const trimmed = editingValue.trim();
+    if (!trimmed) {
+      setEditingKey(null);
+      return;
+    }
+
+    let formatted = trimmed;
+    if (type === 'minus' && !formatted.startsWith('-')) formatted = '-' + formatted;
+    if (type === 'plus' && !formatted.startsWith('+')) formatted = '+' + formatted;
+
+    const list = [...categories[type]];
+    const oldValue = list[index];
+    list[index] = formatted;
+    list.sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' }));
+
+    const updated = { ...categories, [type]: list };
+    notifyUpdate(updated);
+    setEditingKey(null);
+    showToast(`แก้ไขหัวข้อ "${oldValue}" เป็น "${formatted}" แล้ว`);
+  };
+
+  const handleDeleteTopic = (type: 'minus' | 'plus', index: number) => {
+    const target = categories[type][index];
+    if (window.confirm(`คุณต้องการลบหัวข้อ "${target}" ออกจากรายการใช่หรือไม่?`)) {
+      const list = categories[type].filter((_, i) => i !== index);
+      const updated = { ...categories, [type]: list };
+      notifyUpdate(updated);
+      showToast(`ลบหัวข้อ "${target}" เรียบร้อยแล้ว`);
+    }
+  };
+
+  const handleResetToDefault = () => {
+    if (window.confirm('คุณต้องการรีเซ็ตหัวข้อทั้งหมดกลับเป็นค่าเริ่มต้นหรือไม่?')) {
+      const defaultCategories = {
+        minus: [...INITIAL_MINUS_CATEGORIES].sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
+        plus: [...INITIAL_PLUS_CATEGORIES].sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
+      };
+      notifyUpdate(defaultCategories);
+      showToast('รีเซ็ตหัวข้อเป็นค่าเริ่มต้นเรียบร้อยแล้ว');
+    }
+  };
+
+  const currentList = categories[activeTab];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-fadeIn no-print">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+        {/* Modal Header */}
+        <div className="bg-slate-900 text-white px-5 py-4 flex items-center justify-between border-b border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-orange-600/20 text-orange-400 rounded-xl border border-orange-500/30">
+              <FolderTree className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">จัดการหัวข้อรายการ (Manage Topics)</h2>
+              <p className="text-xs text-slate-400">แก้ไข ลบ หรือเพิ่มตัวเลือกในเมนูดรอปดาวน์</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+          {toast && (
+            <div className="p-2.5 bg-orange-500/10 border border-orange-500/30 text-orange-700 dark:text-orange-300 rounded-xl text-xs font-semibold flex items-center gap-2 animate-fadeIn">
+              <Tag className="w-4 h-4 text-orange-500 shrink-0" />
+              <span>{toast}</span>
+            </div>
+          )}
+
+          {/* Category Tabs */}
+          <div className="flex border-b border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('minus');
+                setEditingKey(null);
+              }}
+              className={`flex-1 py-2.5 text-xs font-bold border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
+                activeTab === 'minus'
+                  ? 'border-red-500 text-red-600 bg-red-50/50 dark:bg-red-950/20'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              🔻 รายการหัก / ค่าใช้จ่าย (-) ({categories.minus.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('plus');
+                setEditingKey(null);
+              }}
+              className={`flex-1 py-2.5 text-xs font-bold border-b-2 transition-colors flex items-center justify-center gap-1.5 ${
+                activeTab === 'plus'
+                  ? 'border-emerald-500 text-emerald-600 bg-emerald-50/50 dark:bg-emerald-950/20'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              🟢 รายรับ / เติมเงิน (+) ({categories.plus.length})
+            </button>
+          </div>
+
+          {/* Add New Topic Box */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+              เพิ่มหัวข้อใหม่ในกลุ่ม {activeTab === 'minus' ? '🔻 รายการหัก (-)' : '🟢 รายรับ (+)'}:
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newTopicInput}
+                onChange={(e) => setNewTopicInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
+                placeholder={activeTab === 'minus' ? 'เช่น -ค่าของสด, -ค่าน้ำมัน...' : 'เช่น +ค่าห้องพัก, +เงินสดมัดจำ...'}
+                className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
+              />
+              <button
+                type="button"
+                onClick={handleAddTopic}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-xs transition-transform active:scale-95 shrink-0"
+              >
+                <Plus className="w-4 h-4" /> เพิ่มหัวข้อ
+              </button>
+            </div>
+          </div>
+
+          {/* Topic List */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                รายชื่อหัวข้อทั้งหมด ({currentList.length} หัวข้อ):
+              </span>
+              <button
+                type="button"
+                onClick={handleResetToDefault}
+                className="text-[11px] text-slate-500 hover:text-orange-600 underline"
+              >
+                คืนค่าเริ่มต้นทั้งหมด
+              </button>
+            </div>
+
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/40">
+              {currentList.length === 0 ? (
+                <div className="p-4 text-center text-xs text-slate-400">ยังไม่มีหัวข้อในกลุ่มนี้</div>
+              ) : (
+                currentList.map((item, index) => {
+                  const itemKey = `${activeTab}-${index}`;
+                  const isEditing = editingKey === itemKey;
+
+                  return (
+                    <div
+                      key={`${item}-${index}`}
+                      className="p-2.5 flex items-center justify-between gap-2 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+                    >
+                      {isEditing ? (
+                        <div className="flex items-center gap-1.5 flex-1">
+                          <input
+                            type="text"
+                            autoFocus
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEdit(activeTab, index);
+                              if (e.key === 'Escape') setEditingKey(null);
+                            }}
+                            className="flex-1 border border-orange-400 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEdit(activeTab, index)}
+                            className="p-1 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600"
+                            title="บันทึกการแก้ไข"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingKey(null)}
+                            className="p-1 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300"
+                            title="ยกเลิก"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded ${
+                              activeTab === 'minus'
+                                ? 'text-red-700 bg-red-100/60 dark:text-red-300 dark:bg-red-950/40'
+                                : 'text-emerald-700 bg-emerald-100/60 dark:text-emerald-300 dark:bg-emerald-950/40'
+                            }`}
+                          >
+                            {item}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(activeTab, index, item)}
+                              className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                              title="แก้ไขหัวข้อนี้"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTopic(activeTab, index)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                              title="ลบหัวข้อนี้"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-5 py-3 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors"
+          >
+            เสร็จสิ้น (Done)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

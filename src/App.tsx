@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { CashCountSheet } from './components/CashCountSheet';
 import { ReceiptSubstituteSheet } from './components/ReceiptSubstituteSheet';
 import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
 import { StaffManagerModal } from './components/StaffManagerModal';
+import { CategoryManagerModal } from './components/CategoryManagerModal';
 import { CashCountData, ReceiptSubstituteData } from './types';
 import { getInitialCashCountData, getInitialReceiptData } from './data/defaults';
 import { exportToPdf, printDocument } from './utils/pdfExport';
@@ -22,7 +23,7 @@ import {
   getIsQuotaExceeded,
 } from './lib/firebase';
 import { syncMinusExpensesToReceipt } from './utils/syncUtils';
-import { CheckCircle2, Info } from 'lucide-react';
+import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'cashCount' | 'receiptSubstitute'>('cashCount');
@@ -77,8 +78,30 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStaffManagerOpen, setIsStaffManagerOpen] = useState(false);
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
+  const printMenuRef = useRef<HTMLDivElement>(null);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isFirebaseSyncing, setIsFirebaseSyncing] = useState(false);
+
+  // Close print menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (printMenuRef.current && !printMenuRef.current.contains(e.target as Node)) {
+        setIsPrintMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Custom event listener for category management
+  useEffect(() => {
+    const handleOpenCategories = () => setIsCategoryManagerOpen(true);
+    window.addEventListener('open-manage-categories', handleOpenCategories);
+    return () => window.removeEventListener('open-manage-categories', handleOpenCategories);
+  }, []);
 
   // Test Firestore Connection on Boot
   useEffect(() => {
@@ -353,15 +376,116 @@ export default function App() {
       <Header
         activeTab={activeTab}
         onSelectTab={setActiveTab}
-        onExportPdf={handleExportPdf}
-        onPrint={handlePrint}
-        onSaveRecord={handleSaveRecord}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        isFirebaseSyncing={isFirebaseSyncing}
       />
 
       {/* Main Content View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-4">
+        {/* Action Control Toolbar (Unified row for Manage Staff, Manage Topics, Save, Print/PDF) */}
+        <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-5xl mx-auto">
+          {/* Left Management Group */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsStaffManagerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
+              title="จัดการรายชื่อพนักงาน"
+            >
+              <Users className="w-3.5 h-3.5 text-emerald-600" />
+              จัดการรายชื่อพนักงาน
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsCategoryManagerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
+              title="จัดการหัวข้อรายการ (Expense & Income Topics)"
+            >
+              <FolderTree className="w-3.5 h-3.5 text-orange-600" />
+              จัดการหัวข้อรายการ
+            </button>
+
+            {activeTab === 'receiptSubstitute' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setReceiptData((prev) => syncMinusExpensesToReceipt(cashCountData, prev));
+                  showToast('ดึงรายการหัก (-) จากตารางนับเงินเรียบร้อยแล้ว');
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border border-blue-700 rounded-lg shadow-xs transition-colors"
+                title="ดึงรายการหัก (-) จากตารางนับเงิน"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-white" />
+                ดึงรายการหัก (-)
+              </button>
+            )}
+          </div>
+
+          {/* Right Action Group */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSaveRecord}
+              disabled={isFirebaseSyncing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors shadow-xs disabled:opacity-50"
+              title="บันทึกข้อมูลไปที่ Firebase และประวัติ"
+            >
+              <Cloud className={`w-3.5 h-3.5 ${isFirebaseSyncing ? 'animate-spin' : ''}`} />
+              {isFirebaseSyncing ? 'กำลังบันทึก...' : 'บันทึก Firebase'}
+            </button>
+
+            <div className="h-4 w-[1px] bg-slate-200 mx-0.5 hidden sm:block"></div>
+
+            {/* Combined Print / PDF Button */}
+            <div className="relative" ref={printMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsPrintMenuOpen((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors shadow-xs"
+                title="พิมพ์เอกสาร หรือส่งออกเป็นไฟล์ PDF"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>พิมพ์ / PDF</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isPrintMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isPrintMenuOpen && (
+                <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs font-semibold text-slate-800 animate-in fade-in zoom-in-95 duration-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPrintMenuOpen(false);
+                      handlePrint();
+                    }}
+                    className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 text-slate-800 hover:text-emerald-700 flex items-center gap-2.5 transition-colors"
+                  >
+                    <Printer className="w-4 h-4 text-sky-600 shrink-0" />
+                    <div>
+                      <div className="font-bold">พิมพ์เอกสาร (Print)</div>
+                      <div className="text-[10px] text-slate-500 font-normal">สั่งพิมพ์ผ่านเครื่องพิมพ์</div>
+                    </div>
+                  </button>
+                  <div className="border-t border-slate-100 my-1"></div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPrintMenuOpen(false);
+                      handleExportPdf();
+                    }}
+                    className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 text-slate-800 hover:text-emerald-700 flex items-center gap-2.5 transition-colors"
+                  >
+                    <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <div className="font-bold">ส่งออกเป็น PDF (Download)</div>
+                      <div className="text-[10px] text-slate-500 font-normal">บันทึกเป็นไฟล์ PDF ลงเครื่อง</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {activeTab === 'cashCount' ? (
           <CashCountSheet
             data={cashCountData}
@@ -369,6 +493,7 @@ export default function App() {
             onReset={handleResetCashCount}
             savedCashCounts={savedCashCounts}
             onOpenManageStaff={() => setIsStaffManagerOpen(true)}
+            onOpenManageCategories={() => setIsCategoryManagerOpen(true)}
           />
         ) : (
           <ReceiptSubstituteSheet
@@ -398,6 +523,12 @@ export default function App() {
         onClose={() => setIsStaffManagerOpen(false)}
       />
 
+      {/* Expense/Income Category Manager Modal */}
+      <CategoryManagerModal
+        isOpen={isCategoryManagerOpen}
+        onClose={() => setIsCategoryManagerOpen(false)}
+      />
+
       {/* History Modal */}
       <HistoryModal
         isOpen={isHistoryOpen}
@@ -419,6 +550,7 @@ export default function App() {
         onImportJson={handleImportJson}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onOpenManageStaff={() => setIsStaffManagerOpen(true)}
+        onOpenManageCategories={() => setIsCategoryManagerOpen(true)}
         onClearDraft={() => {
           if (activeTab === 'cashCount') {
             handleResetCashCount();

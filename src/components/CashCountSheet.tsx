@@ -38,6 +38,7 @@ interface CashCountSheetProps {
   onReset: () => void;
   savedCashCounts?: CashCountData[];
   onOpenManageStaff?: () => void;
+  onOpenManageCategories?: () => void;
 }
 
 export const CashCountSheet: React.FC<CashCountSheetProps> = ({
@@ -46,6 +47,7 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
   onReset,
   savedCashCounts = [],
   onOpenManageStaff,
+  onOpenManageCategories,
 }) => {
   // Calculations
   const totalCashIn = data.denominations.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0);
@@ -65,6 +67,41 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
       onChange({ ...data, beerShiftDiff: calculatedBeerShiftDiff });
     }
   }, [calculatedBeerShiftDiff, data.beerShiftDiff]);
+
+  // Ensure standard minimum 6 rows for Expenses & Incomes IN and OUT
+  useEffect(() => {
+    let updated = false;
+    let expIn = [...(data.expensesIn || [])];
+    let expOut = [...(data.expensesOut || [])];
+
+    while (expIn.length < 6) {
+      expIn.push({
+        id: `exp-in-${Date.now()}-${expIn.length + 1}`,
+        item: '',
+        amount: 0,
+        staff: '',
+      });
+      updated = true;
+    }
+
+    while (expOut.length < 6) {
+      expOut.push({
+        id: `exp-out-${Date.now()}-${expOut.length + 1}`,
+        item: '',
+        amount: 0,
+        staff: '',
+      });
+      updated = true;
+    }
+
+    if (updated) {
+      onChange({
+        ...data,
+        expensesIn: expIn,
+        expensesOut: expOut,
+      });
+    }
+  }, [data.expensesIn?.length, data.expensesOut?.length]);
 
   const shiftDiff = totalCashOut - totalCashIn;
   const netDiff = (totalCashOut + totalExpensesOut) - (totalCashIn + totalExpensesIn);
@@ -171,14 +208,18 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
         staffOut: '',
         beerPrevBalance: inheritedPrevBalance,
         beerShiftDiff: 0,
-        expensesIn: [
-          { id: `exp-in-${Date.now()}-1`, item: '', amount: 0, staff: '' },
-          { id: `exp-in-${Date.now()}-2`, item: '', amount: 0, staff: '' },
-        ],
-        expensesOut: [
-          { id: `exp-out-${Date.now()}-1`, item: '', amount: 0, staff: '' },
-          { id: `exp-out-${Date.now()}-2`, item: '', amount: 0, staff: '' },
-        ],
+        expensesIn: Array.from({ length: 6 }, (_, i) => ({
+          id: `exp-in-${Date.now()}-${i + 1}`,
+          item: '',
+          amount: 0,
+          staff: '',
+        })),
+        expensesOut: Array.from({ length: 6 }, (_, i) => ({
+          id: `exp-out-${Date.now()}-${i + 1}`,
+          item: '',
+          amount: 0,
+          staff: '',
+        })),
         remarks: '',
       });
     }
@@ -236,32 +277,6 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
 
   return (
     <div className="w-full space-y-4">
-      {/* Top Action Control Toolbar */}
-      <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-5xl mx-auto">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleClearForNewShift}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-xs transition-transform active:scale-95"
-            title="ลบข้อมูลเก่า นำยอดยกไปตั้งเป็นยอดยกมา และเริ่มนับกะใหม่"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            ลบข้อมูลเก่า & เริ่มกะใหม่
-          </button>
-        </div>
-
-        {onOpenManageStaff && (
-          <button
-            type="button"
-            onClick={onOpenManageStaff}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors"
-          >
-            <Users className="w-3.5 h-3.5 text-emerald-600" />
-            จัดการรายชื่อพนักงาน
-          </button>
-        )}
-      </div>
-
       {/* Printable Sheet Container */}
       <div
         id="cash-count-document"
@@ -269,7 +284,17 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
       >
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 print:pb-1.5 print:mb-1.5 border-b border-slate-300">
-          <NanSeasonsLogo className="h-20 print:h-12" />
+          <div className="flex items-center gap-3 md:gap-4">
+            <NanSeasonsLogo className="h-20 print:h-12" />
+            <div className="border-l border-slate-300 pl-3 md:pl-4 py-1">
+              <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">
+                Cash Count Sheet
+              </h2>
+              <p className="text-xs font-semibold text-slate-500 mt-1 print:text-[10px]">
+                ตารางนับเงินสดเข้า-ออกประจำกะ
+              </p>
+            </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-3 font-semibold text-slate-800 text-base md:text-lg">
             <div className="flex items-center gap-2">
@@ -368,15 +393,15 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
         </div>
 
         {/* Cash Count Main Grid - Separated into 2 distinct tables for IN and OUT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 print:grid-cols-2 print:gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-3">
           {/* LEFT TABLE: IN Section */}
-          <div className="border border-slate-800 rounded-lg overflow-hidden shadow-xs">
-            <table className="w-full border-collapse text-sm print:text-xs">
+          <div className="border border-slate-800 rounded-lg overflow-hidden shadow-xs flex flex-col h-full">
+            <table className="w-full h-full border-collapse text-xs md:text-sm print:text-xs">
               <thead>
                 <tr className="bg-slate-700 text-white font-bold text-center">
-                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">IN</th>
-                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">Count</th>
-                  <th className="border-b border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">฿ Worth</th>
+                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-1 w-1/3 text-xs md:text-sm uppercase tracking-wider">IN</th>
+                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-1 w-1/3 text-xs md:text-sm uppercase tracking-wider">Count</th>
+                  <th className="border-b border-slate-800 px-3 py-2 print:px-1.5 print:py-1 w-1/3 text-xs md:text-sm uppercase tracking-wider">฿ Worth</th>
                 </tr>
               </thead>
               <tbody>
@@ -388,25 +413,25 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                   return (
                     <tr key={`in-${denom.value}`} className={`${rowBg} hover:bg-slate-200/50 transition-colors`}>
                       {/* IN Label */}
-                      <td className="border-b border-r border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-800 text-center">
+                      <td className="border-b border-r border-slate-400 px-3 py-1.5 print:px-1.5 print:py-0.5 font-medium text-slate-800 text-center text-xs md:text-sm">
                         {denom.label}
                       </td>
 
                       {/* IN Count Input */}
-                      <td className="border-b border-r border-slate-400 px-2 py-1 print:px-1 print:py-0.5 text-center">
+                      <td className="border-b border-r border-slate-400 px-2 py-1 print:px-1.5 print:py-0.5 text-center">
                         <input
                           type="number"
                           min="0"
                           value={denom.countIn === 0 ? '' : denom.countIn}
                           onChange={(e) => handleDenominationChange(idx, 'countIn', e.target.value)}
                           placeholder="0"
-                          className="w-full text-center bg-sky-50 focus:bg-white font-semibold text-slate-900 border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded py-0.5 outline-none no-print"
+                          className="w-full text-center bg-sky-50 focus:bg-white font-semibold text-slate-900 border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded py-0.5 text-xs md:text-sm outline-none no-print"
                         />
-                        <span className="hidden print:inline font-bold">{denom.countIn || 0}</span>
+                        <span className="hidden print:inline font-bold text-xs md:text-sm">{denom.countIn || 0}</span>
                       </td>
 
                       {/* IN Worth */}
-                      <td className="border-b border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-900 text-right font-mono">
+                      <td className="border-b border-slate-400 px-3 py-1.5 print:px-1.5 print:py-0.5 font-medium text-slate-900 text-right font-mono text-xs md:text-sm">
                         {formatCurrency(worthIn)}
                       </td>
                     </tr>
@@ -417,11 +442,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                 <tr className="bg-[#55ff33] text-black font-extrabold border-t border-slate-800">
                   <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
-                      <span className="text-xs font-bold text-slate-900">THB</span>
+                      <span className="text-xs md:text-sm font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
+                      <span className="text-xs md:text-sm font-bold text-slate-900">THB</span>
                     </div>
                   </td>
-                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-xs md:text-sm font-mono font-bold">
                     {formatCurrency(totalCashIn)}
                   </td>
                 </tr>
@@ -430,19 +455,18 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                 <tr className="bg-[#00aaff] text-black font-extrabold">
                   <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-extrabold uppercase tracking-wider">Previous balance</span>
-                      <span className="text-xs font-bold text-slate-900">THB</span>
+                      <span className="text-xs md:text-sm font-extrabold uppercase tracking-wider">Previous balance</span>
+                      <span className="text-xs md:text-sm font-bold text-slate-900">THB</span>
                     </div>
                   </td>
-                  <td className="border-b border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
-                    <div className="flex items-center justify-between gap-1 no-print">
-                      <span className="text-xs text-slate-900 font-bold shrink-0">THB</span>
+                  <td className="border-b border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5 text-xs md:text-sm font-mono font-bold">
+                    <div className="flex items-center justify-end gap-1 no-print">
                       <input
                         type="number"
                         value={data.beerPrevBalance || ''}
                         onChange={(e) => onChange({ ...data, beerPrevBalance: Number(e.target.value) || 0 })}
                         placeholder="0.00"
-                        className="w-24 text-right bg-white/90 font-mono font-bold text-slate-900 border border-blue-400 rounded px-1.5 py-0.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
+                        className="w-24 text-right bg-white/90 font-mono font-bold text-slate-900 border border-blue-400 rounded px-1.5 py-0.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600 text-xs md:text-sm"
                       />
                     </div>
                     <span className="hidden print:inline font-mono font-bold text-right block">{formatCurrency(data.beerPrevBalance)}</span>
@@ -453,11 +477,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                 <tr className="bg-[#ff0000] text-white font-extrabold">
                   <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-extrabold uppercase tracking-wider">Different</span>
-                      <span className="text-xs font-bold text-white">THB</span>
+                      <span className="text-xs md:text-sm font-extrabold uppercase tracking-wider">Different</span>
+                      <span className="text-xs md:text-sm font-bold text-white">THB</span>
                     </div>
                   </td>
-                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-xs md:text-sm font-mono font-bold">
                     {formatSignedCurrency(redInDiff)}
                   </td>
                 </tr>
@@ -466,11 +490,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                 <tr className="bg-[#8B4513] text-white font-extrabold">
                   <td colSpan={2} className="border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider">Final</span>
-                      <span className="text-xs font-bold text-white">THB</span>
+                      <span className="text-xs md:text-sm font-extrabold uppercase tracking-wider">Final</span>
+                      <span className="text-xs md:text-sm font-bold text-white">THB</span>
                     </div>
                   </td>
-                  <td className="text-right px-3 py-2 print:px-1.5 print:py-0.5 text-base print:text-xs font-mono tracking-wider">
+                  <td className="text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm md:text-base print:text-xs font-mono font-bold tracking-wider">
                     {formatSignedCurrency(finalIn)}
                   </td>
                 </tr>
@@ -479,13 +503,13 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
           </div>
 
           {/* RIGHT TABLE: OUT Section */}
-          <div className="border border-slate-800 rounded-lg overflow-hidden shadow-xs">
-            <table className="w-full border-collapse text-sm print:text-xs">
+          <div className="border border-slate-800 rounded-lg overflow-hidden shadow-xs flex flex-col h-full">
+            <table className="w-full h-full border-collapse text-xs md:text-sm print:text-xs">
               <thead>
                 <tr className="bg-slate-700 text-white font-bold text-center">
-                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">OUT</th>
-                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">Count</th>
-                  <th className="border-b border-slate-800 px-3 py-2 print:px-1 print:py-1 w-1/3">฿ Worth</th>
+                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-1 w-1/3 text-xs md:text-sm uppercase tracking-wider">OUT</th>
+                  <th className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-1 w-1/3 text-xs md:text-sm uppercase tracking-wider">Count</th>
+                  <th className="border-b border-slate-800 px-3 py-2 print:px-1.5 print:py-1 w-1/3 text-xs md:text-sm uppercase tracking-wider">฿ Worth</th>
                 </tr>
               </thead>
               <tbody>
@@ -497,25 +521,25 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                   return (
                     <tr key={`out-${denom.value}`} className={`${rowBg} hover:bg-slate-200/50 transition-colors`}>
                       {/* OUT Label */}
-                      <td className="border-b border-r border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-800 text-center">
+                      <td className="border-b border-r border-slate-400 px-3 py-1.5 print:px-1.5 print:py-0.5 font-medium text-slate-800 text-center text-xs md:text-sm">
                         {denom.label}
                       </td>
 
                       {/* OUT Count Input */}
-                      <td className="border-b border-r border-slate-400 px-2 py-1 print:px-1 print:py-0.5 text-center">
+                      <td className="border-b border-r border-slate-400 px-2 py-1 print:px-1.5 print:py-0.5 text-center">
                         <input
                           type="number"
                           min="0"
                           value={denom.countOut === 0 ? '' : denom.countOut}
                           onChange={(e) => handleDenominationChange(idx, 'countOut', e.target.value)}
                           placeholder="0"
-                          className="w-full text-center bg-sky-50 focus:bg-white font-semibold text-slate-900 border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded py-0.5 outline-none no-print"
+                          className="w-full text-center bg-sky-50 focus:bg-white font-semibold text-slate-900 border border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 rounded py-0.5 text-xs md:text-sm outline-none no-print"
                         />
-                        <span className="hidden print:inline font-bold">{denom.countOut || 0}</span>
+                        <span className="hidden print:inline font-bold text-xs md:text-sm">{denom.countOut || 0}</span>
                       </td>
 
                       {/* OUT Worth */}
-                      <td className="border-b border-slate-400 px-3 py-1.5 print:px-1 print:py-0.5 font-medium text-slate-900 text-right font-mono">
+                      <td className="border-b border-slate-400 px-3 py-1.5 print:px-1.5 print:py-0.5 font-medium text-slate-900 text-right font-mono text-xs md:text-sm">
                         {formatCurrency(worthOut)}
                       </td>
                     </tr>
@@ -526,11 +550,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                 <tr className="bg-[#55ff33] text-black font-extrabold border-t border-slate-800">
                   <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
-                      <span className="text-xs font-bold text-slate-900">THB</span>
+                      <span className="text-xs md:text-sm font-extrabold uppercase tracking-wider">Cash Drawer Balance</span>
+                      <span className="text-xs md:text-sm font-bold text-slate-900">THB</span>
                     </div>
                   </td>
-                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-xs md:text-sm font-mono font-bold">
                     {formatCurrency(totalCashOut)}
                   </td>
                 </tr>
@@ -539,12 +563,15 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                 <tr className="bg-[#00aaff] text-black font-extrabold">
                   <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-extrabold uppercase tracking-wider">Previous balance</span>
-                      <span className="text-xs font-bold text-slate-900">THB</span>
+                      <span className="text-xs md:text-sm font-extrabold uppercase tracking-wider">Previous balance</span>
+                      <span className="text-xs md:text-sm font-bold text-slate-900">THB</span>
                     </div>
                   </td>
-                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
-                    {formatCurrency(prevBalanceOut)}
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-xs md:text-sm font-mono font-bold">
+                    <div className="flex items-center justify-end gap-1 no-print min-h-[28px]">
+                      <span>{formatCurrency(prevBalanceOut)}</span>
+                    </div>
+                    <span className="hidden print:inline font-mono font-bold text-right block">{formatCurrency(prevBalanceOut)}</span>
                   </td>
                 </tr>
 
@@ -552,11 +579,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                 <tr className="bg-[#ff0000] text-white font-extrabold">
                   <td colSpan={2} className="border-b border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs font-extrabold uppercase tracking-wider">Different</span>
-                      <span className="text-xs font-bold text-white">THB</span>
+                      <span className="text-xs md:text-sm font-extrabold uppercase tracking-wider">Different</span>
+                      <span className="text-xs md:text-sm font-bold text-white">THB</span>
                     </div>
                   </td>
-                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm print:text-xs font-mono">
+                  <td className="border-b border-slate-800 text-right px-3 py-2 print:px-1.5 print:py-0.5 text-xs md:text-sm font-mono font-bold">
                     {formatSignedCurrency(redOutDiff)}
                   </td>
                 </tr>
@@ -565,11 +592,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                 <tr className="bg-[#8B4513] text-white font-extrabold">
                   <td colSpan={2} className="border-r border-slate-800 px-3 py-2 print:px-1.5 print:py-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider">Final</span>
-                      <span className="text-xs font-bold text-white">THB</span>
+                      <span className="text-xs md:text-sm font-extrabold uppercase tracking-wider">Final</span>
+                      <span className="text-xs md:text-sm font-bold text-white">THB</span>
                     </div>
                   </td>
-                  <td className="text-right px-3 py-2 print:px-1.5 print:py-0.5 text-base print:text-xs font-mono tracking-wider">
+                  <td className="text-right px-3 py-2 print:px-1.5 print:py-0.5 text-sm md:text-base print:text-xs font-mono font-bold tracking-wider">
                     {formatSignedCurrency(finalOut)}
                   </td>
                 </tr>
@@ -581,78 +608,97 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
         {/* Expenses Section (Side-by-side tables) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-3 mt-4 print:mt-2">
           {/* Expenses & Incomes IN */}
-          <div className="border border-slate-800 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between bg-[#ffff00] px-3 py-1.5 print:py-0.5 border-b border-slate-800">
-              <span className="font-extrabold text-slate-900 text-sm print:text-xs">Expenses & Incomes IN</span>
-              <button
-                type="button"
-                onClick={() => addExpenseRow('expensesIn')}
-                className="no-print inline-flex items-center gap-1 text-xs font-bold bg-white text-slate-800 px-2 py-1 rounded border border-slate-300 hover:bg-slate-100 shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" /> เพิ่มรายการ
-              </button>
+          <div className="border border-slate-800 rounded-lg overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between bg-[#ffff00] px-3 py-1.5 print:py-0.5 border-b border-slate-800">
+                <span className="font-extrabold text-slate-900 text-sm print:text-xs">Expenses & Incomes IN</span>
+                <div className="flex items-center gap-1.5 no-print">
+                  {onOpenManageCategories && (
+                    <button
+                      type="button"
+                      onClick={onOpenManageCategories}
+                      className="text-[11px] font-bold text-slate-700 hover:text-orange-600 bg-white/80 hover:bg-white px-2 py-1 rounded border border-slate-300 transition-colors"
+                      title="จัดการ/แก้ไข/ลบ หัวข้อรายการ"
+                    >
+                      ⚙️ จัดการหัวข้อ
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => addExpenseRow('expensesIn')}
+                    className="inline-flex items-center gap-1 text-xs font-bold bg-white text-slate-800 px-2 py-1 rounded border border-slate-300 hover:bg-slate-100 shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> เพิ่มรายการ
+                  </button>
+                </div>
+              </div>
+
+              <table className="w-full text-xs print:text-[11px] border-collapse">
+                <thead>
+                  <tr className="bg-[#ffffaa] border-b border-slate-800 text-slate-900 font-bold">
+                    <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-left w-[42%]">Items:</th>
+                    <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-right w-[28%]">฿ Amount:</th>
+                    <th className="px-2 py-1 print:py-0.5 text-left w-[30%]">Staff:</th>
+                    <th className="no-print w-7"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.expensesIn.map((exp, idx) => (
+                    <tr key={exp.id || idx} className="border-b border-slate-300 hover:bg-slate-50">
+                      <td className="border-r border-slate-300 p-0.5">
+                        <ExpenseCategorySelect
+                          value={exp.item}
+                          onChange={(val) => handleExpenseChange('expensesIn', idx, 'item', val)}
+                          placeholder="เลือก/ใส่หัวข้อ"
+                          onOpenManageCategories={onOpenManageCategories}
+                        />
+                        <span className="hidden print:inline font-medium text-xs px-1">{exp.item}</span>
+                      </td>
+                      <td className="border-r border-slate-300 p-0.5">
+                        <input
+                          type="number"
+                          value={exp.amount === 0 ? '' : exp.amount}
+                          onChange={(e) => handleExpenseChange('expensesIn', idx, 'amount', Number(e.target.value))}
+                          placeholder="0.00"
+                          className="w-full text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none no-print"
+                        />
+                        <span className="hidden print:inline font-mono text-xs px-1">{formatCurrency(exp.amount)}</span>
+                      </td>
+                      <td className="p-0.5">
+                        <StaffSelect
+                          value={exp.staff}
+                          onChange={(val) => handleExpenseChange('expensesIn', idx, 'staff', val)}
+                          placeholder="ผู้รับ"
+                          size="sm"
+                          onOpenManageStaff={onOpenManageStaff}
+                        />
+                        <span className="hidden print:inline text-xs px-1">{exp.staff}</span>
+                      </td>
+                      <td className="no-print p-0.5 text-center">
+                        {data.expensesIn.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeExpenseRow('expensesIn', idx)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                            title="ลบแถว"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             <table className="w-full text-xs print:text-[11px] border-collapse">
-              <thead>
-                <tr className="bg-[#ffffaa] border-b border-slate-800 text-slate-900 font-bold">
-                  <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-left w-1/2">Items:</th>
-                  <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-right w-1/3">฿ Amount:</th>
-                  <th className="px-2 py-1 print:py-0.5 text-left">Staff:</th>
-                  <th className="no-print w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.expensesIn.map((exp, idx) => (
-                  <tr key={exp.id || idx} className="border-b border-slate-300 hover:bg-slate-50">
-                    <td className="border-r border-slate-300 p-0.5">
-                      <ExpenseCategorySelect
-                        value={exp.item}
-                        onChange={(val) => handleExpenseChange('expensesIn', idx, 'item', val)}
-                        placeholder="เลือก/ใส่หัวข้อ"
-                      />
-                      <span className="hidden print:inline font-medium text-xs px-1">{exp.item}</span>
-                    </td>
-                    <td className="border-r border-slate-300 p-0.5">
-                      <input
-                        type="number"
-                        value={exp.amount === 0 ? '' : exp.amount}
-                        onChange={(e) => handleExpenseChange('expensesIn', idx, 'amount', Number(e.target.value))}
-                        placeholder="0.00"
-                        className="w-full text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none no-print"
-                      />
-                      <span className="hidden print:inline font-mono text-xs px-1">{formatCurrency(exp.amount)}</span>
-                    </td>
-                    <td className="p-0.5">
-                      <StaffSelect
-                        value={exp.staff}
-                        onChange={(val) => handleExpenseChange('expensesIn', idx, 'staff', val)}
-                        placeholder="ผู้รับ"
-                        size="sm"
-                      />
-                      <span className="hidden print:inline text-xs px-1">{exp.staff}</span>
-                    </td>
-                    <td className="no-print p-0.5 text-center">
-                      {data.expensesIn.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeExpenseRow('expensesIn', idx)}
-                          className="text-red-500 hover:text-red-700 p-1"
-                          title="ลบแถว"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
               <tfoot>
                 <tr className="bg-[#ffff00] font-extrabold text-slate-900 border-t border-slate-800">
-                  <td className="px-2 py-1 print:py-0.5 border-r border-slate-800 text-right text-xs whitespace-nowrap font-bold">
+                  <td className="px-2 py-1.5 print:py-0.5 border-r border-slate-800 text-right text-xs whitespace-nowrap font-bold">
                     รวม Expenses & Incomes IN:
                   </td>
-                  <td className="px-2 py-1 print:py-0.5 text-right font-mono text-xs font-extrabold whitespace-nowrap" colSpan={3}>
+                  <td className="px-2 py-1.5 print:py-0.5 text-right font-mono text-xs font-extrabold whitespace-nowrap" colSpan={3}>
                     {formatCurrency(totalExpensesIn)}
                   </td>
                 </tr>
@@ -661,78 +707,97 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
           </div>
 
           {/* Expenses & Incomes OUT */}
-          <div className="border border-slate-800 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between bg-[#ffff00] px-3 py-1.5 print:py-0.5 border-b border-slate-800">
-              <span className="font-extrabold text-slate-900 text-sm print:text-xs">Expenses & Incomes OUT</span>
-              <button
-                type="button"
-                onClick={() => addExpenseRow('expensesOut')}
-                className="no-print inline-flex items-center gap-1 text-xs font-bold bg-white text-slate-800 px-2 py-1 rounded border border-slate-300 hover:bg-slate-100 shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" /> เพิ่มรายการ
-              </button>
+          <div className="border border-slate-800 rounded-lg overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between bg-[#ffff00] px-3 py-1.5 print:py-0.5 border-b border-slate-800">
+                <span className="font-extrabold text-slate-900 text-sm print:text-xs">Expenses & Incomes OUT</span>
+                <div className="flex items-center gap-1.5 no-print">
+                  {onOpenManageCategories && (
+                    <button
+                      type="button"
+                      onClick={onOpenManageCategories}
+                      className="text-[11px] font-bold text-slate-700 hover:text-orange-600 bg-white/80 hover:bg-white px-2 py-1 rounded border border-slate-300 transition-colors"
+                      title="จัดการ/แก้ไข/ลบ หัวข้อรายการ"
+                    >
+                      ⚙️ จัดการหัวข้อ
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => addExpenseRow('expensesOut')}
+                    className="inline-flex items-center gap-1 text-xs font-bold bg-white text-slate-800 px-2 py-1 rounded border border-slate-300 hover:bg-slate-100 shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> เพิ่มรายการ
+                  </button>
+                </div>
+              </div>
+
+              <table className="w-full text-xs print:text-[11px] border-collapse">
+                <thead>
+                  <tr className="bg-[#ffffaa] border-b border-slate-800 text-slate-900 font-bold">
+                    <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-left w-[42%]">Items:</th>
+                    <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-right w-[28%]">฿ Amount:</th>
+                    <th className="px-2 py-1 print:py-0.5 text-left w-[30%]">Staff:</th>
+                    <th className="no-print w-7"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.expensesOut.map((exp, idx) => (
+                    <tr key={exp.id || idx} className="border-b border-slate-300 hover:bg-slate-50">
+                      <td className="border-r border-slate-300 p-0.5">
+                        <ExpenseCategorySelect
+                          value={exp.item}
+                          onChange={(val) => handleExpenseChange('expensesOut', idx, 'item', val)}
+                          placeholder="เลือก/ใส่หัวข้อ"
+                          onOpenManageCategories={onOpenManageCategories}
+                        />
+                        <span className="hidden print:inline font-medium text-xs px-1">{exp.item}</span>
+                      </td>
+                      <td className="border-r border-slate-300 p-0.5">
+                        <input
+                          type="number"
+                          value={exp.amount === 0 ? '' : exp.amount}
+                          onChange={(e) => handleExpenseChange('expensesOut', idx, 'amount', Number(e.target.value))}
+                          placeholder="0.00"
+                          className="w-full text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none no-print"
+                        />
+                        <span className="hidden print:inline font-mono text-xs px-1">{formatCurrency(exp.amount)}</span>
+                      </td>
+                      <td className="p-0.5">
+                        <StaffSelect
+                          value={exp.staff}
+                          onChange={(val) => handleExpenseChange('expensesOut', idx, 'staff', val)}
+                          placeholder="ผู้จ่าย"
+                          size="sm"
+                          onOpenManageStaff={onOpenManageStaff}
+                        />
+                        <span className="hidden print:inline text-xs px-1">{exp.staff}</span>
+                      </td>
+                      <td className="no-print p-0.5 text-center">
+                        {data.expensesOut.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeExpenseRow('expensesOut', idx)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                            title="ลบแถว"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             <table className="w-full text-xs print:text-[11px] border-collapse">
-              <thead>
-                <tr className="bg-[#ffffaa] border-b border-slate-800 text-slate-900 font-bold">
-                  <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-left w-1/2">Items:</th>
-                  <th className="border-r border-slate-800 px-2 py-1 print:py-0.5 text-right w-1/3">฿ Amount:</th>
-                  <th className="px-2 py-1 print:py-0.5 text-left">Staff:</th>
-                  <th className="no-print w-8"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.expensesOut.map((exp, idx) => (
-                  <tr key={exp.id || idx} className="border-b border-slate-300 hover:bg-slate-50">
-                    <td className="border-r border-slate-300 p-0.5">
-                      <ExpenseCategorySelect
-                        value={exp.item}
-                        onChange={(val) => handleExpenseChange('expensesOut', idx, 'item', val)}
-                        placeholder="เลือก/ใส่หัวข้อ"
-                      />
-                      <span className="hidden print:inline font-medium text-xs px-1">{exp.item}</span>
-                    </td>
-                    <td className="border-r border-slate-300 p-0.5">
-                      <input
-                        type="number"
-                        value={exp.amount === 0 ? '' : exp.amount}
-                        onChange={(e) => handleExpenseChange('expensesOut', idx, 'amount', Number(e.target.value))}
-                        placeholder="0.00"
-                        className="w-full text-right border border-slate-200 rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none no-print"
-                      />
-                      <span className="hidden print:inline font-mono text-xs px-1">{formatCurrency(exp.amount)}</span>
-                    </td>
-                    <td className="p-0.5">
-                      <StaffSelect
-                        value={exp.staff}
-                        onChange={(val) => handleExpenseChange('expensesOut', idx, 'staff', val)}
-                        placeholder="ผู้จ่าย"
-                        size="sm"
-                      />
-                      <span className="hidden print:inline text-xs px-1">{exp.staff}</span>
-                    </td>
-                    <td className="no-print p-0.5 text-center">
-                      {data.expensesOut.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeExpenseRow('expensesOut', idx)}
-                          className="text-red-500 hover:text-red-700 p-1"
-                          title="ลบแถว"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
               <tfoot>
                 <tr className="bg-[#ffff00] font-extrabold text-slate-900 border-t border-slate-800">
-                  <td className="px-2 py-1 print:py-0.5 border-r border-slate-800 text-right text-xs whitespace-nowrap font-bold">
+                  <td className="px-2 py-1.5 print:py-0.5 border-r border-slate-800 text-right text-xs whitespace-nowrap font-bold">
                     รวม Expenses & Incomes OUT:
                   </td>
-                  <td className="px-2 py-1 print:py-0.5 text-right font-mono text-xs font-extrabold whitespace-nowrap" colSpan={3}>
+                  <td className="px-2 py-1.5 print:py-0.5 text-right font-mono text-xs font-extrabold whitespace-nowrap" colSpan={3}>
                     {formatCurrency(totalExpensesOut)}
                   </td>
                 </tr>

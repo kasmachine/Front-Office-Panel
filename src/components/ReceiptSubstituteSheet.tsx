@@ -70,41 +70,6 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
 
   return (
     <div className="w-full space-y-4">
-      {/* Control Bar */}
-      <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-4xl mx-auto">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg shadow-xs transition-transform active:scale-95"
-            title="ล้างข้อมูลในใบรับรองแทนใบเสร็จเพื่อทำรายการใหม่"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            ลบข้อมูลเก่า & เริ่มใหม่
-          </button>
-          {onManualSync && (
-            <button
-              type="button"
-              onClick={onManualSync}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border border-blue-700 rounded-lg shadow-xs transition-colors"
-              title="ดึงรายการหัก (-) จากตารางนับเงินมาบันทึกลงในใบรับรองแทนใบเสร็จ"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-white animate-spin-hover" />
-              ดึงรายการหัก (-) จากตารางนับเงิน
-              {minusCount > 0 && (
-                <span className="bg-blue-800 text-white font-mono px-1.5 py-0.5 rounded-full text-[10px]">
-                  {minusCount}
-                </span>
-              )}
-            </button>
-          )}
-        </div>
-
-        <div className="text-[11px] text-slate-500 italic">
-          * ระบบจะบันทึกและซิงค์ข้อมูล Real-Time อัตโนมัติทุกอุปกรณ์
-        </div>
-      </div>
-
       {/* Printable Sheet Container */}
       <div
         id="receipt-substitute-document"
