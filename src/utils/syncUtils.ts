@@ -19,24 +19,7 @@ export function syncMinusExpensesToReceipt(
 ): ReceiptSubstituteData {
   const minusExpenses = extractMinusExpenses(cashCountData);
 
-  if (minusExpenses.length === 0) {
-    // If there are no minus expenses, retain manual items (and clean leading minus signs if any)
-    const nonCcItems = currentReceiptData.items
-      .filter((item) => !item.id.startsWith('cc-'))
-      .map((item) => ({
-        ...item,
-        description: item.description ? item.description.replace(/^[-+\s]+/, '') : '',
-      }));
-    if (nonCcItems.length > 0 && nonCcItems.length !== currentReceiptData.items.length) {
-      return {
-        ...currentReceiptData,
-        items: nonCcItems,
-      };
-    }
-    return currentReceiptData;
-  }
-
-  // Convert minus expenses into receipt items with leading '-' and '+' removed
+  // Convert current minus expenses into receipt items with leading '-' and '+' removed
   const autoItems: ReceiptSubstituteItem[] = minusExpenses.map((exp) => {
     const raw = exp.item ? exp.item.trim() : '';
     const cleanedDescription = raw.replace(/^[-+\s]+/, '');
@@ -49,7 +32,7 @@ export function syncMinusExpensesToReceipt(
     };
   });
 
-  // Preserve any manually added items in receipt substitute (cleaning leading minus if any)
+  // Preserve any manually added items in receipt substitute
   const manualItems = currentReceiptData.items
     .filter((item) => !item.id.startsWith('cc-') && (item.description.trim() !== '' || item.amount > 0))
     .map((item) => ({
@@ -58,8 +41,16 @@ export function syncMinusExpensesToReceipt(
     }));
 
   const mergedItems = [...autoItems, ...manualItems];
-
   const effectiveDate = cashCountData.date || currentReceiptData.startDate;
+
+  const itemsChanged = JSON.stringify(mergedItems) !== JSON.stringify(currentReceiptData.items);
+  const datesChanged =
+    (currentReceiptData.startDate || '') !== effectiveDate ||
+    (currentReceiptData.endDate || '') !== effectiveDate;
+
+  if (!itemsChanged && !datesChanged) {
+    return currentReceiptData;
+  }
 
   return {
     ...currentReceiptData,
@@ -68,3 +59,4 @@ export function syncMinusExpensesToReceipt(
     items: mergedItems,
   };
 }
+
