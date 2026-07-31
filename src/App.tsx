@@ -245,7 +245,7 @@ export default function App() {
     });
   };
 
-  // Instant multi-tab BroadcastChannel listener for tabs open on the same device
+  // Instant multi-tab BroadcastChannel & Storage Event listener for tabs open on the same device
   useEffect(() => {
     const unsubBroadcast = subscribeBroadcastDraft((draftType, data) => {
       if (draftType === 'cashCount') {
@@ -254,7 +254,27 @@ export default function App() {
         applyReceiptDraftUpdate(data);
       }
     });
-    return () => unsubBroadcast();
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'nan_seasons_current_cash' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          applyCashDraftUpdate(parsed);
+        } catch (err) { /* ignore */ }
+      } else if (e.key === 'nan_seasons_current_receipt' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          applyReceiptDraftUpdate(parsed);
+        } catch (err) { /* ignore */ }
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      unsubBroadcast();
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   // Realtime subscription for Active Draft (Cash Count) across devices via Firestore

@@ -1,12 +1,9 @@
 {
-  "projectId": "augmented-territory-246tg",
-  "appId": "1:540236030818:web:b6c2b041f3b3eb5b82823b",
-  "apiKey": "AIzaSyBhO9Zzd5_I6hbLLEYAmxg6S67aTcXjjz8",
-  "authDomain": "augmented-territory-246tg.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-0d3fe253-f957-4241-8f35-19b15bbdfad4",
-  "storageBucket": "augmented-territory-246tg.firebasestorage.app",
-  "messagingSenderId": "540236030818",
-  "measurementId": "",
-  "oAuthClientId": "540236030818-926fm7nl02g1sbr4jsqh3fse2ndo7nts.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "projectId": "front-office-panel",
+  "appId": "1:378081460481:web:c4fe0f3ec8c2d0c780db00",
+  "apiKey": "AIzaSyAGVeD4d3eSqZsBSop91Tiq3iAoFnv9P0Y",
+  "authDomain": "front-office-panel.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "front-office-panel.firebasestorage.app",
+  "messagingSenderId": "378081460481"
 }

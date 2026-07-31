@@ -20,12 +20,23 @@ import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/a
 import firebaseConfig from '../../firebase-applet-config.json';
 import { CashCountData, ReceiptSubstituteData } from '../types';
 
+// Construct effective Firebase config (supports Vercel env vars or fallback to firebase-applet-config.json)
+const effectiveFirebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId,
+};
+
 // Initialize Firebase App
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const app = getApps().length > 0 ? getApp() : initializeApp(effectiveFirebaseConfig);
 
 // Initialize Firestore with custom databaseId if specified in config
-export const db = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+export const db = effectiveFirebaseConfig.firestoreDatabaseId && effectiveFirebaseConfig.firestoreDatabaseId !== '(default)'
+  ? getFirestore(app, effectiveFirebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
 
 export const auth = getAuth(app);
