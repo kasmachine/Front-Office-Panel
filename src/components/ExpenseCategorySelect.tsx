@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Check, Settings2 } from 'lucide-react';
+import { subscribeCategories, saveCategoriesToFirebase } from '../lib/firebase';
 
 export const INITIAL_MINUS_CATEGORIES = [
   '-น้ำแข็ง',
@@ -68,7 +69,18 @@ export const ExpenseCategorySelect: React.FC<ExpenseCategorySelectProps> = ({
       setCategories(getStoredCategories());
     };
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+
+    const unsub = subscribeCategories((remoteCats) => {
+      if (remoteCats && (remoteCats.minus.length > 0 || remoteCats.plus.length > 0)) {
+        setCategories(remoteCats);
+        saveCategories(remoteCats);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      unsub();
+    };
   }, []);
 
   const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -123,8 +135,10 @@ export const ExpenseCategorySelect: React.FC<ExpenseCategorySelectProps> = ({
       }
     }
 
-    saveCategories({ minus: updatedMinus, plus: updatedPlus });
-    setCategories({ minus: updatedMinus, plus: updatedPlus });
+    const updated = { minus: updatedMinus, plus: updatedPlus };
+    saveCategories(updated);
+    saveCategoriesToFirebase(updated);
+    setCategories(updated);
     window.dispatchEvent(new Event('storage'));
     onChange(trimmed.startsWith('+') || trimmed.startsWith('-') ? trimmed : '+' + trimmed);
     setIsCustomMode(false);

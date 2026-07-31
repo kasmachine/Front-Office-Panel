@@ -349,4 +349,45 @@ export function subscribeStaffList(callback: (staffList: string[]) => void) {
   );
 }
 
+/**
+ * Realtime Category List Sync (Syncs expense/income categories live across all devices)
+ */
+const CATEGORIES_DOC = 'expense_categories';
+let lastSavedCategories = '';
+
+export async function saveCategoriesToFirebase(categories: { minus: string[]; plus: string[] }): Promise<void> {
+  if (isQuotaExceeded) return;
+  const serialized = JSON.stringify(categories);
+  if (lastSavedCategories === serialized) return;
+
+  const path = `${CONFIG_COLLECTION}/${CATEGORIES_DOC}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, CONFIG_COLLECTION, CATEGORIES_DOC);
+    await setDoc(docRef, { ...categories, updatedAt: new Date().toISOString() });
+    lastSavedCategories = serialized;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export function subscribeCategories(callback: (categories: { minus: string[]; plus: string[] }) => void) {
+  const docRef = doc(db, CONFIG_COLLECTION, CATEGORIES_DOC);
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (Array.isArray(data.minus) && Array.isArray(data.plus)) {
+          callback({ minus: data.minus, plus: data.plus });
+        }
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, `${CONFIG_COLLECTION}/${CATEGORIES_DOC}`);
+    }
+  );
+}
+
+
 

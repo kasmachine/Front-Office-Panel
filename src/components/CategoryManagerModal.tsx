@@ -6,6 +6,7 @@ import {
   INITIAL_MINUS_CATEGORIES,
   INITIAL_PLUS_CATEGORIES,
 } from './ExpenseCategorySelect';
+import { saveCategoriesToFirebase, subscribeCategories } from '../lib/firebase';
 
 interface CategoryManagerModalProps {
   isOpen: boolean;
@@ -30,6 +31,16 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       setCategories(getStoredCategories());
       setEditingKey(null);
       setNewTopicInput('');
+
+      const unsub = subscribeCategories((remoteCats) => {
+        if (remoteCats && (remoteCats.minus.length > 0 || remoteCats.plus.length > 0)) {
+          setCategories(remoteCats);
+          saveCategories(remoteCats);
+          window.dispatchEvent(new Event('storage'));
+          if (onCategoriesUpdated) onCategoriesUpdated();
+        }
+      });
+      return () => unsub();
     }
   }, [isOpen]);
 
@@ -42,6 +53,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
   const notifyUpdate = (updated: { minus: string[]; plus: string[] }) => {
     saveCategories(updated);
+    saveCategoriesToFirebase(updated);
     setCategories(updated);
     window.dispatchEvent(new Event('storage'));
     if (onCategoriesUpdated) onCategoriesUpdated();

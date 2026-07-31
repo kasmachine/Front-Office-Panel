@@ -20,10 +20,12 @@ import {
   testConnection,
   saveActiveDraftToFirebase,
   subscribeActiveDraft,
+  subscribeStaffList,
+  subscribeCategories,
   getIsQuotaExceeded,
 } from './lib/firebase';
 import { syncMinusExpensesToReceipt } from './utils/syncUtils';
-import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown } from 'lucide-react';
+import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'cashCount' | 'receiptSubstitute'>('cashCount');
@@ -142,7 +144,7 @@ export default function App() {
     } catch (e) { /* ignore */ }
   }, [savedReceipts]);
 
-  // Subscribe to Firebase Firestore real-time updates for history records
+  // Subscribe to Firebase Firestore real-time updates for history records, staff list & categories
   useEffect(() => {
     const unsubCash = subscribeCashCounts((firebaseItems) => {
       if (firebaseItems && firebaseItems.length > 0) {
@@ -156,9 +158,27 @@ export default function App() {
       }
     });
 
+    const unsubStaff = subscribeStaffList((remoteStaff) => {
+      if (remoteStaff && remoteStaff.length > 0) {
+        try {
+          localStorage.setItem('nan_seasons_staff_list_v1', JSON.stringify(remoteStaff));
+        } catch (e) { /* ignore */ }
+      }
+    });
+
+    const unsubCats = subscribeCategories((remoteCats) => {
+      if (remoteCats && (remoteCats.minus.length > 0 || remoteCats.plus.length > 0)) {
+        try {
+          localStorage.setItem('nan_seasons_expense_categories_v1', JSON.stringify(remoteCats));
+        } catch (e) { /* ignore */ }
+      }
+    });
+
     return () => {
       unsubCash();
       unsubReceipts();
+      unsubStaff();
+      unsubCats();
     };
   }, []);
 
@@ -350,15 +370,59 @@ export default function App() {
 
   const handleResetCashCount = () => {
     if (window.confirm('คุณต้องการล้างข้อมูลตารางนับเงินนี้ใช่หรือไม่?')) {
-      setCashCountData(getInitialCashCountData());
+      const fresh = getInitialCashCountData();
+      setCashCountData(fresh);
+      saveActiveDraftToFirebase('cashCount', fresh);
       showToast('ล้างข้อมูลตารางนับเงินเรียบร้อย');
     }
   };
 
   const handleResetReceipt = () => {
     if (window.confirm('คุณต้องการล้างข้อมูลใบรับรองแทนใบเสร็จนี้ใช่หรือไม่?')) {
-      setReceiptData(getInitialReceiptData());
+      const fresh = getInitialReceiptData();
+      setReceiptData(fresh);
+      saveActiveDraftToFirebase('receiptSubstitute', fresh);
       showToast('ล้างข้อมูลใบรับรองแทนใบเสร็จเรียบร้อย');
+    }
+  };
+
+  const handleStartNewShift = () => {
+    if (activeTab === 'cashCount') {
+      const today = new Date();
+      const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+
+      const totalOut = cashCountData.denominations.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0);
+      const totalIn = cashCountData.denominations.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0);
+      let inheritedPrevBalance = totalOut > 0 ? totalOut : (totalIn > 0 ? totalIn : (cashCountData.beerPrevBalance || 0));
+      const nextShift = cashCountData.shift === 'Early' ? 'Late' : 'Early';
+      const formattedAmount = `THB ${inheritedPrevBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      if (
+        window.confirm(
+          `คุณต้องการล้างข้อมูลเพื่อเริ่มกะใหม่ใช่หรือไม่?\n\n` +
+          `• ยอด Previous balance ยกมาจากกะก่อนหน้า: ${formattedAmount}\n` +
+          `• ปรับกะใหม่เป็น: ${nextShift === 'Early' ? 'Early (กะเช้า)' : 'Late (กะบ่าย)'}\n\n` +
+          `(จำนวนนับเงิน รายการรับ-จ่าย และชื่อพนักงานจะถูกล้างเพื่อเริ่มนับเงินกะใหม่)`
+        )
+      ) {
+        const freshData: CashCountData = {
+          ...getInitialCashCountData(),
+          id: `cash-${Date.now()}`,
+          date: todayCashDate,
+          shift: nextShift,
+          beerPrevBalance: inheritedPrevBalance,
+        };
+        setCashCountData(freshData);
+        saveActiveDraftToFirebase('cashCount', freshData);
+        showToast('ล้างข้อมูลเรียบร้อยแล้ว พร้อมเริ่มนับเงินกะใหม่');
+      }
+    } else {
+      if (window.confirm('คุณต้องการล้างข้อมูลเพื่อเริ่มฉบับใหม่ใช่หรือไม่?')) {
+        const freshReceipt = getInitialReceiptData();
+        setReceiptData(freshReceipt);
+        saveActiveDraftToFirebase('receiptSubstitute', freshReceipt);
+        showToast('ล้างข้อมูลใบรับรองแทนใบเสร็จเรียบร้อยแล้ว');
+      }
     }
   };
 
@@ -393,6 +457,16 @@ export default function App() {
             >
               <Users className="w-3.5 h-3.5 text-emerald-600" />
               จัดการรายชื่อพนักงาน
+            </button>
+
+            <button
+              type="button"
+              onClick={handleStartNewShift}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 border border-rose-700 rounded-lg shadow-xs transition-colors"
+              title="ล้างข้อมูลตารางเพื่อเริ่มนับเงินกะใหม่"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-white" />
+              ล้างข้อมูลเพื่อเริ่มกะใหม่
             </button>
 
             <button

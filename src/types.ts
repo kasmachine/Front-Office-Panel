@@ -17,7 +17,7 @@ export interface ExpenseRow {
 export interface CashCountData {
   id: string;
   date: string; // YYYY-MM-DD or DD/MM/YY
-  shift: 'Early' | 'Late' | 'Night' | string;
+  shift: 'Early' | 'Late' | string;
   denominations: DenominationRow[];
   beerPrevBalance: number;
   beerShiftDiff: number;

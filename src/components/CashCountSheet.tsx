@@ -177,8 +177,7 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
 
     let nextShift = 'Early';
     if (data.shift === 'Early') nextShift = 'Late';
-    else if (data.shift === 'Late') nextShift = 'Night';
-    else if (data.shift === 'Night') nextShift = 'Early';
+    else nextShift = 'Early';
 
     const formattedAmount = `THB ${inheritedPrevBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -300,13 +299,12 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
             <div className="flex items-center gap-2">
               <span className="text-slate-900 font-bold">Shift:</span>
               <select
-                value={data.shift}
+                value={data.shift === 'Night' ? 'Early' : data.shift}
                 onChange={(e) => handleShiftDropdownChange(e.target.value)}
                 className="no-print border border-slate-300 rounded px-2.5 py-1 text-sm bg-slate-50 font-bold text-slate-900 focus:ring-2 focus:ring-orange-500 outline-none"
               >
                 <option value="Early">Early (กะเช้า)</option>
                 <option value="Late">Late (กะบ่าย)</option>
-                <option value="Night">Night (กะดึก)</option>
               </select>
               <span className="hidden print:inline font-bold underline px-2 text-sm">{data.shift}</span>
             </div>
