@@ -18,6 +18,7 @@ import {
   subscribeReceipts,
   deleteReceiptFromFirebase,
   testConnection,
+  initAuth,
   saveActiveDraftToFirebase,
   subscribeActiveDraft,
   subscribeStaffList,
@@ -111,27 +112,28 @@ export default function App() {
     return () => window.removeEventListener('open-manage-categories', handleOpenCategories);
   }, []);
 
-  // Test Firestore Connection on Boot
+  // Test Firestore Connection & Anonymous Auth on Boot
   useEffect(() => {
+    initAuth();
     testConnection();
   }, []);
 
-  // Ensure date is set to current date (today) on load
+  // Ensure date is set to current date (today) on load if missing
   useEffect(() => {
     const today = new Date();
     const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     const todayReceiptDate = today.toISOString().split('T')[0];
 
     setCashCountData((prev) => {
-      if (prev.date !== todayCashDate) {
+      if (!prev.date) {
         return { ...prev, date: todayCashDate };
       }
       return prev;
     });
 
     setReceiptData((prev) => {
-      if (prev.startDate !== todayReceiptDate || prev.endDate !== todayReceiptDate) {
-        return { ...prev, startDate: todayReceiptDate, endDate: todayReceiptDate };
+      if (!prev.startDate || !prev.endDate) {
+        return { ...prev, startDate: prev.startDate || todayReceiptDate, endDate: prev.endDate || todayReceiptDate };
       }
       return prev;
     });
@@ -197,8 +199,9 @@ export default function App() {
       const { lastModifiedAt, ...cleanData } = remoteData;
       const today = new Date();
       const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+      
       setCashCountData((prev) => {
-        const updated = { ...(cleanData as CashCountData), date: todayCashDate };
+        const updated = { date: todayCashDate, ...(cleanData as CashCountData) };
         if (JSON.stringify(prev) !== JSON.stringify(updated)) {
           isApplyingRemoteCashRef.current = true;
           return updated;
@@ -218,11 +221,12 @@ export default function App() {
       const { lastModifiedAt, ...cleanData } = remoteData;
       const today = new Date();
       const todayReceiptDate = today.toISOString().split('T')[0];
+
       setReceiptData((prev) => {
         const updated = {
-          ...(cleanData as ReceiptSubstituteData),
           startDate: todayReceiptDate,
           endDate: todayReceiptDate,
+          ...(cleanData as ReceiptSubstituteData),
         };
         if (JSON.stringify(prev) !== JSON.stringify(updated)) {
           isApplyingRemoteReceiptRef.current = true;
@@ -234,40 +238,38 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Auto save draft to localStorage & Firebase real-time draft (200ms debounce)
+  // Auto save draft to localStorage & Firebase real-time draft (150ms debounce)
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
-
-    // Do NOT push to Firebase if we haven't received initial remote state yet
-    if (!isRemoteDraftInitializedCash.current) return;
 
     const isRemote = isApplyingRemoteCashRef.current;
     if (isRemote) {
       isApplyingRemoteCashRef.current = false;
+      return;
     }
-    if (isRemote || getIsQuotaExceeded()) return;
+
+    if (getIsQuotaExceeded()) return;
 
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('cashCount', cashCountData);
-    }, 200);
+    }, 150);
     return () => clearTimeout(timer);
   }, [cashCountData]);
 
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
 
-    // Do NOT push to Firebase if we haven't received initial remote state yet
-    if (!isRemoteDraftInitializedReceipt.current) return;
-
     const isRemote = isApplyingRemoteReceiptRef.current;
     if (isRemote) {
       isApplyingRemoteReceiptRef.current = false;
+      return;
     }
-    if (isRemote || getIsQuotaExceeded()) return;
+
+    if (getIsQuotaExceeded()) return;
 
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('receiptSubstitute', receiptData);
-    }, 200);
+    }, 150);
     return () => clearTimeout(timer);
   }, [receiptData]);
 

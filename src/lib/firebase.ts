@@ -291,12 +291,12 @@ export async function saveActiveDraftToFirebase(draftType: 'cashCount' | 'receip
   const serialized = JSON.stringify(data);
   if (lastSavedDrafts[draftType] === serialized) return;
 
+  lastSavedDrafts[draftType] = serialized;
   const path = `${DRAFTS_COLLECTION}/${draftType}`;
   try {
     await initAuth();
     const docRef = doc(db, DRAFTS_COLLECTION, draftType);
     await setDoc(docRef, { ...data, lastModifiedAt: new Date().toISOString() });
-    lastSavedDrafts[draftType] = serialized;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
   }
