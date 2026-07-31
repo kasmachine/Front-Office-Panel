@@ -84,6 +84,12 @@ export default function App() {
   const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
 
+  // Active Draft sync tracking refs to prevent typing overwrites
+  const lastCashLocalEditTime = useRef<number>(0);
+  const lastReceiptLocalEditTime = useRef<number>(0);
+  const isApplyingRemoteCashRef = useRef<boolean>(false);
+  const isApplyingRemoteReceiptRef = useRef<boolean>(false);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isFirebaseSyncing, setIsFirebaseSyncing] = useState(false);
 
@@ -184,14 +190,17 @@ export default function App() {
 
   // Realtime subscription for Active Draft (Cash Count) across devices
   useEffect(() => {
-    const unsub = subscribeActiveDraft('cashCount', (remoteData) => {
-      if (!remoteData) return;
+    const unsub = subscribeActiveDraft('cashCount', (remoteData, hasPendingWrites) => {
+      if (!remoteData || hasPendingWrites) return;
+      if (Date.now() - lastCashLocalEditTime.current < 2000) return;
+
       const { lastModifiedAt, ...cleanData } = remoteData;
       const today = new Date();
       const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
       setCashCountData((prev) => {
         const updated = { ...(cleanData as CashCountData), date: todayCashDate };
         if (JSON.stringify(prev) !== JSON.stringify(updated)) {
+          isApplyingRemoteCashRef.current = true;
           return updated;
         }
         return prev;
@@ -202,8 +211,10 @@ export default function App() {
 
   // Realtime subscription for Active Draft (Receipt Substitute) across devices
   useEffect(() => {
-    const unsub = subscribeActiveDraft('receiptSubstitute', (remoteData) => {
-      if (!remoteData) return;
+    const unsub = subscribeActiveDraft('receiptSubstitute', (remoteData, hasPendingWrites) => {
+      if (!remoteData || hasPendingWrites) return;
+      if (Date.now() - lastReceiptLocalEditTime.current < 2000) return;
+
       const { lastModifiedAt, ...cleanData } = remoteData;
       const today = new Date();
       const todayReceiptDate = today.toISOString().split('T')[0];
@@ -214,6 +225,7 @@ export default function App() {
           endDate: todayReceiptDate,
         };
         if (JSON.stringify(prev) !== JSON.stringify(updated)) {
+          isApplyingRemoteReceiptRef.current = true;
           return updated;
         }
         return prev;
@@ -222,22 +234,32 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Auto save draft to localStorage & Firebase real-time draft (2500ms debounce)
+  // Auto save draft to localStorage & Firebase real-time draft (400ms debounce)
   useEffect(() => {
+    if (isApplyingRemoteCashRef.current) {
+      isApplyingRemoteCashRef.current = false;
+    } else {
+      lastCashLocalEditTime.current = Date.now();
+    }
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
     if (getIsQuotaExceeded()) return;
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('cashCount', cashCountData);
-    }, 2500);
+    }, 400);
     return () => clearTimeout(timer);
   }, [cashCountData]);
 
   useEffect(() => {
+    if (isApplyingRemoteReceiptRef.current) {
+      isApplyingRemoteReceiptRef.current = false;
+    } else {
+      lastReceiptLocalEditTime.current = Date.now();
+    }
     localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
     if (getIsQuotaExceeded()) return;
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('receiptSubstitute', receiptData);
-    }, 2500);
+    }, 400);
     return () => clearTimeout(timer);
   }, [receiptData]);
 

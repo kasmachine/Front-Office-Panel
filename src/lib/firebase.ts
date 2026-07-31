@@ -296,13 +296,16 @@ export async function saveActiveDraftToFirebase(draftType: 'cashCount' | 'receip
   }
 }
 
-export function subscribeActiveDraft(draftType: 'cashCount' | 'receiptSubstitute', callback: (data: any) => void) {
+export function subscribeActiveDraft(
+  draftType: 'cashCount' | 'receiptSubstitute',
+  callback: (data: any, hasPendingWrites: boolean) => void
+) {
   const docRef = doc(db, DRAFTS_COLLECTION, draftType);
   return onSnapshot(
     docRef,
     (snapshot) => {
       if (snapshot.exists()) {
-        callback(snapshot.data());
+        callback(snapshot.data(), snapshot.metadata.hasPendingWrites);
       }
     },
     (err) => {
