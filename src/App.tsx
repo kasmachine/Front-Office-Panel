@@ -86,9 +86,9 @@ export default function App() {
   const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
 
-  // Active Draft sync tracking refs to prevent typing overwrites
-  const isApplyingRemoteCashRef = useRef<boolean>(false);
-  const isApplyingRemoteReceiptRef = useRef<boolean>(false);
+  // Active Draft sync tracking refs to prevent typing overwrites & state echo loops
+  const lastRemoteCashSerializedRef = useRef<string>('');
+  const lastRemoteReceiptSerializedRef = useRef<string>('');
   const isRemoteDraftInitializedCash = useRef<boolean>(false);
   const isRemoteDraftInitializedReceipt = useRef<boolean>(false);
 
@@ -155,6 +155,8 @@ export default function App() {
 
   // Subscribe to Firebase Firestore real-time updates for history records, staff list & categories
   useEffect(() => {
+    initAuth().catch(() => {});
+
     const unsubCash = subscribeCashCounts((firebaseItems) => {
       if (firebaseItems) {
         setSavedCashCounts(firebaseItems);
@@ -202,13 +204,16 @@ export default function App() {
       }
 
       const { lastModifiedAt, ...cleanData } = remoteData;
-      const today = new Date();
-      const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
-      
+      const initialDefaults = getInitialCashCountData();
+      const updated: CashCountData = {
+        ...initialDefaults,
+        ...(cleanData as CashCountData),
+      };
+      const serializedRemote = canonicalStringify(updated);
+
+      lastRemoteCashSerializedRef.current = serializedRemote;
       setCashCountData((prev) => {
-        const updated = { date: todayCashDate, ...(cleanData as CashCountData) };
-        if (canonicalStringify(prev) !== canonicalStringify(updated)) {
-          isApplyingRemoteCashRef.current = true;
+        if (canonicalStringify(prev) !== serializedRemote) {
           return updated;
         }
         return prev;
@@ -228,17 +233,16 @@ export default function App() {
       }
 
       const { lastModifiedAt, ...cleanData } = remoteData;
-      const today = new Date();
-      const todayReceiptDate = today.toISOString().split('T')[0];
+      const initialDefaults = getInitialReceiptData();
+      const updated: ReceiptSubstituteData = {
+        ...initialDefaults,
+        ...(cleanData as ReceiptSubstituteData),
+      };
+      const serializedRemote = canonicalStringify(updated);
 
+      lastRemoteReceiptSerializedRef.current = serializedRemote;
       setReceiptData((prev) => {
-        const updated = {
-          startDate: todayReceiptDate,
-          endDate: todayReceiptDate,
-          ...(cleanData as ReceiptSubstituteData),
-        };
-        if (canonicalStringify(prev) !== canonicalStringify(updated)) {
-          isApplyingRemoteReceiptRef.current = true;
+        if (canonicalStringify(prev) !== serializedRemote) {
           return updated;
         }
         return prev;
@@ -247,16 +251,15 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Auto save draft to localStorage & Firebase real-time draft (150ms debounce)
+  // Auto save draft to localStorage & Firebase real-time draft (100ms debounce)
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
 
     // CRITICAL: Do NOT push to Firebase if we haven't received initial remote state yet
     if (!isRemoteDraftInitializedCash.current) return;
 
-    const isRemote = isApplyingRemoteCashRef.current;
-    if (isRemote) {
-      isApplyingRemoteCashRef.current = false;
+    const currentSerialized = canonicalStringify(cashCountData);
+    if (lastRemoteCashSerializedRef.current === currentSerialized) {
       return;
     }
 
@@ -264,7 +267,8 @@ export default function App() {
 
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('cashCount', cashCountData);
-    }, 150);
+      lastRemoteCashSerializedRef.current = currentSerialized;
+    }, 100);
     return () => clearTimeout(timer);
   }, [cashCountData]);
 
@@ -274,9 +278,8 @@ export default function App() {
     // CRITICAL: Do NOT push to Firebase if we haven't received initial remote state yet
     if (!isRemoteDraftInitializedReceipt.current) return;
 
-    const isRemote = isApplyingRemoteReceiptRef.current;
-    if (isRemote) {
-      isApplyingRemoteReceiptRef.current = false;
+    const currentSerialized = canonicalStringify(receiptData);
+    if (lastRemoteReceiptSerializedRef.current === currentSerialized) {
       return;
     }
 
@@ -284,7 +287,8 @@ export default function App() {
 
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('receiptSubstitute', receiptData);
-    }, 150);
+      lastRemoteReceiptSerializedRef.current = currentSerialized;
+    }, 100);
     return () => clearTimeout(timer);
   }, [receiptData]);
 

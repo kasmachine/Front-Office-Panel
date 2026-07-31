@@ -282,35 +282,57 @@ export function canonicalStringify(obj: any): string {
   if (Array.isArray(obj)) {
     return '[' + obj.map(canonicalStringify).join(',') + ']';
   }
-  const keys = Object.keys(obj).sort();
+  const keys = Object.keys(obj).filter((k) => obj[k] !== undefined).sort();
   const pairs = keys.map((key) => `${JSON.stringify(key)}:${canonicalStringify(obj[key])}`);
   return '{' + pairs.join(',') + '}';
 }
 
-const lastSavedDrafts: Record<string, string> = {};
+const lastSentDrafts: Record<string, string> = {};
+const pendingWrites: Record<string, { inProgress: boolean; nextData?: any }> = {
+  cashCount: { inProgress: false },
+  receiptSubstitute: { inProgress: false },
+};
 
 export function updateLastSavedDraftCache(draftType: 'cashCount' | 'receiptSubstitute', data: any) {
   if (!data) return;
   const { lastModifiedAt, ...cleanData } = data;
-  lastSavedDrafts[draftType] = canonicalStringify(cleanData);
+  lastSentDrafts[draftType] = canonicalStringify(cleanData);
 }
 
 /**
  * Realtime Active Draft Sync (Syncs draft state live across team members)
  */
 export async function saveActiveDraftToFirebase(draftType: 'cashCount' | 'receiptSubstitute', data: any): Promise<void> {
-  if (isQuotaExceeded) return;
-  const serialized = canonicalStringify(data);
-  if (lastSavedDrafts[draftType] === serialized) return;
+  if (isQuotaExceeded || !data) return;
+  const { lastModifiedAt, ...cleanData } = data;
+  const serialized = canonicalStringify(cleanData);
 
-  lastSavedDrafts[draftType] = serialized;
+  if (lastSentDrafts[draftType] === serialized) return;
+
+  const state = pendingWrites[draftType] || { inProgress: false };
+  pendingWrites[draftType] = state;
+
+  if (state.inProgress) {
+    state.nextData = cleanData;
+    return;
+  }
+
+  state.inProgress = true;
   const path = `${DRAFTS_COLLECTION}/${draftType}`;
   try {
     await initAuth();
     const docRef = doc(db, DRAFTS_COLLECTION, draftType);
-    await setDoc(docRef, { ...data, lastModifiedAt: new Date().toISOString() });
+    await setDoc(docRef, { ...cleanData, lastModifiedAt: new Date().toISOString() });
+    lastSentDrafts[draftType] = serialized;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
+  } finally {
+    state.inProgress = false;
+    if (state.nextData) {
+      const next = state.nextData;
+      state.nextData = undefined;
+      saveActiveDraftToFirebase(draftType, next);
+    }
   }
 }
 

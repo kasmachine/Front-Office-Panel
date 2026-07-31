@@ -62,47 +62,6 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
   const redOutDiff = totalCashOut - prevBalanceOut;
   const calculatedBeerShiftDiff = totalCashOut > 0 ? redOutDiff : redInDiff;
 
-  useEffect(() => {
-    if (data.beerShiftDiff !== calculatedBeerShiftDiff) {
-      onChange({ ...data, beerShiftDiff: calculatedBeerShiftDiff });
-    }
-  }, [calculatedBeerShiftDiff, data.beerShiftDiff]);
-
-  // Ensure standard minimum 6 rows for Expenses & Incomes IN and OUT
-  useEffect(() => {
-    let updated = false;
-    let expIn = [...(data.expensesIn || [])];
-    let expOut = [...(data.expensesOut || [])];
-
-    while (expIn.length < 6) {
-      expIn.push({
-        id: `exp-in-${Date.now()}-${expIn.length + 1}`,
-        item: '',
-        amount: 0,
-        staff: '',
-      });
-      updated = true;
-    }
-
-    while (expOut.length < 6) {
-      expOut.push({
-        id: `exp-out-${Date.now()}-${expOut.length + 1}`,
-        item: '',
-        amount: 0,
-        staff: '',
-      });
-      updated = true;
-    }
-
-    if (updated) {
-      onChange({
-        ...data,
-        expensesIn: expIn,
-        expensesOut: expOut,
-      });
-    }
-  }, [data.expensesIn?.length, data.expensesOut?.length]);
-
   const shiftDiff = totalCashOut - totalCashIn;
   const netDiff = (totalCashOut + totalExpensesOut) - (totalCashIn + totalExpensesIn);
 
