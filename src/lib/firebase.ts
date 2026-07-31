@@ -9,6 +9,7 @@ import {
   query,
   orderBy,
   onSnapshot,
+  getDoc,
   getDocFromServer,
   setLogLevel
 } from 'firebase/firestore';
@@ -303,6 +304,58 @@ export function updateLastSavedDraftCache(draftType: 'cashCount' | 'receiptSubst
   lastSentDrafts[draftType] = canonicalStringify(cleanData);
 }
 
+// Multi-tab instant BroadcastChannel sync
+let draftBroadcastChannel: BroadcastChannel | null = null;
+if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+  try {
+    draftBroadcastChannel = new BroadcastChannel('nan_seasons_realtime_draft_v1');
+  } catch (e) {
+    draftBroadcastChannel = null;
+  }
+}
+
+export function broadcastDraftUpdate(draftType: 'cashCount' | 'receiptSubstitute', data: any) {
+  if (draftBroadcastChannel && data) {
+    try {
+      const { lastModifiedAt, ...cleanData } = data;
+      draftBroadcastChannel.postMessage({ draftType, data: cleanData, time: Date.now() });
+    } catch (e) { /* ignore */ }
+  }
+}
+
+export function subscribeBroadcastDraft(
+  callback: (draftType: 'cashCount' | 'receiptSubstitute', data: any) => void
+) {
+  if (!draftBroadcastChannel) return () => {};
+  const handler = (event: MessageEvent) => {
+    if (event.data && event.data.draftType && event.data.data) {
+      callback(event.data.draftType, event.data.data);
+    }
+  };
+  draftBroadcastChannel.addEventListener('message', handler);
+  return () => {
+    draftBroadcastChannel?.removeEventListener('message', handler);
+  };
+}
+
+export async function fetchActiveDraftFromFirebase(draftType: 'cashCount' | 'receiptSubstitute') {
+  try {
+    await initAuth();
+    const docRef = doc(db, DRAFTS_COLLECTION, draftType);
+    const snap = await getDocFromServer(docRef);
+    if (snap.exists()) {
+      return snap.data();
+    }
+  } catch (err) {
+    try {
+      const docRef = doc(db, DRAFTS_COLLECTION, draftType);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) return snap.data();
+    } catch (e) { /* ignore */ }
+  }
+  return null;
+}
+
 /**
  * Realtime Active Draft Sync (Syncs draft state live across team members)
  */
@@ -310,6 +363,9 @@ export async function saveActiveDraftToFirebase(draftType: 'cashCount' | 'receip
   if (isQuotaExceeded || !data) return;
   const { lastModifiedAt, ...cleanData } = data;
   const serialized = canonicalStringify(cleanData);
+
+  // Instantly notify other tabs on the same device via BroadcastChannel
+  broadcastDraftUpdate(draftType, cleanData);
 
   if (lastSentDrafts[draftType] === serialized) return;
 

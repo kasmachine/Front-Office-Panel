@@ -21,6 +21,8 @@ import {
   initAuth,
   saveActiveDraftToFirebase,
   subscribeActiveDraft,
+  subscribeBroadcastDraft,
+  fetchActiveDraftFromFirebase,
   subscribeStaffList,
   subscribeCategories,
   getIsQuotaExceeded,
@@ -199,63 +201,105 @@ export default function App() {
     };
   }, []);
 
-  // Realtime subscription for Active Draft (Cash Count) across devices
+  // Helper to apply cash count draft update from remote/broadcast
+  const applyCashDraftUpdate = (remoteData: any) => {
+    isRemoteDraftInitializedCash.current = true;
+    if (!remoteData) return;
+
+    const { lastModifiedAt, ...cleanData } = remoteData;
+    const initialDefaults = getInitialCashCountData();
+    const updated: CashCountData = {
+      ...initialDefaults,
+      ...(cleanData as CashCountData),
+    };
+    const serializedRemote = canonicalStringify(updated);
+
+    lastRemoteCashSerializedRef.current = serializedRemote;
+    setCashCountData((prev) => {
+      if (canonicalStringify(prev) !== serializedRemote) {
+        return updated;
+      }
+      return prev;
+    });
+  };
+
+  // Helper to apply receipt substitute draft update from remote/broadcast
+  const applyReceiptDraftUpdate = (remoteData: any) => {
+    isRemoteDraftInitializedReceipt.current = true;
+    if (!remoteData) return;
+
+    const { lastModifiedAt, ...cleanData } = remoteData;
+    const initialDefaults = getInitialReceiptData();
+    const updated: ReceiptSubstituteData = {
+      ...initialDefaults,
+      ...(cleanData as ReceiptSubstituteData),
+    };
+    const serializedRemote = canonicalStringify(updated);
+
+    lastRemoteReceiptSerializedRef.current = serializedRemote;
+    setReceiptData((prev) => {
+      if (canonicalStringify(prev) !== serializedRemote) {
+        return updated;
+      }
+      return prev;
+    });
+  };
+
+  // Instant multi-tab BroadcastChannel listener for tabs open on the same device
+  useEffect(() => {
+    const unsubBroadcast = subscribeBroadcastDraft((draftType, data) => {
+      if (draftType === 'cashCount') {
+        applyCashDraftUpdate(data);
+      } else if (draftType === 'receiptSubstitute') {
+        applyReceiptDraftUpdate(data);
+      }
+    });
+    return () => unsubBroadcast();
+  }, []);
+
+  // Realtime subscription for Active Draft (Cash Count) across devices via Firestore
   useEffect(() => {
     const unsub = subscribeActiveDraft('cashCount', (remoteData, hasPendingWrites) => {
-      isRemoteDraftInitializedCash.current = true;
-      if (hasPendingWrites) return;
-
-      if (!remoteData) {
+      if (hasPendingWrites) {
+        isRemoteDraftInitializedCash.current = true;
         return;
       }
-
-      const { lastModifiedAt, ...cleanData } = remoteData;
-      const initialDefaults = getInitialCashCountData();
-      const updated: CashCountData = {
-        ...initialDefaults,
-        ...(cleanData as CashCountData),
-      };
-      const serializedRemote = canonicalStringify(updated);
-
-      lastRemoteCashSerializedRef.current = serializedRemote;
-      setCashCountData((prev) => {
-        if (canonicalStringify(prev) !== serializedRemote) {
-          return updated;
-        }
-        return prev;
-      });
+      applyCashDraftUpdate(remoteData);
     });
     return () => unsub();
   }, []);
 
-  // Realtime subscription for Active Draft (Receipt Substitute) across devices
+  // Realtime subscription for Active Draft (Receipt Substitute) across devices via Firestore
   useEffect(() => {
     const unsub = subscribeActiveDraft('receiptSubstitute', (remoteData, hasPendingWrites) => {
-      isRemoteDraftInitializedReceipt.current = true;
-      if (hasPendingWrites) return;
-
-      if (!remoteData) {
+      if (hasPendingWrites) {
+        isRemoteDraftInitializedReceipt.current = true;
         return;
       }
-
-      const { lastModifiedAt, ...cleanData } = remoteData;
-      const initialDefaults = getInitialReceiptData();
-      const updated: ReceiptSubstituteData = {
-        ...initialDefaults,
-        ...(cleanData as ReceiptSubstituteData),
-      };
-      const serializedRemote = canonicalStringify(updated);
-
-      lastRemoteReceiptSerializedRef.current = serializedRemote;
-      setReceiptData((prev) => {
-        if (canonicalStringify(prev) !== serializedRemote) {
-          return updated;
-        }
-        return prev;
-      });
+      applyReceiptDraftUpdate(remoteData);
     });
     return () => unsub();
   }, []);
+
+  // Manual sync handler to pull fresh draft state from server on demand
+  const handleManualSync = async () => {
+    setSaveStatus('saving');
+    try {
+      const [remoteCash, remoteReceipt] = await Promise.all([
+        fetchActiveDraftFromFirebase('cashCount'),
+        fetchActiveDraftFromFirebase('receiptSubstitute'),
+      ]);
+      if (remoteCash) applyCashDraftUpdate(remoteCash);
+      if (remoteReceipt) applyReceiptDraftUpdate(remoteReceipt);
+      const now = new Date();
+      setLastSavedTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
+      setSaveStatus('saved');
+      setToastMessage('ดึงข้อมูล Real-time ล่าสุดเรียบร้อยแล้ว');
+      setTimeout(() => setToastMessage(''), 3000);
+    } catch (e) {
+      setSaveStatus('saved');
+    }
+  };
 
   // Auto save draft to localStorage & Firebase real-time (100ms debounce)
   useEffect(() => {
@@ -516,6 +560,7 @@ export default function App() {
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onManualSync={handleManualSync}
         saveStatus={saveStatus}
         lastSavedTime={lastSavedTime}
       />

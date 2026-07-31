@@ -1,11 +1,12 @@
 import React from 'react';
 import { NanSeasonsLogo } from './NanSeasonsLogo';
-import { FileText, Calculator, Cloud, CheckCircle2, Loader2, Settings } from 'lucide-react';
+import { FileText, Calculator, CheckCircle2, Loader2, Settings, RefreshCw } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'cashCount' | 'receiptSubstitute';
   onSelectTab: (tab: 'cashCount' | 'receiptSubstitute') => void;
   onOpenSettings?: () => void;
+  onManualSync?: () => void;
   saveStatus?: 'saving' | 'saved' | 'idle';
   lastSavedTime?: string;
 }
@@ -14,6 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
   onOpenSettings,
+  onManualSync,
   saveStatus = 'saved',
   lastSavedTime = '',
 }) => {
@@ -40,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
                   <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                  บันทึกอัตโนมัติเรียบร้อย {lastSavedTime ? `(${lastSavedTime})` : ''}
+                  Real-time Sync {lastSavedTime ? `(${lastSavedTime})` : ''}
                 </span>
               )}
             </h1>
@@ -54,6 +56,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Tab Selector & Settings Buttons */}
         <div className="flex items-center gap-2 self-start md:self-auto">
+          {onManualSync && (
+            <button
+              type="button"
+              onClick={onManualSync}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs md:text-sm font-semibold text-emerald-200 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/80 rounded-xl transition-all shadow-xs"
+              title="ดึงข้อมูล Real-time ล่าสุดจากเซิร์ฟเวอร์ (Sync Now)"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">ดึงข้อมูลล่าสุด</span>
+            </button>
+          )}
+
           <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700/80">
             <button
               type="button"
@@ -89,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="ตั้งค่าระบบและเครื่องมือทางเทคนิค (Settings)"
             >
               <Settings className="w-4 h-4 text-orange-400" />
-              <span>ตั้งค่า (Settings)</span>
+              <span className="hidden sm:inline">ตั้งค่า (Settings)</span>
             </button>
           )}
         </div>
