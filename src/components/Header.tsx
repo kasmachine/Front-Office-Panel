@@ -1,19 +1,22 @@
 import React from 'react';
 import { NanSeasonsLogo } from './NanSeasonsLogo';
-import { FileText, Calculator, Cloud, Settings } from 'lucide-react';
+import { FileText, Calculator, Cloud, CheckCircle2, Loader2, Settings } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'cashCount' | 'receiptSubstitute';
   onSelectTab: (tab: 'cashCount' | 'receiptSubstitute') => void;
   onOpenSettings?: () => void;
+  saveStatus?: 'saving' | 'saved' | 'idle';
+  lastSavedTime?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
   onOpenSettings,
+  saveStatus = 'saved',
+  lastSavedTime = '',
 }) => {
-
   return (
     <header className="no-print bg-slate-900 text-white sticky top-0 z-40 shadow-md border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -25,14 +28,21 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <h1 className="text-base font-bold tracking-tight text-white flex flex-wrap items-center gap-2">
               ระบบการเงิน & เอกสาร Front Office Panel
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full shadow-xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              {saveStatus === 'saving' ? (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full shadow-xs">
+                  <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />
+                  กำลังบันทึกอัตโนมัติ...
                 </span>
-                <Cloud className="w-3 h-3 text-emerald-400" />
-                Firebase Real-time Synced
-              </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full shadow-xs">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  บันทึกอัตโนมัติเรียบร้อย {lastSavedTime ? `(${lastSavedTime})` : ''}
+                </span>
+              )}
             </h1>
             <p className="text-xs text-slate-400">
               {activeTab === 'cashCount'

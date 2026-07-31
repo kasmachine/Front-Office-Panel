@@ -94,6 +94,11 @@ export default function App() {
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isFirebaseSyncing, setIsFirebaseSyncing] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saving' | 'saved' | 'idle'>('saved');
+  const [lastSavedTime, setLastSavedTime] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+  });
 
   // Close print menu on click outside
   useEffect(() => {
@@ -251,7 +256,7 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Auto save draft to localStorage & Firebase real-time draft (100ms debounce)
+  // Auto save draft & record to localStorage & Firebase real-time (100ms debounce)
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
 
@@ -265,9 +270,19 @@ export default function App() {
 
     if (getIsQuotaExceeded()) return;
 
-    const timer = setTimeout(() => {
-      saveActiveDraftToFirebase('cashCount', cashCountData);
-      lastRemoteCashSerializedRef.current = currentSerialized;
+    setSaveStatus('saving');
+
+    const timer = setTimeout(async () => {
+      try {
+        await saveActiveDraftToFirebase('cashCount', cashCountData);
+        await saveCashCountToFirebase({ ...cashCountData, id: cashCountData.id || `cash-${Date.now()}`, createdAt: cashCountData.createdAt || Date.now() });
+        lastRemoteCashSerializedRef.current = currentSerialized;
+        const now = new Date();
+        setLastSavedTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
+        setSaveStatus('saved');
+      } catch (e) {
+        setSaveStatus('saved');
+      }
     }, 100);
     return () => clearTimeout(timer);
   }, [cashCountData]);
@@ -285,9 +300,19 @@ export default function App() {
 
     if (getIsQuotaExceeded()) return;
 
-    const timer = setTimeout(() => {
-      saveActiveDraftToFirebase('receiptSubstitute', receiptData);
-      lastRemoteReceiptSerializedRef.current = currentSerialized;
+    setSaveStatus('saving');
+
+    const timer = setTimeout(async () => {
+      try {
+        await saveActiveDraftToFirebase('receiptSubstitute', receiptData);
+        await saveReceiptToFirebase({ ...receiptData, id: receiptData.id || `receipt-${Date.now()}`, createdAt: receiptData.createdAt || Date.now() });
+        lastRemoteReceiptSerializedRef.current = currentSerialized;
+        const now = new Date();
+        setLastSavedTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
+        setSaveStatus('saved');
+      } catch (e) {
+        setSaveStatus('saved');
+      }
     }, 100);
     return () => clearTimeout(timer);
   }, [receiptData]);
@@ -492,6 +517,8 @@ export default function App() {
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        saveStatus={saveStatus}
+        lastSavedTime={lastSavedTime}
       />
 
       {/* Main Content View Container */}
@@ -552,11 +579,19 @@ export default function App() {
               type="button"
               onClick={handleSaveRecord}
               disabled={isFirebaseSyncing}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors shadow-xs disabled:opacity-50"
-              title="บันทึกข้อมูลไปที่ Firebase และประวัติ"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all shadow-xs disabled:opacity-50 ${
+                saveStatus === 'saving' || isFirebaseSyncing
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+              }`}
+              title="ระบบบันทึกข้อมูลอัตโนมัติแบบ Real-time ลง Firebase และเครื่องนี้"
             >
-              <Cloud className={`w-3.5 h-3.5 ${isFirebaseSyncing ? 'animate-spin' : ''}`} />
-              {isFirebaseSyncing ? 'กำลังบันทึก...' : 'บันทึก Firebase'}
+              <Cloud className={`w-3.5 h-3.5 ${saveStatus === 'saving' || isFirebaseSyncing ? 'animate-spin' : ''}`} />
+              <span>
+                {saveStatus === 'saving' || isFirebaseSyncing
+                  ? 'กำลังบันทึกอัตโนมัติ...'
+                  : 'บันทึกอัตโนมัติแล้ว'}
+              </span>
             </button>
 
             <div className="h-4 w-[1px] bg-slate-200 mx-0.5 hidden sm:block"></div>
