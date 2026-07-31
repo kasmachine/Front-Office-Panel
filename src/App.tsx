@@ -153,19 +153,19 @@ export default function App() {
   // Subscribe to Firebase Firestore real-time updates for history records, staff list & categories
   useEffect(() => {
     const unsubCash = subscribeCashCounts((firebaseItems) => {
-      if (firebaseItems && firebaseItems.length > 0) {
+      if (firebaseItems) {
         setSavedCashCounts(firebaseItems);
       }
     });
 
     const unsubReceipts = subscribeReceipts((firebaseItems) => {
-      if (firebaseItems && firebaseItems.length > 0) {
+      if (firebaseItems) {
         setSavedReceipts(firebaseItems);
       }
     });
 
     const unsubStaff = subscribeStaffList((remoteStaff) => {
-      if (remoteStaff && remoteStaff.length > 0) {
+      if (remoteStaff) {
         try {
           localStorage.setItem('nan_seasons_staff_list_v1', JSON.stringify(remoteStaff));
         } catch (e) { /* ignore */ }
@@ -173,7 +173,7 @@ export default function App() {
     });
 
     const unsubCats = subscribeCategories((remoteCats) => {
-      if (remoteCats && (remoteCats.minus.length > 0 || remoteCats.plus.length > 0)) {
+      if (remoteCats) {
         try {
           localStorage.setItem('nan_seasons_expense_categories_v1', JSON.stringify(remoteCats));
         } catch (e) { /* ignore */ }
@@ -232,7 +232,7 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Auto save draft to localStorage & Firebase real-time draft (300ms debounce)
+  // Auto save draft to localStorage & Firebase real-time draft (200ms debounce)
   useEffect(() => {
     const isRemote = isApplyingRemoteCashRef.current;
     if (isRemote) {
@@ -243,7 +243,7 @@ export default function App() {
 
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('cashCount', cashCountData);
-    }, 300);
+    }, 200);
     return () => clearTimeout(timer);
   }, [cashCountData]);
 
@@ -257,7 +257,7 @@ export default function App() {
 
     const timer = setTimeout(() => {
       saveActiveDraftToFirebase('receiptSubstitute', receiptData);
-    }, 300);
+    }, 200);
     return () => clearTimeout(timer);
   }, [receiptData]);
 
