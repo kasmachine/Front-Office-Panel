@@ -24,6 +24,7 @@ import {
   subscribeStaffList,
   subscribeCategories,
   getIsQuotaExceeded,
+  canonicalStringify,
 } from './lib/firebase';
 import { syncMinusExpensesToReceipt } from './utils/syncUtils';
 import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
@@ -194,7 +195,11 @@ export default function App() {
   useEffect(() => {
     const unsub = subscribeActiveDraft('cashCount', (remoteData, hasPendingWrites) => {
       isRemoteDraftInitializedCash.current = true;
-      if (!remoteData || hasPendingWrites) return;
+      if (hasPendingWrites) return;
+
+      if (!remoteData) {
+        return;
+      }
 
       const { lastModifiedAt, ...cleanData } = remoteData;
       const today = new Date();
@@ -202,7 +207,7 @@ export default function App() {
       
       setCashCountData((prev) => {
         const updated = { date: todayCashDate, ...(cleanData as CashCountData) };
-        if (JSON.stringify(prev) !== JSON.stringify(updated)) {
+        if (canonicalStringify(prev) !== canonicalStringify(updated)) {
           isApplyingRemoteCashRef.current = true;
           return updated;
         }
@@ -216,7 +221,11 @@ export default function App() {
   useEffect(() => {
     const unsub = subscribeActiveDraft('receiptSubstitute', (remoteData, hasPendingWrites) => {
       isRemoteDraftInitializedReceipt.current = true;
-      if (!remoteData || hasPendingWrites) return;
+      if (hasPendingWrites) return;
+
+      if (!remoteData) {
+        return;
+      }
 
       const { lastModifiedAt, ...cleanData } = remoteData;
       const today = new Date();
@@ -228,7 +237,7 @@ export default function App() {
           endDate: todayReceiptDate,
           ...(cleanData as ReceiptSubstituteData),
         };
-        if (JSON.stringify(prev) !== JSON.stringify(updated)) {
+        if (canonicalStringify(prev) !== canonicalStringify(updated)) {
           isApplyingRemoteReceiptRef.current = true;
           return updated;
         }
@@ -241,6 +250,9 @@ export default function App() {
   // Auto save draft to localStorage & Firebase real-time draft (150ms debounce)
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
+
+    // CRITICAL: Do NOT push to Firebase if we haven't received initial remote state yet
+    if (!isRemoteDraftInitializedCash.current) return;
 
     const isRemote = isApplyingRemoteCashRef.current;
     if (isRemote) {
@@ -258,6 +270,9 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
+
+    // CRITICAL: Do NOT push to Firebase if we haven't received initial remote state yet
+    if (!isRemoteDraftInitializedReceipt.current) return;
 
     const isRemote = isApplyingRemoteReceiptRef.current;
     if (isRemote) {

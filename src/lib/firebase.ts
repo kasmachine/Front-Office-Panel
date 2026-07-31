@@ -275,12 +275,24 @@ export async function deleteReceiptFromFirebase(docId: string): Promise<void> {
   }
 }
 
+export function canonicalStringify(obj: any): string {
+  if (obj === null || typeof obj !== 'object') {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    return '[' + obj.map(canonicalStringify).join(',') + ']';
+  }
+  const keys = Object.keys(obj).sort();
+  const pairs = keys.map((key) => `${JSON.stringify(key)}:${canonicalStringify(obj[key])}`);
+  return '{' + pairs.join(',') + '}';
+}
+
 const lastSavedDrafts: Record<string, string> = {};
 
 export function updateLastSavedDraftCache(draftType: 'cashCount' | 'receiptSubstitute', data: any) {
   if (!data) return;
   const { lastModifiedAt, ...cleanData } = data;
-  lastSavedDrafts[draftType] = JSON.stringify(cleanData);
+  lastSavedDrafts[draftType] = canonicalStringify(cleanData);
 }
 
 /**
@@ -288,7 +300,7 @@ export function updateLastSavedDraftCache(draftType: 'cashCount' | 'receiptSubst
  */
 export async function saveActiveDraftToFirebase(draftType: 'cashCount' | 'receiptSubstitute', data: any): Promise<void> {
   if (isQuotaExceeded) return;
-  const serialized = JSON.stringify(data);
+  const serialized = canonicalStringify(data);
   if (lastSavedDrafts[draftType] === serialized) return;
 
   lastSavedDrafts[draftType] = serialized;
