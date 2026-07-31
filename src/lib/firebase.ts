@@ -162,11 +162,11 @@ export async function saveCashCountToFirebase(data: CashCountData): Promise<stri
  * Realtime listener for Cash Count Records from Firestore
  */
 export function subscribeCashCounts(callback: (items: CashCountData[]) => void) {
-  const q = query(collection(db, CASH_COUNTS_COLLECTION), orderBy('createdAt', 'desc'));
   return onSnapshot(
-    q,
+    collection(db, CASH_COUNTS_COLLECTION),
     (snapshot) => {
       const list: CashCountData[] = snapshot.docs.map((d) => d.data() as CashCountData);
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       callback(list);
     },
     (err) => {
@@ -232,11 +232,11 @@ export async function saveReceiptToFirebase(data: ReceiptSubstituteData): Promis
  * Realtime listener for Receipt Substitute Records from Firestore
  */
 export function subscribeReceipts(callback: (items: ReceiptSubstituteData[]) => void) {
-  const q = query(collection(db, RECEIPTS_COLLECTION), orderBy('createdAt', 'desc'));
   return onSnapshot(
-    q,
+    collection(db, RECEIPTS_COLLECTION),
     (snapshot) => {
       const list: ReceiptSubstituteData[] = snapshot.docs.map((d) => d.data() as ReceiptSubstituteData);
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       callback(list);
     },
     (err) => {
@@ -316,10 +316,13 @@ export function subscribeActiveDraft(
           updateLastSavedDraftCache(draftType, data);
         }
         callback(data, snapshot.metadata.hasPendingWrites);
+      } else {
+        callback(null, false);
       }
     },
     (err) => {
       handleFirestoreError(err, OperationType.GET, `${DRAFTS_COLLECTION}/${draftType}`);
+      callback(null, false);
     }
   );
 }

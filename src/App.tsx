@@ -85,10 +85,10 @@ export default function App() {
   const printMenuRef = useRef<HTMLDivElement>(null);
 
   // Active Draft sync tracking refs to prevent typing overwrites
-  const lastCashLocalEditTime = useRef<number>(0);
-  const lastReceiptLocalEditTime = useRef<number>(0);
   const isApplyingRemoteCashRef = useRef<boolean>(false);
   const isApplyingRemoteReceiptRef = useRef<boolean>(false);
+  const isRemoteDraftInitializedCash = useRef<boolean>(false);
+  const isRemoteDraftInitializedReceipt = useRef<boolean>(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isFirebaseSyncing, setIsFirebaseSyncing] = useState(false);
@@ -191,6 +191,7 @@ export default function App() {
   // Realtime subscription for Active Draft (Cash Count) across devices
   useEffect(() => {
     const unsub = subscribeActiveDraft('cashCount', (remoteData, hasPendingWrites) => {
+      isRemoteDraftInitializedCash.current = true;
       if (!remoteData || hasPendingWrites) return;
 
       const { lastModifiedAt, ...cleanData } = remoteData;
@@ -211,6 +212,7 @@ export default function App() {
   // Realtime subscription for Active Draft (Receipt Substitute) across devices
   useEffect(() => {
     const unsub = subscribeActiveDraft('receiptSubstitute', (remoteData, hasPendingWrites) => {
+      isRemoteDraftInitializedReceipt.current = true;
       if (!remoteData || hasPendingWrites) return;
 
       const { lastModifiedAt, ...cleanData } = remoteData;
@@ -234,11 +236,15 @@ export default function App() {
 
   // Auto save draft to localStorage & Firebase real-time draft (200ms debounce)
   useEffect(() => {
+    localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
+
+    // Do NOT push to Firebase if we haven't received initial remote state yet
+    if (!isRemoteDraftInitializedCash.current) return;
+
     const isRemote = isApplyingRemoteCashRef.current;
     if (isRemote) {
       isApplyingRemoteCashRef.current = false;
     }
-    localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
     if (isRemote || getIsQuotaExceeded()) return;
 
     const timer = setTimeout(() => {
@@ -248,11 +254,15 @@ export default function App() {
   }, [cashCountData]);
 
   useEffect(() => {
+    localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
+
+    // Do NOT push to Firebase if we haven't received initial remote state yet
+    if (!isRemoteDraftInitializedReceipt.current) return;
+
     const isRemote = isApplyingRemoteReceiptRef.current;
     if (isRemote) {
       isApplyingRemoteReceiptRef.current = false;
     }
-    localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
     if (isRemote || getIsQuotaExceeded()) return;
 
     const timer = setTimeout(() => {
