@@ -277,6 +277,12 @@ export async function deleteReceiptFromFirebase(docId: string): Promise<void> {
 
 const lastSavedDrafts: Record<string, string> = {};
 
+export function updateLastSavedDraftCache(draftType: 'cashCount' | 'receiptSubstitute', data: any) {
+  if (!data) return;
+  const { lastModifiedAt, ...cleanData } = data;
+  lastSavedDrafts[draftType] = JSON.stringify(cleanData);
+}
+
 /**
  * Realtime Active Draft Sync (Syncs draft state live across team members)
  */
@@ -289,7 +295,7 @@ export async function saveActiveDraftToFirebase(draftType: 'cashCount' | 'receip
   try {
     await initAuth();
     const docRef = doc(db, DRAFTS_COLLECTION, draftType);
-    await setDoc(docRef, { ...data, lastModifiedAt: new Date().toISOString() }, { merge: true });
+    await setDoc(docRef, { ...data, lastModifiedAt: new Date().toISOString() });
     lastSavedDrafts[draftType] = serialized;
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
@@ -305,7 +311,11 @@ export function subscribeActiveDraft(
     docRef,
     (snapshot) => {
       if (snapshot.exists()) {
-        callback(snapshot.data(), snapshot.metadata.hasPendingWrites);
+        const data = snapshot.data();
+        if (!snapshot.metadata.hasPendingWrites) {
+          updateLastSavedDraftCache(draftType, data);
+        }
+        callback(data, snapshot.metadata.hasPendingWrites);
       }
     },
     (err) => {
