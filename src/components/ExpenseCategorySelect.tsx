@@ -3,13 +3,19 @@ import { Check, Settings2 } from 'lucide-react';
 import { subscribeCategories, saveCategoriesToFirebase } from '../lib/firebase';
 
 export const INITIAL_MINUS_CATEGORIES = [
+  '-แสงรุ่งต้ม',
+  '-ตลาดเช้า (ผัก ผลไม้ และอาหารต่างๆ)',
+  '-ตลาดเย็น (ผัก ผลไม้ และอาหารต่างๆ)',
   '-น้ำแข็ง',
   '-น้ำถัง',
+  '-น้ำมันเครื่องตัดหญ้า',
+  '-อุปกรณ์ช่าง/งานสวน',
+  '-Kas paid out',
 ];
 
 export const INITIAL_PLUS_CATEGORIES = [
-  '+Guest pay in',
-  '+kas pay in',
+  '+Guest paid in',
+  '+Kas paid in',
 ];
 
 const LOCAL_STORAGE_KEY = 'nan_seasons_expense_categories_v1';
@@ -20,11 +26,11 @@ export function getStoredCategories(): { minus: string[]; plus: string[] } {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && Array.isArray(parsed.minus) && Array.isArray(parsed.plus)) {
-        const minusArr = (parsed.minus as string[]).map(String);
-        const plusArr = (parsed.plus as string[]).map(String);
+        const minusArr = Array.from(new Set([...INITIAL_MINUS_CATEGORIES, ...parsed.minus.map(String)]));
+        const plusArr = Array.from(new Set([...INITIAL_PLUS_CATEGORIES, ...parsed.plus.map(String)]));
         return {
-          minus: Array.from(new Set(minusArr)).sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
-          plus: Array.from(new Set(plusArr)).sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
+          minus: minusArr.sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
+          plus: plusArr.sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
         };
       }
     }

@@ -181,6 +181,7 @@ export default function App() {
       if (remoteStaff) {
         try {
           localStorage.setItem('nan_seasons_staff_list_v1', JSON.stringify(remoteStaff));
+          window.dispatchEvent(new Event('storage'));
         } catch (e) { /* ignore */ }
       }
     });
@@ -189,6 +190,7 @@ export default function App() {
       if (remoteCats) {
         try {
           localStorage.setItem('nan_seasons_expense_categories_v1', JSON.stringify(remoteCats));
+          window.dispatchEvent(new Event('storage'));
         } catch (e) { /* ignore */ }
       }
     });

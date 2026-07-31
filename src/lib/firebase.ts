@@ -440,6 +440,18 @@ const CONFIG_COLLECTION = 'app_config';
 const STAFF_DOC = 'staff_list';
 let lastSavedStaffList = '';
 
+const DEFAULT_STAFF_LIST = [
+  'Aan',
+  'Belle',
+  'Kas',
+  'Kwan',
+  'Macc',
+  'Nhum',
+  'Ooh',
+  'Pam',
+  'Teung',
+];
+
 export async function saveStaffListToFirebase(staffList: string[]): Promise<void> {
   if (isQuotaExceeded) return;
   const serialized = JSON.stringify(staffList);
@@ -461,8 +473,11 @@ export function subscribeStaffList(callback: (staffList: string[]) => void) {
   return onSnapshot(
     docRef,
     (snapshot) => {
-      if (snapshot.exists() && Array.isArray(snapshot.data().list)) {
+      if (snapshot.exists() && Array.isArray(snapshot.data().list) && snapshot.data().list.length > 0) {
         callback(snapshot.data().list);
+      } else {
+        saveStaffListToFirebase(DEFAULT_STAFF_LIST);
+        callback(DEFAULT_STAFF_LIST);
       }
     },
     (err) => {
@@ -476,6 +491,23 @@ export function subscribeStaffList(callback: (staffList: string[]) => void) {
  */
 const CATEGORIES_DOC = 'expense_categories';
 let lastSavedCategories = '';
+
+const DEFAULT_CATEGORIES = {
+  minus: [
+    '-แสงรุ่งต้ม',
+    '-ตลาดเช้า (ผัก ผลไม้ และอาหารต่างๆ)',
+    '-ตลาดเย็น (ผัก ผลไม้ และอาหารต่างๆ)',
+    '-น้ำแข็ง',
+    '-น้ำถัง',
+    '-น้ำมันเครื่องตัดหญ้า',
+    '-อุปกรณ์ช่าง/งานสวน',
+    '-Kas paid out',
+  ],
+  plus: [
+    '+Guest paid in',
+    '+Kas paid in',
+  ],
+};
 
 export async function saveCategoriesToFirebase(categories: { minus: string[]; plus: string[] }): Promise<void> {
   if (isQuotaExceeded) return;
@@ -500,9 +532,15 @@ export function subscribeCategories(callback: (categories: { minus: string[]; pl
     (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        if (Array.isArray(data.minus) && Array.isArray(data.plus)) {
+        if (Array.isArray(data.minus) && Array.isArray(data.plus) && (data.minus.length > 0 || data.plus.length > 0)) {
           callback({ minus: data.minus, plus: data.plus });
+        } else {
+          saveCategoriesToFirebase(DEFAULT_CATEGORIES);
+          callback(DEFAULT_CATEGORIES);
         }
+      } else {
+        saveCategoriesToFirebase(DEFAULT_CATEGORIES);
+        callback(DEFAULT_CATEGORIES);
       }
     },
     (err) => {
