@@ -24,6 +24,7 @@ import {
   subscribeStaffList,
   subscribeCategories,
   getIsQuotaExceeded,
+  resetQuotaExceeded,
   canonicalStringify,
 } from './lib/firebase';
 import { syncMinusExpensesToReceipt } from './utils/syncUtils';
@@ -256,7 +257,7 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Auto save draft & record to localStorage & Firebase real-time (100ms debounce)
+  // Auto save draft to localStorage & Firebase real-time (100ms debounce)
   useEffect(() => {
     localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
 
@@ -275,7 +276,6 @@ export default function App() {
     const timer = setTimeout(async () => {
       try {
         await saveActiveDraftToFirebase('cashCount', cashCountData);
-        await saveCashCountToFirebase({ ...cashCountData, id: cashCountData.id || `cash-${Date.now()}`, createdAt: cashCountData.createdAt || Date.now() });
         lastRemoteCashSerializedRef.current = currentSerialized;
         const now = new Date();
         setLastSavedTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
@@ -305,7 +305,6 @@ export default function App() {
     const timer = setTimeout(async () => {
       try {
         await saveActiveDraftToFirebase('receiptSubstitute', receiptData);
-        await saveReceiptToFirebase({ ...receiptData, id: receiptData.id || `receipt-${Date.now()}`, createdAt: receiptData.createdAt || Date.now() });
         lastRemoteReceiptSerializedRef.current = currentSerialized;
         const now = new Date();
         setLastSavedTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);

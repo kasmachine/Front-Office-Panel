@@ -45,6 +45,10 @@ export function getIsQuotaExceeded(): boolean {
   return isQuotaExceeded;
 }
 
+export function resetQuotaExceeded(): void {
+  isQuotaExceeded = false;
+}
+
 export interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
@@ -340,6 +344,7 @@ export function subscribeActiveDraft(
   draftType: 'cashCount' | 'receiptSubstitute',
   callback: (data: any, hasPendingWrites: boolean) => void
 ) {
+  initAuth().catch(() => {});
   const docRef = doc(db, DRAFTS_COLLECTION, draftType);
   return onSnapshot(
     docRef,
