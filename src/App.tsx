@@ -29,7 +29,7 @@ import {
   resetQuotaExceeded,
   canonicalStringify,
 } from './lib/firebase';
-import { syncMinusExpensesToReceipt } from './utils/syncUtils';
+import { syncMinusExpensesToReceipt, isWithin7Days } from './utils/syncUtils';
 import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
 
 export default function App() {
@@ -69,18 +69,24 @@ export default function App() {
     return getInitialReceiptData();
   });
 
-  // History storage states (Synced with Firebase Firestore & LocalStorage)
+  // History storage states (Synced with Firebase Firestore & LocalStorage - Retains 7 Days)
   const [savedCashCounts, setSavedCashCounts] = useState<CashCountData[]>(() => {
     try {
       const local = localStorage.getItem('nan_seasons_history_cash');
-      if (local) return JSON.parse(local);
+      if (local) {
+        const items: CashCountData[] = JSON.parse(local);
+        return items.filter((c) => isWithin7Days(c.createdAt, c.date));
+      }
     } catch (e) { /* ignore */ }
     return [];
   });
   const [savedReceipts, setSavedReceipts] = useState<ReceiptSubstituteData[]>(() => {
     try {
       const local = localStorage.getItem('nan_seasons_history_receipt');
-      if (local) return JSON.parse(local);
+      if (local) {
+        const items: ReceiptSubstituteData[] = JSON.parse(local);
+        return items.filter((r) => isWithin7Days(r.createdAt, r.startDate));
+      }
     } catch (e) { /* ignore */ }
     return [];
   });
@@ -170,13 +176,13 @@ export default function App() {
 
     const unsubCash = subscribeCashCounts((firebaseItems) => {
       if (firebaseItems) {
-        setSavedCashCounts(firebaseItems);
+        setSavedCashCounts(firebaseItems.filter((c) => isWithin7Days(c.createdAt, c.date)));
       }
     });
 
     const unsubReceipts = subscribeReceipts((firebaseItems) => {
       if (firebaseItems) {
-        setSavedReceipts(firebaseItems);
+        setSavedReceipts(firebaseItems.filter((r) => isWithin7Days(r.createdAt, r.startDate)));
       }
     });
 
@@ -530,7 +536,7 @@ export default function App() {
     }
   };
 
-  const handleStartNewShift = () => {
+  const handleStartNewShift = async () => {
     if (activeTab === 'cashCount') {
       const today = new Date();
       const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
@@ -543,29 +549,60 @@ export default function App() {
 
       if (
         window.confirm(
-          `คุณต้องการล้างข้อมูลเพื่อเริ่มกะใหม่ใช่หรือไม่?\n\n` +
+          `คุณต้องการสลับเป็นกะใหม่ใช่หรือไม่?\n\n` +
           `• ยอด Previous balance ยกมาจากกะก่อนหน้า: ${formattedAmount}\n` +
           `• ปรับกะใหม่เป็น: ${nextShift === 'Early' ? 'Early (กะเช้า)' : 'Late (กะบ่าย)'}\n\n` +
-          `(จำนวนนับเงิน รายการรับ-จ่าย และชื่อพนักงานจะถูกล้างเพื่อเริ่มนับเงินกะใหม่)`
+          `(ระบบจะบันทึกข้อมูลกะปัจจุบันลงในประวัติ 7 วันอัตโนมัติก่อนเริ่มกะใหม่)`
         )
       ) {
+        // Save current shift record to Firebase and history before creating fresh shift
+        const currentRecord: CashCountData = {
+          ...cashCountData,
+          id: cashCountData.id || `cash-${Date.now()}`,
+          createdAt: cashCountData.createdAt || Date.now(),
+        };
+        try {
+          await saveCashCountToFirebase(currentRecord);
+        } catch (e) {
+          console.error(e);
+        }
+        setSavedCashCounts((prev) => [currentRecord, ...prev.filter((c) => c.id !== currentRecord.id)]);
+
         const freshData: CashCountData = {
           ...getInitialCashCountData(),
           id: `cash-${Date.now()}`,
           date: todayCashDate,
           shift: nextShift,
           beerPrevBalance: inheritedPrevBalance,
+          createdAt: Date.now(),
         };
         setCashCountData(freshData);
         saveActiveDraftToFirebase('cashCount', freshData);
-        showToast('ล้างข้อมูลเรียบร้อยแล้ว พร้อมเริ่มนับเงินกะใหม่');
+        showToast('บันทึกกะเดิมลงประวัติ 7 วันเรียบร้อยแล้ว และพร้อมสำหรับเริ่มกะใหม่');
       }
     } else {
-      if (window.confirm('คุณต้องการล้างข้อมูลเพื่อเริ่มฉบับใหม่ใช่หรือไม่?')) {
+      if (
+        window.confirm(
+          `คุณต้องการสลับเป็นฉบับใหม่ใช่หรือไม่?\n\n` +
+          `(ระบบจะบันทึกเอกสารฉบับปัจจุบันลงในประวัติ 7 วันอัตโนมัติ)`
+        )
+      ) {
+        const currentReceiptRecord: ReceiptSubstituteData = {
+          ...receiptData,
+          id: receiptData.id || `receipt-${Date.now()}`,
+          createdAt: receiptData.createdAt || Date.now(),
+        };
+        try {
+          await saveReceiptToFirebase(currentReceiptRecord);
+        } catch (e) {
+          console.error(e);
+        }
+        setSavedReceipts((prev) => [currentReceiptRecord, ...prev.filter((r) => r.id !== currentReceiptRecord.id)]);
+
         const freshReceipt = getInitialReceiptData();
         setReceiptData(freshReceipt);
         saveActiveDraftToFirebase('receiptSubstitute', freshReceipt);
-        showToast('ล้างข้อมูลใบรับรองแทนใบเสร็จเรียบร้อยแล้ว');
+        showToast('บันทึกฉบับเดิมลงประวัติ 7 วันเรียบร้อยแล้ว และพร้อมสำหรับฉบับใหม่');
       }
     }
   };

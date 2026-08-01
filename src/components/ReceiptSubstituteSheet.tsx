@@ -1,8 +1,10 @@
 import React, { useRef } from 'react';
 import { ReceiptSubstituteData, ReceiptSubstituteItem, CashCountData } from '../types';
 import { ArabicToBahtText } from '../utils/bahttext';
-import { extractMinusExpenses } from '../utils/syncUtils';
-import { Plus, Trash2, Upload, Image as ImageIcon, ShieldCheck, RotateCcw, RefreshCw, Calendar } from 'lucide-react';
+import { extractMinusExpenses, getTodayFormatted, formatDateToDisplay } from '../utils/syncUtils';
+import { getStoredCategories } from './ExpenseCategorySelect';
+import { getStoredStaffList } from './StaffSelect';
+import { Plus, Trash2, Upload, Image as ImageIcon, ShieldCheck } from 'lucide-react';
 
 interface ReceiptSubstituteSheetProps {
   data: ReceiptSubstituteData;
@@ -21,30 +23,28 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const minusCount = cashCountData ? extractMinusExpenses(cashCountData).length : 0;
-  const totalAmount = data.items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
-  const bahtText = ArabicToBahtText(totalAmount);
+  const minusCategories = getStoredCategories().minus.map((cat) => cat.replace(/^[-+\s]+/, ''));
+  const storedStaffList = getStoredStaffList();
 
-  const handleSetTodayDate = () => {
-    const today = new Date().toISOString().split('T')[0];
-    onChange({
-      ...data,
-      startDate: today,
-      endDate: today,
-      items: data.items.map((it) => ({ ...it, date: it.date || today })),
-    });
-  };
+  const totalAmount = data.items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
+  const bahtText = ArabicToBahtText(Math.abs(totalAmount));
 
   const handleItemChange = (index: number, field: keyof ReceiptSubstituteItem, value: string | number) => {
     const newItems = [...data.items];
-    newItems[index] = { ...newItems[index], [field]: value };
+    if (field === 'amount') {
+      const num = Number(value) || 0;
+      // Store negative value for calculation formula, but UI hides minus sign
+      newItems[index] = { ...newItems[index], amount: num !== 0 ? -Math.abs(num) : 0 };
+    } else {
+      newItems[index] = { ...newItems[index], [field]: value };
+    }
     onChange({ ...data, items: newItems });
   };
 
   const addItem = () => {
     const newItem: ReceiptSubstituteItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      date: data.startDate || new Date().toISOString().split('T')[0],
+      date: getTodayFormatted(),
       description: '',
       amount: 0,
       remark: '',
@@ -70,6 +70,22 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
 
   return (
     <div className="w-full space-y-4">
+      {/* Datalists for categories and staff selection */}
+      <datalist id="expense-categories-datalist">
+        {minusCategories.map((cat, i) => (
+          <option key={i} value={cat} />
+        ))}
+      </datalist>
+
+      <datalist id="staff-remark-datalist">
+        {storedStaffList.map((staff, i) => (
+          <React.Fragment key={i}>
+            <option value={`ผู้เบิก/จ่าย: ${staff}`} />
+            <option value={staff} />
+          </React.Fragment>
+        ))}
+      </datalist>
+
       {/* Printable Sheet Container */}
       <div
         id="receipt-substitute-document"
@@ -106,80 +122,81 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
               </tr>
             </thead>
             <tbody>
-              {data.items.map((item, idx) => (
-                <tr key={item.id || idx} className="border-b border-slate-400 hover:bg-slate-50/50">
-                  {/* Date */}
-                  <td className="border-r border-slate-400 p-1.5 text-center">
-                    <input
-                      type="text"
-                      value={item.date}
-                      onChange={(e) => handleItemChange(idx, 'date', e.target.value)}
-                      placeholder="DD/MM/YYYY"
-                      className="w-full text-center border border-slate-200 rounded px-1.5 py-1 text-xs no-print"
-                    />
-                    <span className="hidden print:inline text-xs">{item.date}</span>
-                  </td>
+              {data.items.map((item, idx) => {
+                const formattedDate = formatDateToDisplay(item.date);
+                const displayDesc = item.description ? item.description.replace(/^[-+\s]+/, '') : '';
+                const displayAmount = item.amount === 0 ? '' : Math.abs(item.amount);
 
-                  {/* Description */}
-                  <td className="border-r border-slate-400 p-1.5">
-                    {(() => {
-                      const displayDesc = item.description ? item.description.replace(/^[-+\s]+/, '') : '';
-                      return (
-                        <>
-                          <input
-                            type="text"
-                            value={displayDesc}
-                            onChange={(e) => handleItemChange(idx, 'description', e.target.value.replace(/^[-+\s]+/, ''))}
-                            placeholder="ระบุรายละเอียดรายจ่าย"
-                            className="w-full border border-slate-200 rounded px-2 py-1 text-xs font-medium no-print"
-                          />
-                          <span className="hidden print:inline text-xs font-medium">{displayDesc}</span>
-                        </>
-                      );
-                    })()}
-                  </td>
+                return (
+                  <tr key={item.id || idx} className="border-b border-slate-400 hover:bg-slate-50/50">
+                    {/* Date */}
+                    <td className="border-r border-slate-400 p-1.5 text-center">
+                      <input
+                        type="text"
+                        value={formattedDate}
+                        onChange={(e) => handleItemChange(idx, 'date', e.target.value)}
+                        placeholder="DD/MM/YYYY"
+                        className="w-full text-center border border-slate-200 rounded px-1.5 py-1 text-xs no-print"
+                      />
+                      <span className="hidden print:inline text-xs">{formattedDate}</span>
+                    </td>
 
-                  {/* Amount */}
-                  <td className="border-r border-slate-400 p-1.5 text-right font-mono">
-                    <input
-                      type="number"
-                      value={item.amount === 0 ? '' : item.amount}
-                      onChange={(e) => handleItemChange(idx, 'amount', Number(e.target.value))}
-                      placeholder="0.00"
-                      className="w-full text-right border border-slate-200 rounded px-2 py-1 text-xs font-mono no-print"
-                    />
-                    <span className="hidden print:inline text-xs font-mono">
-                      {item.amount ? item.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
-                    </span>
-                  </td>
+                    {/* Description */}
+                    <td className="border-r border-slate-400 p-1.5">
+                      <input
+                        type="text"
+                        list="expense-categories-datalist"
+                        value={displayDesc}
+                        onChange={(e) => handleItemChange(idx, 'description', e.target.value.replace(/^[-+\s]+/, ''))}
+                        placeholder="ระบุรายละเอียดรายจ่าย"
+                        className="w-full border border-slate-200 rounded px-2 py-1 text-xs font-medium no-print"
+                      />
+                      <span className="hidden print:inline text-xs font-medium">{displayDesc}</span>
+                    </td>
 
-                  {/* Remark */}
-                  <td className="border-r border-slate-400 p-1.5 text-center">
-                    <input
-                      type="text"
-                      value={item.remark}
-                      onChange={(e) => handleItemChange(idx, 'remark', e.target.value)}
-                      placeholder="หมายเหตุ"
-                      className="w-full text-center border border-slate-200 rounded px-1.5 py-1 text-xs no-print"
-                    />
-                    <span className="hidden print:inline text-xs">{item.remark}</span>
-                  </td>
+                    {/* Amount */}
+                    <td className="border-r border-slate-400 p-1.5 text-right font-mono">
+                      <input
+                        type="number"
+                        value={displayAmount}
+                        onChange={(e) => handleItemChange(idx, 'amount', e.target.value)}
+                        placeholder="0.00"
+                        className="w-full text-right border border-slate-200 rounded px-2 py-1 text-xs font-mono no-print"
+                      />
+                      <span className="hidden print:inline text-xs font-mono">
+                        {item.amount ? Math.abs(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                      </span>
+                    </td>
 
-                  {/* Delete button */}
-                  <td className="no-print p-1 text-center">
-                    {data.items.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeItem(idx)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                        title="ลบรายการ"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    {/* Remark */}
+                    <td className="border-r border-slate-400 p-1.5 text-center">
+                      <input
+                        type="text"
+                        list="staff-remark-datalist"
+                        value={item.remark}
+                        onChange={(e) => handleItemChange(idx, 'remark', e.target.value)}
+                        placeholder="หมายเหตุ / ผู้เบิกจ่าย"
+                        className="w-full text-center border border-slate-200 rounded px-1.5 py-1 text-xs no-print"
+                      />
+                      <span className="hidden print:inline text-xs">{item.remark}</span>
+                    </td>
+
+                    {/* Delete button */}
+                    <td className="no-print p-1 text-center">
+                      {data.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          title="ลบรายการ"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               {/* Total Row */}
@@ -188,7 +205,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
                   รวมทั้งสิ้น
                 </td>
                 <td className="border-r border-slate-800 px-4 py-2.5 text-right font-mono font-extrabold text-base">
-                  THB {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  THB {Math.abs(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 <td colSpan={2} className="px-3 py-2 text-xs text-slate-500 text-center font-normal">
                   -
@@ -213,6 +230,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
             ( {bahtText} )
           </div>
         </div>
+
 
         {/* Staff & Approver Section */}
         <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">

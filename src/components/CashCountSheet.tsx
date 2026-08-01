@@ -30,6 +30,7 @@ function fromIsoDate(isoStr: string): string {
 }
 import { StaffSelect } from './StaffSelect';
 import { ExpenseCategorySelect, getStoredCategories } from './ExpenseCategorySelect';
+import { saveCashCountToFirebase } from '../lib/firebase';
 import { Users } from 'lucide-react';
 
 interface CashCountSheetProps {
@@ -230,8 +231,19 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
     }
   };
 
-  const handleShiftDropdownChange = (newShift: string) => {
+  const handleShiftDropdownChange = async (newShift: string) => {
     if (newShift === data.shift) return;
+
+    // Auto-save current shift record to history before switching shift
+    try {
+      await saveCashCountToFirebase({
+        ...data,
+        id: data.id || `cash-${Date.now()}`,
+        createdAt: data.createdAt || Date.now(),
+      });
+    } catch (e) {
+      /* ignore */
+    }
 
     let inheritedPrevBalance = data.beerPrevBalance || 0;
 

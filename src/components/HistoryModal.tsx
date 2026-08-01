@@ -67,7 +67,17 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         </div>
 
         {/* Modal Content Body */}
-        <div className="p-6 overflow-y-auto space-y-8 flex-1">
+        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+          {/* 7-Day Retention Notice */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-center justify-between text-xs text-amber-900 font-medium shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                ระบบจัดเก็บประวัติย้อนหลัง <b>7 วัน</b> อัตโนมัติ (เมื่อสลับกะหรือเริ่มกะใหม่ ข้อมูลเดิมจะถูกบันทึกไว้ในประวัติทันที ไม่สูญหาย)
+              </span>
+            </div>
+          </div>
+
           {/* Saved Cash Counts */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
