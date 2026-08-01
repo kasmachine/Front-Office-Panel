@@ -59,23 +59,64 @@ export function extractMinusExpenses(cashCountData: CashCountData) {
 
 export function syncMinusExpensesToReceipt(
   cashCountData: CashCountData,
+  savedCashCounts: CashCountData[] = [],
   currentReceiptData: ReceiptSubstituteData
 ): ReceiptSubstituteData {
-  const minusExpenses = extractMinusExpenses(cashCountData);
+  const targetDate = cashCountData.date
+    ? formatDateToDisplay(cashCountData.date)
+    : currentReceiptData.startDate
+    ? formatDateToDisplay(currentReceiptData.startDate)
+    : getTodayFormatted();
 
-  // Convert current minus expenses into receipt items with leading '-' and '+' removed
-  const autoItems: ReceiptSubstituteItem[] = minusExpenses.map((exp) => {
-    const raw = exp.item ? exp.item.trim() : '';
-    const cleanedDescription = raw.replace(/^[-+\s]+/, '');
-    const itemDate = cashCountData.date ? formatDateToDisplay(cashCountData.date) : getTodayFormatted();
-    return {
-      id: `cc-${exp.id}`,
-      date: itemDate,
-      description: cleanedDescription || raw,
-      amount: Number(exp.amount) || 0,
-      remark: exp.staff ? `ผู้เบิก/จ่าย: ${exp.staff}` : (exp.remark || ''),
-    };
+  // Collect all cash counts for the same date (both Early & Late shifts)
+  const relevantCashCounts: CashCountData[] = [];
+  const seenIds = new Set<string>();
+
+  const addIfMatches = (cc: CashCountData) => {
+    if (!cc) return;
+    const ccDate = cc.date ? formatDateToDisplay(cc.date) : targetDate;
+    if (ccDate === targetDate) {
+      const ccId = cc.id || `active-${cc.shift || 'shift'}`;
+      if (!seenIds.has(ccId)) {
+        seenIds.add(ccId);
+        relevantCashCounts.push(cc);
+      }
+    }
+  };
+
+  // 1. Add active cash count data
+  if (cashCountData) {
+    addIfMatches(cashCountData);
+  }
+
+  // 2. Add saved cash counts from history for the same date
+  (savedCashCounts || []).forEach((sc) => {
+    addIfMatches(sc);
   });
+
+  // Convert minus expenses from ALL shifts for this date into receipt items
+  const autoItemsMap = new Map<string, ReceiptSubstituteItem>();
+
+  relevantCashCounts.forEach((cc) => {
+    const minusExpenses = extractMinusExpenses(cc);
+    const ccDate = cc.date ? formatDateToDisplay(cc.date) : targetDate;
+
+    minusExpenses.forEach((exp) => {
+      const raw = exp.item ? exp.item.trim() : '';
+      const cleanedDescription = raw.replace(/^[-+\s]+/, '');
+      const itemKey = `cc-${cc.id || 'current'}-${exp.id}`;
+
+      autoItemsMap.set(itemKey, {
+        id: itemKey,
+        date: ccDate,
+        description: cleanedDescription || raw,
+        amount: Number(exp.amount) || 0,
+        remark: exp.staff ? `ผู้เบิก/จ่าย: ${exp.staff}` : (exp.remark || ''),
+      });
+    });
+  });
+
+  const autoItems = Array.from(autoItemsMap.values());
 
   // Preserve any manually added items in receipt substitute
   const manualItems = currentReceiptData.items
@@ -87,12 +128,21 @@ export function syncMinusExpensesToReceipt(
     }));
 
   const mergedItems = [...autoItems, ...manualItems];
-  const effectiveDate = cashCountData.date ? formatDateToDisplay(cashCountData.date) : currentReceiptData.startDate;
+
+  if (mergedItems.length === 0) {
+    mergedItems.push({
+      id: `item-${Date.now()}`,
+      date: targetDate,
+      description: '',
+      amount: 0,
+      remark: '',
+    });
+  }
 
   const itemsChanged = JSON.stringify(mergedItems) !== JSON.stringify(currentReceiptData.items);
   const datesChanged =
-    (currentReceiptData.startDate || '') !== effectiveDate ||
-    (currentReceiptData.endDate || '') !== effectiveDate;
+    (currentReceiptData.startDate || '') !== targetDate ||
+    (currentReceiptData.endDate || '') !== targetDate;
 
   if (!itemsChanged && !datesChanged) {
     return currentReceiptData;
@@ -100,8 +150,8 @@ export function syncMinusExpensesToReceipt(
 
   return {
     ...currentReceiptData,
-    startDate: currentReceiptData.startDate || effectiveDate,
-    endDate: currentReceiptData.endDate || effectiveDate,
+    startDate: targetDate,
+    endDate: targetDate,
     items: mergedItems,
   };
 }

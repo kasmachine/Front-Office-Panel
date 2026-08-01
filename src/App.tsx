@@ -391,10 +391,10 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [receiptData]);
 
-  // Automatically pull minus expenses (-) from CashCountSheet to ReceiptSubstituteSheet
+  // Automatically pull minus expenses (-) from ALL shifts of the day into 1 combined ReceiptSubstituteSheet
   useEffect(() => {
-    setReceiptData((prev) => syncMinusExpensesToReceipt(cashCountData, prev));
-  }, [cashCountData.expensesIn, cashCountData.expensesOut, cashCountData.date]);
+    setReceiptData((prev) => syncMinusExpensesToReceipt(cashCountData, savedCashCounts, prev));
+  }, [cashCountData, savedCashCounts]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -667,8 +667,8 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => {
-                  setReceiptData((prev) => syncMinusExpensesToReceipt(cashCountData, prev));
-                  showToast('ดึงรายการหัก (-) จากตารางนับเงินเรียบร้อยแล้ว');
+                  setReceiptData((prev) => syncMinusExpensesToReceipt(cashCountData, savedCashCounts, prev));
+                  showToast('ดึงรายการหัก (-) จากตารางนับเงินทั้งสองกะเรียบร้อยแล้ว');
                 }}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 border border-blue-700 rounded-lg shadow-xs transition-colors"
                 title="ดึงรายการหัก (-) จากตารางนับเงิน"
@@ -768,8 +768,8 @@ export default function App() {
             onReset={handleResetReceipt}
             cashCountData={cashCountData}
             onManualSync={() => {
-              setReceiptData((prev) => syncMinusExpensesToReceipt(cashCountData, prev));
-              showToast('ดึงรายการหัก (-) จากตารางนับเงินเรียบร้อยแล้ว');
+              setReceiptData((prev) => syncMinusExpensesToReceipt(cashCountData, savedCashCounts, prev));
+              showToast('ดึงรายการหัก (-) จากตารางนับเงินทั้งสองกะเรียบร้อยแล้ว');
             }}
           />
         )}
