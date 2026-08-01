@@ -222,12 +222,12 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
               <span className="font-bold">ข้าพเจ้า:</span>
               <input
                 type="text"
-                value={data.requesterName}
+                value={data.requesterName ?? 'นางสาว ขวัญทิชา ตั้งเสรีกล'}
                 onChange={(e) => onChange({ ...data, requesterName: e.target.value })}
                 placeholder="ชื่อ-นามสกุล ผู้เบิกจ่าย"
                 className="no-print border-b border-slate-400 px-2 py-0.5 font-medium flex-1 outline-none"
               />
-              <span className="hidden print:inline font-bold underline">{data.requesterName || '...........................................'}</span>
+              <span className="hidden print:inline font-bold underline">{data.requesterName || 'นางสาว ขวัญทิชา ตั้งเสรีกล'}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -254,12 +254,12 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
               <span className="font-bold">ผู้อนุมัติ:</span>
               <input
                 type="text"
-                value={data.approverName}
+                value={data.approverName ?? 'นายเกษม มนตรี'}
                 onChange={(e) => onChange({ ...data, approverName: e.target.value })}
                 placeholder="ชื่อ-นามสกุล ผู้อนุมัติ"
                 className="no-print border-b border-slate-400 px-2 py-0.5 font-medium flex-1 outline-none"
               />
-              <span className="hidden print:inline font-bold underline">{data.approverName || '...........................................'}</span>
+              <span className="hidden print:inline font-bold underline">{data.approverName || 'นายเกษม มนตรี'}</span>
             </div>
 
             <div className="flex items-center gap-2">

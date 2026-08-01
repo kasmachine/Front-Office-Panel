@@ -58,6 +58,9 @@ export default function App() {
         const parsed = JSON.parse(saved);
         return {
           ...parsed,
+          requesterName: parsed.requesterName || 'นางสาว ขวัญทิชา ตั้งเสรีกล',
+          approverName: (!parsed.approverName || parsed.approverName === 'นาย กษม โพธิ์ประเสริฐ') ? 'นายเกษม มนตรี' : parsed.approverName,
+          approverPosition: parsed.approverPosition || 'เจ้าของกิจการ',
           startDate: todayReceiptDate,
           endDate: todayReceiptDate,
         };
