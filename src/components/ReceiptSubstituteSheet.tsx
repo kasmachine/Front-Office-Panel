@@ -89,26 +89,8 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
         </div>
 
         {/* Declaration Paragraph */}
-        <div className="my-6 text-sm md:text-base leading-relaxed text-slate-800 text-justify">
+        <div className="my-6 text-xs sm:text-sm md:text-sm leading-relaxed text-slate-800 text-center whitespace-nowrap overflow-x-auto">
           ข้าพเจ้าขอรับรองว่ารายจ่ายเหล่านี้ไม่อาจเรียกเก็บใบเสร็จรับเงินจากผู้รับเงินได้ และข้าพเจ้าได้จ่ายไปในงานของบริษัทโดยแท้
-          ตั้งแต่วันที่{' '}
-          <input
-            type="text"
-            value={data.startDate}
-            onChange={(e) => onChange({ ...data, startDate: e.target.value })}
-            placeholder="วว/ดด/ปปปป"
-            className="no-print border-b border-slate-400 font-semibold px-2 text-center w-36 outline-none focus:border-orange-500"
-          />
-          <span className="hidden print:inline font-bold underline px-1">{data.startDate || '........................'}</span>
-          {' '}ถึงวันที่{' '}
-          <input
-            type="text"
-            value={data.endDate}
-            onChange={(e) => onChange({ ...data, endDate: e.target.value })}
-            placeholder="วว/ดด/ปปปป"
-            className="no-print border-b border-slate-400 font-semibold px-2 text-center w-36 outline-none focus:border-orange-500"
-          />
-          <span className="hidden print:inline font-bold underline px-1">{data.endDate || '........................'}</span>
         </div>
 
         {/* Items Table */}
