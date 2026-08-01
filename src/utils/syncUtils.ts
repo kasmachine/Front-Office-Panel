@@ -110,7 +110,7 @@ export function syncMinusExpensesToReceipt(
         id: itemKey,
         date: ccDate,
         description: cleanedDescription || raw,
-        amount: Number(exp.amount) || 0,
+        amount: -(Math.abs(Number(exp.amount) || 0)),
         remark: exp.staff ? `ผู้เบิก/จ่าย: ${exp.staff}` : (exp.remark || ''),
       });
     });
@@ -120,11 +120,12 @@ export function syncMinusExpensesToReceipt(
 
   // Preserve any manually added items in receipt substitute
   const manualItems = currentReceiptData.items
-    .filter((item) => !item.id.startsWith('cc-') && (item.description.trim() !== '' || item.amount > 0))
+    .filter((item) => !item.id.startsWith('cc-') && (item.description.trim() !== '' || item.amount !== 0))
     .map((item) => ({
       ...item,
       date: formatDateToDisplay(item.date),
       description: item.description ? item.description.replace(/^[-+\s]+/, '') : '',
+      amount: item.amount !== 0 ? -(Math.abs(Number(item.amount) || 0)) : 0,
     }));
 
   const mergedItems = [...autoItems, ...manualItems];
