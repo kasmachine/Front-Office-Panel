@@ -29,7 +29,7 @@ function fromIsoDate(isoStr: string): string {
   return isoStr;
 }
 import { StaffSelect } from './StaffSelect';
-import { ExpenseCategorySelect } from './ExpenseCategorySelect';
+import { ExpenseCategorySelect, getStoredCategories } from './ExpenseCategorySelect';
 import { Users } from 'lucide-react';
 
 interface CashCountSheetProps {
@@ -49,6 +49,22 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
   onOpenManageStaff,
   onOpenManageCategories,
 }) => {
+  const isMinusItem = (itemStr: string): boolean => {
+    if (!itemStr) return false;
+    const trimmed = itemStr.trim();
+    if (trimmed.startsWith('-')) return true;
+    const cats = getStoredCategories();
+    return cats.minus.some((c) => c.trim().toLowerCase() === trimmed.toLowerCase());
+  };
+
+  const isPlusItem = (itemStr: string): boolean => {
+    if (!itemStr) return false;
+    const trimmed = itemStr.trim();
+    if (trimmed.startsWith('+')) return true;
+    const cats = getStoredCategories();
+    return cats.plus.some((c) => c.trim().toLowerCase() === trimmed.toLowerCase());
+  };
+
   // Calculations
   const totalCashIn = data.denominations.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0);
   const totalCashOut = data.denominations.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0);
@@ -83,7 +99,36 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
     val: string | number
   ) => {
     const list = [...data[type]];
-    list[index] = { ...list[index], [field]: val };
+    const currentRow = { ...list[index] };
+
+    if (field === 'item') {
+      const newItemStr = String(val);
+      currentRow.item = newItemStr;
+
+      if (isMinusItem(newItemStr)) {
+        if (currentRow.amount !== 0) {
+          currentRow.amount = -Math.abs(currentRow.amount);
+        }
+      } else if (isPlusItem(newItemStr)) {
+        if (currentRow.amount !== 0) {
+          currentRow.amount = Math.abs(currentRow.amount);
+        }
+      } else if (currentRow.amount < 0) {
+        currentRow.amount = Math.abs(currentRow.amount);
+      }
+    } else if (field === 'amount') {
+      let numVal = typeof val === 'number' ? val : (val === '' ? 0 : Number(val) || 0);
+      if (isMinusItem(currentRow.item)) {
+        numVal = numVal !== 0 ? -Math.abs(numVal) : 0;
+      } else if (isPlusItem(currentRow.item)) {
+        numVal = numVal !== 0 ? Math.abs(numVal) : 0;
+      }
+      currentRow.amount = numVal;
+    } else {
+      currentRow[field] = val as never;
+    }
+
+    list[index] = currentRow;
     onChange({ ...data, [type]: list });
   };
 
@@ -103,7 +148,9 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
   };
 
   const formatCurrency = (amount: number) => {
-    return `THB ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const formatted = Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (amount < 0) return `-THB ${formatted}`;
+    return `THB ${formatted}`;
   };
 
   const formatSignedCurrency = (amount: number) => {
@@ -615,9 +662,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                         <input
                           type="number"
                           value={exp.amount === 0 ? '' : exp.amount}
-                          onChange={(e) => handleExpenseChange('expensesIn', idx, 'amount', Number(e.target.value))}
+                          onChange={(e) => handleExpenseChange('expensesIn', idx, 'amount', e.target.value)}
                           placeholder="0.00"
-                          className="w-full text-right border border-slate-200 rounded px-1.5 py-1 text-xs md:text-sm font-mono font-semibold focus:outline-none no-print"
+                          className={`w-full text-right border border-slate-200 rounded px-1.5 py-1 text-xs md:text-sm font-mono font-semibold focus:outline-none no-print ${
+                            exp.amount < 0 ? 'text-red-600 font-bold bg-red-50/50 border-red-200' : exp.amount > 0 ? 'text-emerald-700 font-bold' : ''
+                          }`}
                         />
                         <span className="hidden print:inline font-mono font-bold text-xs md:text-sm print:text-xs px-1">{formatCurrency(exp.amount)}</span>
                       </td>
@@ -714,9 +763,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                         <input
                           type="number"
                           value={exp.amount === 0 ? '' : exp.amount}
-                          onChange={(e) => handleExpenseChange('expensesOut', idx, 'amount', Number(e.target.value))}
+                          onChange={(e) => handleExpenseChange('expensesOut', idx, 'amount', e.target.value)}
                           placeholder="0.00"
-                          className="w-full text-right border border-slate-200 rounded px-1.5 py-1 text-xs md:text-sm font-mono font-semibold focus:outline-none no-print"
+                          className={`w-full text-right border border-slate-200 rounded px-1.5 py-1 text-xs md:text-sm font-mono font-semibold focus:outline-none no-print ${
+                            exp.amount < 0 ? 'text-red-600 font-bold bg-red-50/50 border-red-200' : exp.amount > 0 ? 'text-emerald-700 font-bold' : ''
+                          }`}
                         />
                         <span className="hidden print:inline font-mono font-bold text-xs md:text-sm print:text-xs px-1">{formatCurrency(exp.amount)}</span>
                       </td>
