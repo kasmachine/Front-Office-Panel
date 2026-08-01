@@ -367,6 +367,12 @@ export default function App() {
     const timer = setTimeout(async () => {
       try {
         await saveActiveDraftToFirebase('cashCount', cashCountData);
+        // Also auto-save to history collection so every shift record is persisted in Firebase
+        await saveCashCountToFirebase({
+          ...cashCountData,
+          id: cashCountData.id || `cash-${Date.now()}`,
+          createdAt: cashCountData.createdAt || Date.now(),
+        });
         lastRemoteCashSerializedRef.current = currentSerialized;
         const now = new Date();
         setLastSavedTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
@@ -584,17 +590,24 @@ export default function App() {
         }
         setSavedCashCounts((prev) => [currentRecord, ...prev.filter((c) => c.id !== currentRecord.id)]);
 
-        const freshData: CashCountData = {
-          ...getInitialCashCountData(),
-          id: `cash-${Date.now()}`,
-          date: todayCashDate,
-          shift: nextShift,
-          beerPrevBalance: inheritedPrevBalance,
-          createdAt: Date.now(),
-        };
-        setCashCountData(freshData);
-        saveActiveDraftToFirebase('cashCount', freshData);
-        showToast('บันทึกกะเดิมลงประวัติ 7 วันเรียบร้อยแล้ว และพร้อมสำหรับเริ่มกะใหม่');
+        const existingNextShift = savedCashCounts.find((c) => c.date === todayCashDate && c.shift === nextShift);
+        if (existingNextShift) {
+          setCashCountData(existingNextShift);
+          saveActiveDraftToFirebase('cashCount', existingNextShift);
+          showToast(`สลับเป็นกะ ${nextShift === 'Early' ? 'Early (กะเช้า)' : 'Late (กะบ่าย)'} และดึงข้อมูลที่มีอยู่แล้วเรียบร้อย`);
+        } else {
+          const freshData: CashCountData = {
+            ...getInitialCashCountData(),
+            id: `cash-${Date.now()}`,
+            date: todayCashDate,
+            shift: nextShift,
+            beerPrevBalance: inheritedPrevBalance,
+            createdAt: Date.now(),
+          };
+          setCashCountData(freshData);
+          saveActiveDraftToFirebase('cashCount', freshData);
+          showToast('บันทึกกะเดิมลงประวัติ 7 วันเรียบร้อยแล้ว และพร้อมสำหรับเริ่มกะใหม่');
+        }
       }
     } else {
       if (

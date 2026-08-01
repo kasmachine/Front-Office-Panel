@@ -235,14 +235,25 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
     if (newShift === data.shift) return;
 
     // Auto-save current shift record to history before switching shift
+    const currentToSave: CashCountData = {
+      ...data,
+      id: data.id || `cash-${Date.now()}`,
+      createdAt: data.createdAt || Date.now(),
+    };
     try {
-      await saveCashCountToFirebase({
-        ...data,
-        id: data.id || `cash-${Date.now()}`,
-        createdAt: data.createdAt || Date.now(),
-      });
+      await saveCashCountToFirebase(currentToSave);
     } catch (e) {
       /* ignore */
+    }
+
+    // Check if an existing record for the new shift on the same date already exists in history
+    const existingForNewShift = savedCashCounts?.find(
+      (c) => c.date === data.date && c.shift === newShift
+    );
+
+    if (existingForNewShift) {
+      onChange(existingForNewShift);
+      return;
     }
 
     let inheritedPrevBalance = data.beerPrevBalance || 0;
