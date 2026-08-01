@@ -266,8 +266,12 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
       countOut: 0,
     }));
 
+    const newShiftId = `cash-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
     onChange({
       ...data,
+      id: newShiftId,
+      createdAt: Date.now(),
       shift: newShift,
       denominations: resetDenoms,
       staffIn: '',

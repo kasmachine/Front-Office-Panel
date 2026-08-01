@@ -176,13 +176,29 @@ export default function App() {
 
     const unsubCash = subscribeCashCounts((firebaseItems) => {
       if (firebaseItems) {
-        setSavedCashCounts(firebaseItems.filter((c) => isWithin7Days(c.createdAt, c.date)));
+        const valid = firebaseItems.filter((c) => isWithin7Days(c.createdAt, c.date));
+        setSavedCashCounts(valid);
+
+        // Auto-purge records older than 7 days from Firebase
+        firebaseItems.forEach((c) => {
+          if (!isWithin7Days(c.createdAt, c.date) && c.id) {
+            deleteCashCountFromFirebase(c.id).catch(() => {});
+          }
+        });
       }
     });
 
     const unsubReceipts = subscribeReceipts((firebaseItems) => {
       if (firebaseItems) {
-        setSavedReceipts(firebaseItems.filter((r) => isWithin7Days(r.createdAt, r.startDate)));
+        const valid = firebaseItems.filter((r) => isWithin7Days(r.createdAt, r.startDate));
+        setSavedReceipts(valid);
+
+        // Auto-purge records older than 7 days from Firebase
+        firebaseItems.forEach((r) => {
+          if (!isWithin7Days(r.createdAt, r.startDate) && r.id) {
+            deleteReceiptFromFirebase(r.id).catch(() => {});
+          }
+        });
       }
     });
 
