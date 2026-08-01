@@ -125,7 +125,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
               {data.items.map((item, idx) => {
                 const formattedDate = formatDateToDisplay(item.date);
                 const displayDesc = item.description ? item.description.replace(/^[-+\s]+/, '') : '';
-                const displayAmount = item.amount === 0 ? '' : (item.amount < 0 ? item.amount : -item.amount);
+                const displayAmount = item.amount === 0 ? '' : Math.abs(item.amount);
 
                 return (
                   <tr key={item.id || idx} className="border-b border-slate-400 hover:bg-slate-50/50">
@@ -164,7 +164,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
                         className="w-full text-right border border-slate-200 rounded px-2 py-1 text-xs font-mono no-print font-bold text-red-600"
                       />
                       <span className="hidden print:inline text-xs font-mono font-bold">
-                        {item.amount ? (item.amount < 0 ? item.amount : -item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                        {item.amount ? Math.abs(item.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                       </span>
                     </td>
 
@@ -205,7 +205,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
                   รวมทั้งสิ้น
                 </td>
                 <td className="border-r border-slate-800 px-4 py-2.5 text-right font-mono font-extrabold text-base text-red-600">
-                  THB {totalAmount === 0 ? '0.00' : (totalAmount < 0 ? totalAmount : -totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  THB {totalAmount === 0 ? '0.00' : Math.abs(totalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 <td colSpan={2} className="px-3 py-2 text-xs text-slate-500 text-center font-normal">
                   -
