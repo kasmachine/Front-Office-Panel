@@ -78,3 +78,15 @@ export interface MonthlyRevenueData {
   target: RevenueCategories;
   updatedAt?: string;
 }
+
+export interface RevenueHistoryRecord {
+  id: string; // unique e.g. "rev-hist-2026-08-1722591234"
+  docId: string; // "revenue-2026-08"
+  year: number;
+  month: number; // 1-12
+  monthName: string; // e.g. "สิงหาคม 2569"
+  updatedAt: string;
+  totalRevenue: number;
+  data: MonthlyRevenueData;
+}
+

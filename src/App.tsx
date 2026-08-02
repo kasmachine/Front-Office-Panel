@@ -8,7 +8,7 @@ import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
 import { StaffManagerModal } from './components/StaffManagerModal';
 import { CategoryManagerModal } from './components/CategoryManagerModal';
-import { CashCountData, ReceiptSubstituteData } from './types';
+import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord } from './types';
 import { getInitialCashCountData, getInitialReceiptData } from './data/defaults';
 import { exportToPdf, printDocument } from './utils/pdfExport';
 import { downloadJsonFile, parseJsonFile } from './utils/jsonExport';
@@ -19,6 +19,9 @@ import {
   saveReceiptToFirebase,
   subscribeReceipts,
   deleteReceiptFromFirebase,
+  subscribeRevenueHistory,
+  deleteRevenueHistoryFromFirebase,
+  saveMonthlyRevenueToFirebase,
   testConnection,
   initAuth,
   saveActiveDraftToFirebase,
@@ -89,6 +92,16 @@ export default function App() {
       if (local) {
         const items: ReceiptSubstituteData[] = JSON.parse(local);
         return items.filter((r) => isWithin7Days(r.createdAt, r.startDate));
+      }
+    } catch (e) { /* ignore */ }
+    return [];
+  });
+
+  const [savedRevenueHistory, setSavedRevenueHistory] = useState<RevenueHistoryRecord[]>(() => {
+    try {
+      const local = localStorage.getItem('nan_seasons_revenue_history');
+      if (local) {
+        return JSON.parse(local);
       }
     } catch (e) { /* ignore */ }
     return [];
@@ -223,11 +236,21 @@ export default function App() {
       }
     });
 
+    const unsubRevHist = subscribeRevenueHistory((firebaseItems) => {
+      if (firebaseItems && firebaseItems.length > 0) {
+        setSavedRevenueHistory(firebaseItems);
+        try {
+          localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(firebaseItems));
+        } catch (e) { /* ignore */ }
+      }
+    });
+
     return () => {
       unsubCash();
       unsubReceipts();
       unsubStaff();
       unsubCats();
+      unsubRevHist();
     };
   }, []);
 
@@ -527,6 +550,24 @@ export default function App() {
     }
     setSavedReceipts(savedReceipts.filter((r) => r.id !== id));
     showToast('ลบรายการเรียบร้อยแล้ว');
+  };
+
+  const handleLoadRevenueHistory = (revData: MonthlyRevenueData) => {
+    const docId = `revenue-${revData.year}-${String(revData.month).padStart(2, '0')}`;
+    localStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(revData));
+    saveMonthlyRevenueToFirebase(revData);
+    setActiveTab('dailyRevenue');
+    showToast(`ดึงข้อมูล Revenue เดือน ${revData.monthName || `${revData.month}/${revData.year}`} เรียบร้อยแล้ว`);
+  };
+
+  const handleDeleteRevenueHistory = async (id: string) => {
+    try {
+      await deleteRevenueHistoryFromFirebase(id);
+    } catch (e) {
+      /* ignore */
+    }
+    setSavedRevenueHistory(savedRevenueHistory.filter((item) => item.id !== id));
+    showToast('ลบรายการประวัติ Revenue เรียบร้อยแล้ว');
   };
 
   const handleExportPdf = async () => {
@@ -853,10 +894,13 @@ export default function App() {
         onClose={() => setIsHistoryOpen(false)}
         savedCashCounts={savedCashCounts}
         savedReceipts={savedReceipts}
+        savedRevenueHistory={savedRevenueHistory}
         onLoadCashCount={setCashCountData}
         onLoadReceipt={setReceiptData}
+        onLoadRevenueHistory={handleLoadRevenueHistory}
         onDeleteCashCount={handleDeleteCashCount}
         onDeleteReceipt={handleDeleteReceipt}
+        onDeleteRevenueHistory={handleDeleteRevenueHistory}
       />
 
       {/* Settings Modal */}

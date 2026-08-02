@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { MonthlyRevenueData, RevenueCategories } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { MonthlyRevenueData, RevenueCategories, RevenueHistoryRecord } from '../types';
 import { getInitialMonthlyRevenueData } from '../data/defaults';
-import { saveMonthlyRevenueToFirebase, subscribeMonthlyRevenue } from '../lib/firebase';
+import { saveMonthlyRevenueToFirebase, subscribeMonthlyRevenue, saveRevenueHistoryToFirebase } from '../lib/firebase';
 import {
   Calendar,
   TrendingUp,
@@ -82,6 +82,62 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
     return () => unsubscribe();
   }, [docId, selectedYear, selectedMonth]);
+
+  // Debounced Revenue History saving whenever revenue data updates
+  const saveHistoryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastHistorySerializedRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!data || !data.id) return;
+    const serialized = JSON.stringify(data);
+    if (serialized === lastHistorySerializedRef.current) return;
+
+    if (saveHistoryTimeoutRef.current) {
+      clearTimeout(saveHistoryTimeoutRef.current);
+    }
+
+    saveHistoryTimeoutRef.current = setTimeout(() => {
+      lastHistorySerializedRef.current = serialized;
+
+      const totalRev: number = (Object.values(data.days || {}) as RevenueCategories[]).reduce((acc: number, item: RevenueCategories): number => {
+        return acc + (item.rooms || 0) + (item.foodBeverage || 0) + (item.shop || 0) +
+               (item.toursEtc || 0) + (item.massage || 0) + (item.laundryOthers || 0);
+      }, 0);
+
+      const now = new Date();
+      const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear() + 543} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} น.`;
+
+      const historyRecord: RevenueHistoryRecord = {
+        id: `rev-hist-${data.year}-${String(data.month).padStart(2, '0')}-${Date.now()}`,
+        docId: data.id,
+        year: data.year,
+        month: data.month,
+        monthName: `${MONTH_TH[data.month - 1]} ${data.year + 543}`,
+        updatedAt: formattedDate,
+        totalRevenue: totalRev,
+        data: data,
+      };
+
+      // 1. Save to Firebase history collection
+      saveRevenueHistoryToFirebase(historyRecord);
+
+      // 2. Save to local storage history array
+      try {
+        const localHistRaw = localStorage.getItem('nan_seasons_revenue_history');
+        let localHist: RevenueHistoryRecord[] = localHistRaw ? JSON.parse(localHistRaw) : [];
+        localHist = [historyRecord, ...localHist.filter(h => h.id !== historyRecord.id)];
+        localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(localHist));
+      } catch (e) {
+        console.error('Failed to update local revenue history', e);
+      }
+    }, 1500);
+
+    return () => {
+      if (saveHistoryTimeoutRef.current) {
+        clearTimeout(saveHistoryTimeoutRef.current);
+      }
+    };
+  }, [data]);
 
   // Handle month/year change
   const handleMonthChange = (newMonth: number, newYear: number) => {
@@ -229,7 +285,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
   const targetPercent = targetTotal > 0 ? (monthTotal / targetTotal) * 100 : 0;
 
   return (
-    <div className="space-y-6 pb-12">
+    <div id="revenue-document" className="space-y-6 pb-12 print:p-0 print:m-0 print:pb-0">
       {/* Control Bar (No Print) */}
       <div className="no-print bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Month Navigation & Picker */}

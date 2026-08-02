@@ -23,13 +23,40 @@
       size: A4 portrait;
       margin: 4mm 5mm;
     }
-    #cash-count-document, #receipt-substitute-document {
+    #cash-count-document, #receipt-substitute-document, #revenue-document {
       width: 100% !important;
       max-width: 100% !important;
       margin: 0 !important;
       padding: 0 !important;
       box-shadow: none !important;
       border: none !important;
+    }
+    #revenue-document table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      font-size: 8pt !important;
+      line-height: 1.1 !important;
+      table-layout: fixed !important;
+    }
+    #revenue-document th {
+      padding: 2px 3px !important;
+      font-size: 8pt !important;
+      border: 1px solid #94a3b8 !important;
+    }
+    #revenue-document td {
+      padding: 1px 2px !important;
+      height: 16px !important;
+      font-size: 8pt !important;
+      border: 1px solid #cbd5e1 !important;
+    }
+    #revenue-document input {
+      padding: 0 1px !important;
+      height: 14px !important;
+      font-size: 8pt !important;
+      line-height: 14px !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
     }
     table {
       page-break-inside: avoid;

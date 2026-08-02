@@ -18,7 +18,7 @@ import {
 setLogLevel('silent');
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData } from '../types';
+import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord } from '../types';
 
 // Construct effective Firebase config (supports Vercel env vars or fallback to firebase-applet-config.json)
 const effectiveFirebaseConfig = {
@@ -589,6 +589,55 @@ export function subscribeMonthlyRevenue(docId: string, callback: (data: MonthlyR
     }
   );
 }
+
+/**
+  * Realtime Revenue History Sync
+  */
+const REVENUE_HISTORY_COLLECTION = 'revenue_history';
+let lastSavedRevenueHistoryMap: Record<string, string> = {};
+
+export async function saveRevenueHistoryToFirebase(historyItem: RevenueHistoryRecord): Promise<void> {
+  if (isQuotaExceeded || !historyItem.id) return;
+  const serialized = JSON.stringify(historyItem.data);
+  if (lastSavedRevenueHistoryMap[historyItem.id] === serialized) return;
+
+  const path = `${REVENUE_HISTORY_COLLECTION}/${historyItem.id}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, REVENUE_HISTORY_COLLECTION, historyItem.id);
+    await setDoc(docRef, { ...historyItem, createdAt: Date.now() });
+    lastSavedRevenueHistoryMap[historyItem.id] = serialized;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export function subscribeRevenueHistory(callback: (items: RevenueHistoryRecord[]) => void) {
+  return onSnapshot(
+    collection(db, REVENUE_HISTORY_COLLECTION),
+    (snapshot) => {
+      const list: RevenueHistoryRecord[] = snapshot.docs.map((d) => d.data() as RevenueHistoryRecord);
+      list.sort((a, b) => (b.data?.updatedAt || '').localeCompare(a.data?.updatedAt || ''));
+      callback(list);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, REVENUE_HISTORY_COLLECTION);
+    }
+  );
+}
+
+export async function deleteRevenueHistoryFromFirebase(historyId: string): Promise<void> {
+  if (isQuotaExceeded) return;
+  await initAuth();
+  const path = `${REVENUE_HISTORY_COLLECTION}/${historyId}`;
+  try {
+    const docRef = doc(db, REVENUE_HISTORY_COLLECTION, historyId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
 
 
 
