@@ -611,7 +611,12 @@ export function subscribeMonthlyRevenue(docId: string, callback: (data: MonthlyR
     docRef,
     (snapshot) => {
       if (snapshot.exists()) {
-        callback(snapshot.data() as MonthlyRevenueData);
+        const data = snapshot.data() as MonthlyRevenueData;
+        callback(data);
+        if (data && data.year && data.month) {
+          const histItem = createRevenueHistoryRecord(data);
+          saveRevenueHistoryToFirebase(histItem);
+        }
       } else {
         callback(null);
       }
@@ -619,6 +624,25 @@ export function subscribeMonthlyRevenue(docId: string, callback: (data: MonthlyR
     (err) => {
       handleFirestoreError(err, OperationType.GET, `${REVENUE_COLLECTION}/${docId}`);
       callback(null);
+    }
+  );
+}
+
+export function subscribeAllMonthlyRevenues(callback: (items: MonthlyRevenueData[]) => void) {
+  return onSnapshot(
+    collection(db, REVENUE_COLLECTION),
+    (snapshot) => {
+      const list: MonthlyRevenueData[] = snapshot.docs.map((d) => d.data() as MonthlyRevenueData);
+      list.forEach((data) => {
+        if (data && data.year && data.month) {
+          const hist = createRevenueHistoryRecord(data);
+          saveRevenueHistoryToFirebase(hist);
+        }
+      });
+      callback(list);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, REVENUE_COLLECTION);
     }
   );
 }

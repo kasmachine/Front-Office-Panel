@@ -117,25 +117,18 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
     }, 2000);
   };
 
+  // Reset serialized ref when month/year changes
+  useEffect(() => {
+    lastHistorySerializedRef.current = '';
+  }, [docId]);
+
   useEffect(() => {
     if (!data || !data.id) return;
     const serialized = JSON.stringify(data);
     if (serialized === lastHistorySerializedRef.current) return;
 
-    if (saveHistoryTimeoutRef.current) {
-      clearTimeout(saveHistoryTimeoutRef.current);
-    }
-
-    saveHistoryTimeoutRef.current = setTimeout(() => {
-      lastHistorySerializedRef.current = serialized;
-      saveHistorySnapshot(data);
-    }, 800);
-
-    return () => {
-      if (saveHistoryTimeoutRef.current) {
-        clearTimeout(saveHistoryTimeoutRef.current);
-      }
-    };
+    lastHistorySerializedRef.current = serialized;
+    saveHistorySnapshot(data);
   }, [data]);
 
   // Handle month/year change

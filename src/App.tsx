@@ -20,6 +20,7 @@ import {
   subscribeReceipts,
   deleteReceiptFromFirebase,
   subscribeRevenueHistory,
+  subscribeAllMonthlyRevenues,
   deleteRevenueHistoryFromFirebase,
   saveMonthlyRevenueToFirebase,
   saveRevenueHistoryToFirebase,
@@ -238,45 +239,57 @@ export default function App() {
       }
     });
 
-    const unsubRevHist = subscribeRevenueHistory((firebaseItems) => {
-      if (firebaseItems && firebaseItems.length > 0) {
-        setSavedRevenueHistory(firebaseItems);
-        try {
-          localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(firebaseItems));
-        } catch (e) { /* ignore */ }
-      } else {
-        // If Firebase revenue history is empty, check localStorage & scan local revenue sheets
-        try {
-          const localHistRaw = localStorage.getItem('nan_seasons_revenue_history');
-          let currentHist: RevenueHistoryRecord[] = localHistRaw ? JSON.parse(localHistRaw) : [];
+    const unsubAllRevenues = subscribeAllMonthlyRevenues((remoteRevenues) => {
+      if (remoteRevenues && remoteRevenues.length > 0) {
+        remoteRevenues.forEach((revData) => {
+          if (revData && revData.year && revData.month) {
+            const docKey = `revenue-${revData.year}-${String(revData.month).padStart(2, '0')}`;
+            try {
+              localStorage.setItem(`nan_seasons_${docKey}`, JSON.stringify(revData));
+            } catch (e) { /* ignore */ }
+            const histItem = createRevenueHistoryRecord(revData);
+            saveRevenueHistoryToFirebase(histItem);
+          }
+        });
+      }
+    });
 
-          // Scan all localStorage keys for nan_seasons_revenue-
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('nan_seasons_revenue-')) {
-              const raw = localStorage.getItem(key);
-              if (raw) {
-                try {
-                  const revData: MonthlyRevenueData = JSON.parse(raw);
-                  if (revData && revData.year && revData.month) {
-                    const exists = currentHist.some(h => h.year === revData.year && h.month === revData.month);
-                    if (!exists) {
-                      const histItem = createRevenueHistoryRecord(revData);
-                      currentHist.unshift(histItem);
-                      saveRevenueHistoryToFirebase(histItem);
-                    }
+    const unsubRevHist = subscribeRevenueHistory((firebaseItems) => {
+      let mergedHist: RevenueHistoryRecord[] = firebaseItems ? [...firebaseItems] : [];
+
+      // Always scan localStorage keys starting with nan_seasons_revenue- for any months stored locally
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('nan_seasons_revenue-')) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              try {
+                const revData: MonthlyRevenueData = JSON.parse(raw);
+                if (revData && revData.year && revData.month) {
+                  const histItem = createRevenueHistoryRecord(revData);
+                  const existsIndex = mergedHist.findIndex(h => h.year === revData.year && h.month === revData.month);
+                  if (existsIndex === -1) {
+                    mergedHist.unshift(histItem);
+                    saveRevenueHistoryToFirebase(histItem);
                   }
-                } catch (e) { /* ignore */ }
-              }
+                }
+              } catch (e) { /* ignore */ }
             }
           }
+        }
+      } catch (e) { /* ignore */ }
 
-          if (currentHist.length > 0) {
-            setSavedRevenueHistory(currentHist);
-            localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(currentHist));
-          }
-        } catch (e) { /* ignore */ }
-      }
+      // Sort history descending by year and month
+      mergedHist.sort((a, b) => {
+        if (b.year !== a.year) return b.year - a.year;
+        return b.month - a.month;
+      });
+
+      setSavedRevenueHistory(mergedHist);
+      try {
+        localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(mergedHist));
+      } catch (e) { /* ignore */ }
     });
 
     return () => {
@@ -284,6 +297,7 @@ export default function App() {
       unsubReceipts();
       unsubStaff();
       unsubCats();
+      unsubAllRevenues();
       unsubRevHist();
     };
   }, []);
