@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="no-print bg-slate-900 text-white sticky top-0 z-30 shadow-md border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
-        {/* Mobile Hamburger Menu & Active Title */}
+        {/* Header Title & Status */}
         <div className="flex items-center gap-3">
           {onToggleMobileMenu && (
             <button
@@ -71,33 +71,6 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'ยอดขายและเป้าหมายประจำวัน (Salesplan and Targets / Daily Revenue)'}
             </p>
           </div>
-        </div>
-
-        {/* Header Actions */}
-        <div className="flex items-center gap-2">
-          {onManualSync && (
-            <button
-              type="button"
-              onClick={onManualSync}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-200 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/80 rounded-xl transition-all shadow-xs"
-              title="ดึงข้อมูล Real-time ล่าสุดจากเซิร์ฟเวอร์ (Sync Now)"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">ดึงข้อมูลล่าสุด</span>
-            </button>
-          )}
-
-          {onOpenSettings && (
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-orange-200 bg-orange-950/80 hover:bg-orange-900 border border-orange-800/80 rounded-xl transition-all shadow-xs"
-              title="ตั้งค่าระบบและเครื่องมือทางเทคนิค (Settings)"
-            >
-              <Settings className="w-4 h-4 text-orange-400" />
-              <span className="hidden sm:inline">ตั้งค่า (Setting)</span>
-            </button>
-          )}
         </div>
       </div>
     </header>

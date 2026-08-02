@@ -783,32 +783,12 @@ export default function App() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsStaffManagerOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
-              title="จัดการรายชื่อพนักงาน"
-            >
-              <Users className="w-3.5 h-3.5 text-emerald-600" />
-              จัดการรายชื่อพนักงาน
-            </button>
-
-            <button
-              type="button"
               onClick={handleStartNewShift}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 border border-rose-700 rounded-lg shadow-xs transition-colors"
               title="ล้างข้อมูลตารางเพื่อเริ่มนับเงินกะใหม่"
             >
               <RotateCcw className="w-3.5 h-3.5 text-white" />
               ล้างข้อมูลเพื่อเริ่มกะใหม่
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsCategoryManagerOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
-              title="จัดการหัวข้อรายการ (Expense & Income Topics)"
-            >
-              <FolderTree className="w-3.5 h-3.5 text-orange-600" />
-              จัดการหัวข้อรายการ
             </button>
 
             {activeTab === 'receiptSubstitute' && (
