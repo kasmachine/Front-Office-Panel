@@ -301,6 +301,61 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
     });
   };
 
+  const handleDateInputChange = (newDateIso: string) => {
+    if (!newDateIso) {
+      onChange({ ...data, date: '' });
+      return;
+    }
+    const formattedDate = fromIsoDate(newDateIso);
+    if (formattedDate === data.date) return;
+
+    // 1. Check if a saved cash count record exists in savedCashCounts for this date and shift
+    const existingForDateAndShift = savedCashCounts?.find(
+      (c) => c.date === formattedDate && c.shift === data.shift
+    );
+
+    if (existingForDateAndShift) {
+      onChange(existingForDateAndShift);
+      return;
+    }
+
+    // 2. Check if any record exists for this date in general
+    const existingForDateAnyShift = savedCashCounts?.find(
+      (c) => c.date === formattedDate
+    );
+
+    if (existingForDateAnyShift) {
+      onChange(existingForDateAnyShift);
+      return;
+    }
+
+    // 3. Reset sheet for the new date cleanly
+    const resetDenoms = data.denominations.map((d) => ({
+      ...d,
+      countIn: 0,
+      countOut: 0,
+    }));
+
+    onChange({
+      ...data,
+      id: `cash-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      createdAt: Date.now(),
+      date: formattedDate,
+      denominations: resetDenoms,
+      staffIn: '',
+      staffOut: '',
+      expensesIn: [
+        { id: `exp-in-${Date.now()}-1`, item: '', amount: 0, staff: '' },
+        { id: `exp-in-${Date.now()}-2`, item: '', amount: 0, staff: '' },
+      ],
+      expensesOut: [
+        { id: `exp-out-${Date.now()}-1`, item: '', amount: 0, staff: '' },
+        { id: `exp-out-${Date.now()}-2`, item: '', amount: 0, staff: '' },
+      ],
+      remarks: '',
+    });
+  };
+
   const handleSetTodayDate = () => {
     const today = new Date();
     const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
@@ -349,13 +404,7 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                 <input
                   type="date"
                   value={toIsoDate(data.date)}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      onChange({ ...data, date: fromIsoDate(e.target.value) });
-                    } else {
-                      onChange({ ...data, date: '' });
-                    }
-                  }}
+                  onChange={(e) => handleDateInputChange(e.target.value)}
                   className="border border-slate-300 rounded pl-8 pr-2 py-1 text-sm bg-slate-50 font-semibold text-slate-900 focus:ring-2 focus:ring-orange-500 outline-none cursor-pointer"
                 />
               </div>

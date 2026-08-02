@@ -896,6 +896,8 @@ export default function App() {
             onChange={setReceiptData}
             onReset={handleResetReceipt}
             cashCountData={cashCountData}
+            savedReceipts={savedReceipts}
+            savedCashCounts={savedCashCounts}
             onManualSync={() => {
               setReceiptData((prev) => syncMinusExpensesToReceipt(cashCountData, savedCashCounts, prev));
               showToast('ดึงรายการหัก (-) จากตารางนับเงินทั้งสองกะเรียบร้อยแล้ว');

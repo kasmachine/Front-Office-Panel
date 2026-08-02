@@ -11,6 +11,8 @@ interface ReceiptSubstituteSheetProps {
   onChange: (newData: ReceiptSubstituteData) => void;
   onReset: () => void;
   cashCountData?: CashCountData;
+  savedReceipts?: ReceiptSubstituteData[];
+  savedCashCounts?: CashCountData[];
   onManualSync?: () => void;
 }
 
@@ -30,9 +32,92 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
   onChange,
   onReset,
   cashCountData,
+  savedReceipts = [],
+  savedCashCounts = [],
   onManualSync,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDateChange = (newDateVal: string) => {
+    if (!newDateVal) return;
+    const formatted = formatDateToDisplay(newDateVal);
+    const newDocId = `receipt-${newDateVal.replace(/\//g, '-')}`;
+
+    // 1. Search in savedReceipts (history & Firebase) for an existing record matching formatted date or newDateVal
+    const existingSaved = savedReceipts.find((r) => {
+      if (!r) return false;
+      const rStartFormatted = r.startDate ? formatDateToDisplay(r.startDate) : '';
+      const rEndFormatted = r.endDate ? formatDateToDisplay(r.endDate) : '';
+      return (
+        rStartFormatted === formatted ||
+        rEndFormatted === formatted ||
+        r.startDate === newDateVal ||
+        r.startDate === formatted ||
+        r.id === newDocId ||
+        r.id === `receipt-${formatted.replace(/\//g, '-')}`
+      );
+    });
+
+    if (existingSaved) {
+      onChange(existingSaved);
+      return;
+    }
+
+    // 2. If no saved receipt record found for this date, search for minus (-) expenses in Cash Counts for this date
+    const allCashCounts = [
+      ...(cashCountData ? [cashCountData] : []),
+      ...savedCashCounts,
+    ];
+
+    const targetCashCounts = allCashCounts.filter(
+      (cc) => cc && cc.date && formatDateToDisplay(cc.date) === formatted
+    );
+
+    let newItems: ReceiptSubstituteItem[] = [];
+
+    if (targetCashCounts.length > 0) {
+      const autoItemsMap = new Map<string, ReceiptSubstituteItem>();
+      targetCashCounts.forEach((cc) => {
+        const minusExpList = extractMinusExpenses(cc);
+        minusExpList.forEach((exp) => {
+          const itemClean = exp.item ? exp.item.replace(/^[-+\s]+/, '').trim() : '';
+          const amt = exp.amount !== 0 ? -Math.abs(exp.amount) : 0;
+          const key = `${itemClean.toLowerCase()}_${amt}`;
+          if (!autoItemsMap.has(key)) {
+            autoItemsMap.set(key, {
+              id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              date: formatted,
+              description: itemClean,
+              amount: amt,
+              remark: exp.staff ? `ผู้เบิก/จ่าย: ${exp.staff}` : '',
+            });
+          }
+        });
+      });
+      newItems = Array.from(autoItemsMap.values());
+    }
+
+    // 3. If still no items, create 1 fresh item for this date
+    if (newItems.length === 0) {
+      newItems = [
+        {
+          id: `item-${Date.now()}-1`,
+          date: formatted,
+          description: '',
+          amount: 0,
+          remark: '',
+        },
+      ];
+    }
+
+    onChange({
+      ...data,
+      id: newDocId,
+      startDate: formatted,
+      endDate: formatted,
+      items: newItems,
+    });
+  };
 
   const minusCategories = getStoredCategories().minus.map((cat) => cat.replace(/^[-+\s]+/, ''));
   const storedStaffList = getStoredStaffList();
@@ -123,22 +208,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
               <input
                 type="date"
                 value={getInputValueDate(data.startDate)}
-                onChange={(e) => {
-                  const newDateVal = e.target.value;
-                  if (!newDateVal) return;
-                  const formatted = formatDateToDisplay(newDateVal);
-                  const newDocId = `receipt-${newDateVal.replace(/\//g, '-')}`;
-                  onChange({
-                    ...data,
-                    id: newDocId,
-                    startDate: formatted,
-                    endDate: formatted,
-                    items: data.items.map((item) => ({
-                      ...item,
-                      date: item.date ? item.date : formatted,
-                    })),
-                  });
-                }}
+                onChange={(e) => handleDateChange(e.target.value)}
                 className="no-print border border-slate-300 rounded px-2 py-0.5 font-mono text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-bold"
               />
               <span className="hidden print:inline font-bold underline font-mono ml-1">
