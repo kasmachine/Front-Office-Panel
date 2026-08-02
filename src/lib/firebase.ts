@@ -18,7 +18,7 @@ import {
 setLogLevel('silent');
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord } from '../types';
+import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories } from '../types';
 
 // Construct effective Firebase config (supports Vercel env vars or fallback to firebase-applet-config.json)
 const effectiveFirebaseConfig = {
@@ -555,6 +555,31 @@ export function subscribeCategories(callback: (categories: { minus: string[]; pl
 const REVENUE_COLLECTION = 'monthly_revenues';
 let lastSavedRevenueMap: Record<string, string> = {};
 
+export function createRevenueHistoryRecord(data: MonthlyRevenueData): RevenueHistoryRecord {
+  const MONTH_TH = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+  const totalRev = (Object.values(data.days || {}) as RevenueCategories[]).reduce((acc: number, item: RevenueCategories): number => {
+    return acc + (item.rooms || 0) + (item.foodBeverage || 0) + (item.shop || 0) +
+           (item.toursEtc || 0) + (item.massage || 0) + (item.laundryOthers || 0);
+  }, 0);
+
+  const now = new Date();
+  const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear() + 543} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} น.`;
+
+  return {
+    id: `rev-hist-${data.year}-${String(data.month).padStart(2, '0')}-${Date.now()}`,
+    docId: data.id || `revenue-${data.year}-${String(data.month).padStart(2, '0')}`,
+    year: data.year,
+    month: data.month,
+    monthName: `${MONTH_TH[(data.month || 1) - 1]} ${(data.year || 2026) + 543}`,
+    updatedAt: formattedDate,
+    totalRevenue: totalRev,
+    data: data,
+  };
+}
+
 export async function saveMonthlyRevenueToFirebase(data: MonthlyRevenueData): Promise<void> {
   if (isQuotaExceeded || !data.id) return;
   const serialized = JSON.stringify(data);
@@ -566,6 +591,10 @@ export async function saveMonthlyRevenueToFirebase(data: MonthlyRevenueData): Pr
     const docRef = doc(db, REVENUE_COLLECTION, data.id);
     await setDoc(docRef, { ...data, updatedAt: new Date().toISOString() });
     lastSavedRevenueMap[data.id] = serialized;
+
+    // Automatically create a history snapshot whenever monthly revenue is saved
+    const historyItem = createRevenueHistoryRecord(data);
+    await saveRevenueHistoryToFirebase(historyItem);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
   }
@@ -617,7 +646,7 @@ export function subscribeRevenueHistory(callback: (items: RevenueHistoryRecord[]
     collection(db, REVENUE_HISTORY_COLLECTION),
     (snapshot) => {
       const list: RevenueHistoryRecord[] = snapshot.docs.map((d) => d.data() as RevenueHistoryRecord);
-      list.sort((a, b) => (b.data?.updatedAt || '').localeCompare(a.data?.updatedAt || ''));
+      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       callback(list);
     },
     (err) => {

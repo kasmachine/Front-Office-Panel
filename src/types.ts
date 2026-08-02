@@ -88,5 +88,6 @@ export interface RevenueHistoryRecord {
   updatedAt: string;
   totalRevenue: number;
   data: MonthlyRevenueData;
+  createdAt?: number;
 }
 

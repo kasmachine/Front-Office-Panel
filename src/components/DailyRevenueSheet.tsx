@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MonthlyRevenueData, RevenueCategories, RevenueHistoryRecord } from '../types';
 import { getInitialMonthlyRevenueData } from '../data/defaults';
-import { saveMonthlyRevenueToFirebase, subscribeMonthlyRevenue, saveRevenueHistoryToFirebase } from '../lib/firebase';
+import { saveMonthlyRevenueToFirebase, subscribeMonthlyRevenue, saveRevenueHistoryToFirebase, createRevenueHistoryRecord } from '../lib/firebase';
 import {
   Calendar,
   TrendingUp,
@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Info,
   CheckCircle,
+  BookmarkCheck,
 } from 'lucide-react';
 
 interface DailyRevenueSheetProps {
@@ -87,6 +88,35 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
   const saveHistoryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastHistorySerializedRef = useRef<string>('');
 
+  const saveHistorySnapshot = (revData: MonthlyRevenueData) => {
+    if (!revData || !revData.id) return;
+    const historyRecord = createRevenueHistoryRecord(revData);
+
+    // 1. Save to Firebase history collection
+    saveRevenueHistoryToFirebase(historyRecord);
+
+    // 2. Save to local storage history array
+    try {
+      const localHistRaw = localStorage.getItem('nan_seasons_revenue_history');
+      let localHist: RevenueHistoryRecord[] = localHistRaw ? JSON.parse(localHistRaw) : [];
+      localHist = [historyRecord, ...localHist.filter(h => h.id !== historyRecord.id)];
+      localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(localHist));
+    } catch (e) {
+      console.error('Failed to update local revenue history', e);
+    }
+  };
+
+  const handleManualSaveHistory = () => {
+    if (!data || !data.id) return;
+    saveHistorySnapshot(data);
+    setIsSaving(true);
+    setSaveSuccess(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      setSaveSuccess(false);
+    }, 2000);
+  };
+
   useEffect(() => {
     if (!data || !data.id) return;
     const serialized = JSON.stringify(data);
@@ -98,39 +128,8 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
     saveHistoryTimeoutRef.current = setTimeout(() => {
       lastHistorySerializedRef.current = serialized;
-
-      const totalRev: number = (Object.values(data.days || {}) as RevenueCategories[]).reduce((acc: number, item: RevenueCategories): number => {
-        return acc + (item.rooms || 0) + (item.foodBeverage || 0) + (item.shop || 0) +
-               (item.toursEtc || 0) + (item.massage || 0) + (item.laundryOthers || 0);
-      }, 0);
-
-      const now = new Date();
-      const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear() + 543} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} น.`;
-
-      const historyRecord: RevenueHistoryRecord = {
-        id: `rev-hist-${data.year}-${String(data.month).padStart(2, '0')}-${Date.now()}`,
-        docId: data.id,
-        year: data.year,
-        month: data.month,
-        monthName: `${MONTH_TH[data.month - 1]} ${data.year + 543}`,
-        updatedAt: formattedDate,
-        totalRevenue: totalRev,
-        data: data,
-      };
-
-      // 1. Save to Firebase history collection
-      saveRevenueHistoryToFirebase(historyRecord);
-
-      // 2. Save to local storage history array
-      try {
-        const localHistRaw = localStorage.getItem('nan_seasons_revenue_history');
-        let localHist: RevenueHistoryRecord[] = localHistRaw ? JSON.parse(localHistRaw) : [];
-        localHist = [historyRecord, ...localHist.filter(h => h.id !== historyRecord.id)];
-        localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(localHist));
-      } catch (e) {
-        console.error('Failed to update local revenue history', e);
-      }
-    }, 1500);
+      saveHistorySnapshot(data);
+    }, 800);
 
     return () => {
       if (saveHistoryTimeoutRef.current) {
@@ -344,6 +343,16 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleManualSaveHistory}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl shadow-2xs transition-all"
+            title="บันทึกภาพรวมยอดขายของเดือนนี้ลงในประวัติย้อนหลังทันที"
+          >
+            <BookmarkCheck className="w-4 h-4 text-emerald-600" />
+            <span>{saveSuccess ? 'บันทึกประวัติสำเร็จ!' : 'บันทึกลงประวัติ'}</span>
+          </button>
+
           <button
             type="button"
             onClick={handleClearMonth}
