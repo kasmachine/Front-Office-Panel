@@ -145,12 +145,16 @@ export function syncMinusExpensesToReceipt(
     (currentReceiptData.startDate || '') !== targetDate ||
     (currentReceiptData.endDate || '') !== targetDate;
 
-  if (!itemsChanged && !datesChanged) {
+  const dateKey = targetDate.replace(/\//g, '-');
+  const targetDocId = `receipt-${dateKey}`;
+
+  if (!itemsChanged && !datesChanged && currentReceiptData.id === targetDocId) {
     return currentReceiptData;
   }
 
   return {
     ...currentReceiptData,
+    id: targetDocId,
     startDate: targetDate,
     endDate: targetDate,
     items: mergedItems,

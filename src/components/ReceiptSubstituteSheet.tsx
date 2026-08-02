@@ -4,7 +4,7 @@ import { ArabicToBahtText } from '../utils/bahttext';
 import { extractMinusExpenses, getTodayFormatted, formatDateToDisplay } from '../utils/syncUtils';
 import { getStoredCategories } from './ExpenseCategorySelect';
 import { getStoredStaffList } from './StaffSelect';
-import { Plus, Trash2, Upload, Image as ImageIcon, ShieldCheck } from 'lucide-react';
+import { Plus, Trash2, Upload, Image as ImageIcon, ShieldCheck, Calendar } from 'lucide-react';
 
 interface ReceiptSubstituteSheetProps {
   data: ReceiptSubstituteData;
@@ -13,6 +13,17 @@ interface ReceiptSubstituteSheetProps {
   cashCountData?: CashCountData;
   onManualSync?: () => void;
 }
+
+const getInputValueDate = (dateStr?: string) => {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+    const [dd, mm, yyyy] = trimmed.split('/');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return '';
+};
 
 export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
   data,
@@ -42,9 +53,10 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
   };
 
   const addItem = () => {
+    const defaultDate = data.startDate ? formatDateToDisplay(data.startDate) : getTodayFormatted();
     const newItem: ReceiptSubstituteItem = {
       id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      date: getTodayFormatted(),
+      date: defaultDate,
       description: '',
       amount: 0,
       remark: '',
@@ -101,6 +113,38 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
           </div>
           <div className="text-xs md:text-sm text-slate-700 font-normal max-w-xl mx-auto">
             {data.companyAddress}
+          </div>
+
+          {/* Daily Date Badge / Selector */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-50 border border-sky-300 rounded-lg text-sky-900 text-xs md:text-sm font-bold shadow-2xs">
+              <Calendar className="w-4 h-4 text-sky-600 no-print" />
+              <span>ประจำวันที่:</span>
+              <input
+                type="date"
+                value={getInputValueDate(data.startDate)}
+                onChange={(e) => {
+                  const newDateVal = e.target.value;
+                  if (!newDateVal) return;
+                  const formatted = formatDateToDisplay(newDateVal);
+                  const newDocId = `receipt-${newDateVal.replace(/\//g, '-')}`;
+                  onChange({
+                    ...data,
+                    id: newDocId,
+                    startDate: formatted,
+                    endDate: formatted,
+                    items: data.items.map((item) => ({
+                      ...item,
+                      date: item.date ? item.date : formatted,
+                    })),
+                  });
+                }}
+                className="no-print border border-slate-300 rounded px-2 py-0.5 font-mono text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-bold"
+              />
+              <span className="hidden print:inline font-bold underline font-mono ml-1">
+                {formatDateToDisplay(data.startDate)}
+              </span>
+            </div>
           </div>
         </div>
 

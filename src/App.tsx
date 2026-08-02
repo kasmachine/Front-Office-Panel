@@ -36,7 +36,7 @@ import {
   resetQuotaExceeded,
   canonicalStringify,
 } from './lib/firebase';
-import { syncMinusExpensesToReceipt, isWithin7Days } from './utils/syncUtils';
+import { syncMinusExpensesToReceipt, isWithin7Days, formatDateToDisplay, getTodayFormatted } from './utils/syncUtils';
 import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
 
 export default function App() {
@@ -510,10 +510,20 @@ export default function App() {
         setSavedCashCounts((prev) => [recordToSave, ...prev.filter((c) => c.id !== recordToSave.id)]);
         showToast('บันทึกตารางนับเงินลงใน Firebase และประวัติเรียบร้อยแล้ว');
       } else {
-        const recordToSave = { ...receiptData, id: receiptData.id || `receipt-${Date.now()}`, createdAt: Date.now() };
+        const displayDate = formatDateToDisplay(receiptData.startDate || getTodayFormatted());
+        const dateKey = (receiptData.startDate || getTodayFormatted()).replace(/[/]/g, '-');
+        const docId = `receipt-${dateKey}`;
+        const recordToSave = {
+          ...receiptData,
+          id: docId,
+          startDate: receiptData.startDate || getTodayFormatted(),
+          endDate: receiptData.endDate || receiptData.startDate || getTodayFormatted(),
+          createdAt: receiptData.createdAt || Date.now(),
+          updatedAt: new Date().toISOString(),
+        };
         await saveReceiptToFirebase(recordToSave);
         setSavedReceipts((prev) => [recordToSave, ...prev.filter((r) => r.id !== recordToSave.id)]);
-        showToast('บันทึกใบรับรองแทนใบเสร็จลงใน Firebase และประวัติเรียบร้อยแล้ว');
+        showToast(`บันทึกใบรับรองแทนใบเสร็จประจำวันที่ ${displayDate} ลงประวัติเรียบร้อยแล้ว`);
       }
     } catch (err) {
       console.error('Error saving to Firebase:', err);

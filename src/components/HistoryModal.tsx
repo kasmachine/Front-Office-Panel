@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord } from '../types';
 import { downloadJsonFile } from '../utils/jsonExport';
+import { formatDateToDisplay } from '../utils/syncUtils';
 import { X, Calendar, Download, Trash2, Clock, Check, Code2, TrendingUp, ChevronDown, ChevronRight, Layers, Lock, ShieldAlert } from 'lucide-react';
 
 interface HistoryModalProps {
@@ -379,29 +380,38 @@ interface MonthGroup {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {savedReceipts.map((item) => {
                     const total = item.items.reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+                    const displayDate = formatDateToDisplay(item.startDate || item.items[0]?.date || '');
 
                     return (
                       <div
                         key={item.id}
-                        className="border border-slate-200 hover:border-orange-400 rounded-xl p-3.5 bg-slate-50/50 hover:bg-white transition-all shadow-2xs flex flex-col justify-between"
+                        className="border border-slate-200 hover:border-sky-400 rounded-xl p-3.5 bg-slate-50/50 hover:bg-white transition-all shadow-2xs flex flex-col justify-between"
                       >
                         <div>
-                          <div className="flex items-center justify-between font-bold text-slate-800 text-sm">
-                            <span className="truncate max-w-[180px]">{item.requesterName || 'ไม่ระบุชื่อ'}</span>
-                            <span className="text-xs font-mono text-slate-500">{item.startDate}</span>
+                          <div className="flex items-center justify-between font-bold text-slate-800 text-sm gap-2">
+                            <span className="truncate max-w-[170px] text-slate-900 font-extrabold">
+                              {item.requesterName || 'ไม่ระบุชื่อ'}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200 shrink-0">
+                              📅 {displayDate}
+                            </span>
                           </div>
-                          <div className="text-xs text-slate-600 mt-1 font-mono">
-                            ยอดรวม: <span className="font-extrabold text-emerald-700">THB {total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                          <div className="text-xs text-slate-600 mt-2 font-mono flex items-center justify-between">
+                            <span>ยอดรวมรายจ่าย:</span>
+                            <span className="font-extrabold text-red-600">
+                              THB {Math.abs(total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
                           </div>
-                          <div className="text-xs text-slate-500 mt-0.5">
-                            จำนวน {item.items.length} รายการ
+                          <div className="text-xs text-slate-500 mt-1 flex items-center justify-between">
+                            <span>จำนวน {item.items.length} รายการ</span>
+                            {item.approverName && <span className="text-[11px] text-slate-400">ผู้อนุมัติ: {item.approverName}</span>}
                           </div>
                         </div>
 
                         <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-slate-200">
                           <button
                             onClick={() => {
-                              downloadJsonFile(item, `ReceiptSubstitute_${item.startDate.replace(/\//g, '-')}.json`);
+                              downloadJsonFile(item, `ReceiptSubstitute_${displayDate.replace(/\//g, '-')}.json`);
                             }}
                             className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded border border-slate-300"
                             title="ดาวน์โหลดไฟล์ JSON รายการนี้"
@@ -413,7 +423,7 @@ interface MonthGroup {
                               onLoadReceipt(item);
                               onClose();
                             }}
-                            className="inline-flex items-center gap-1 text-xs font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 px-2.5 py-1 rounded border border-orange-200"
+                            className="inline-flex items-center gap-1 text-xs font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded border border-sky-200"
                           >
                             <Check className="w-3.5 h-3.5" /> ดึงข้อมูล
                           </button>
