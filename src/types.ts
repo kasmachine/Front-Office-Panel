@@ -52,3 +52,29 @@ export interface ReceiptSubstituteData {
   watermarkText: string;
   createdAt: number;
 }
+
+export interface RevenueCategories {
+  rooms: number;
+  foodBeverage: number;
+  shop: number;
+  toursEtc: number;
+  massage: number;
+  laundryOthers: number;
+}
+
+export interface DailyRevenueItem extends RevenueCategories {
+  day: number;
+  note?: string;
+}
+
+export interface MonthlyRevenueData {
+  id: string; // e.g. "revenue-2026-08"
+  year: number;
+  month: number; // 1-12
+  monthName?: string;
+  days: Record<number, DailyRevenueItem>;
+  lastYear: RevenueCategories;
+  plan: RevenueCategories;
+  target: RevenueCategories;
+  updatedAt?: string;
+}

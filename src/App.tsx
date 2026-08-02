@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
+import { Sidebar } from './components/Sidebar';
 import { CashCountSheet } from './components/CashCountSheet';
 import { ReceiptSubstituteSheet } from './components/ReceiptSubstituteSheet';
+import { DailyRevenueSheet } from './components/DailyRevenueSheet';
 import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
 import { StaffManagerModal } from './components/StaffManagerModal';
@@ -33,7 +35,8 @@ import { syncMinusExpensesToReceipt, isWithin7Days } from './utils/syncUtils';
 import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'cashCount' | 'receiptSubstitute'>('cashCount');
+  const [activeTab, setActiveTab] = useState<'cashCount' | 'receiptSubstitute' | 'dailyRevenue'>('cashCount');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Active form states
   const [cashCountData, setCashCountData] = useState<CashCountData>(() => {
@@ -637,7 +640,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans antialiased selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex font-sans antialiased selection:bg-orange-500 selection:text-white">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="no-print fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-fade-in text-sm font-medium">
@@ -646,20 +649,37 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Navigation Header */}
-      <Header
+      {/* Left Sidebar Navigation Menu */}
+      <Sidebar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenHistory={() => setIsHistoryOpen(true)}
         onManualSync={handleManualSync}
         saveStatus={saveStatus}
         lastSavedTime={lastSavedTime}
+        isMobileOpen={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
-      {/* Main Content View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-4">
+      {/* Main Content Area (Offset by sidebar width on desktop) */}
+      <div className="flex-1 md:ml-64 min-h-screen flex flex-col w-full min-w-0">
+        {/* Main Navigation Header Bar */}
+        <Header
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onManualSync={handleManualSync}
+          saveStatus={saveStatus}
+          lastSavedTime={lastSavedTime}
+          onToggleMobileMenu={() => setIsMobileMenuOpen(true)}
+        />
+
+        {/* Main Content View Container */}
+        <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-4">
         {/* Action Control Toolbar (Unified row for Manage Staff, Manage Topics, Save, Print/PDF) */}
-        <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-5xl mx-auto">
+        {activeTab !== 'dailyRevenue' && (
+          <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-5xl mx-auto">
           {/* Left Management Group */}
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -780,6 +800,7 @@ export default function App() {
             </div>
           </div>
         </div>
+        )}
 
         {activeTab === 'cashCount' ? (
           <CashCountSheet
@@ -790,7 +811,7 @@ export default function App() {
             onOpenManageStaff={() => setIsStaffManagerOpen(true)}
             onOpenManageCategories={() => setIsCategoryManagerOpen(true)}
           />
-        ) : (
+        ) : activeTab === 'receiptSubstitute' ? (
           <ReceiptSubstituteSheet
             data={receiptData}
             onChange={setReceiptData}
@@ -801,6 +822,8 @@ export default function App() {
               showToast('ดึงรายการหัก (-) จากตารางนับเงินทั้งสองกะเรียบร้อยแล้ว');
             }}
           />
+        ) : (
+          <DailyRevenueSheet />
         )}
       </main>
 
@@ -855,6 +878,7 @@ export default function App() {
         }}
         isFirebaseSyncing={isFirebaseSyncing}
       />
+      </div>
     </div>
   );
 }

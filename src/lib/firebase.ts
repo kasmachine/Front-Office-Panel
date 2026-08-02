@@ -18,7 +18,7 @@ import {
 setLogLevel('silent');
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { CashCountData, ReceiptSubstituteData } from '../types';
+import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData } from '../types';
 
 // Construct effective Firebase config (supports Vercel env vars or fallback to firebase-applet-config.json)
 const effectiveFirebaseConfig = {
@@ -548,6 +548,48 @@ export function subscribeCategories(callback: (categories: { minus: string[]; pl
     }
   );
 }
+
+/**
+ * Realtime Monthly Revenue Sync (Salesplan and Targets)
+ */
+const REVENUE_COLLECTION = 'monthly_revenues';
+let lastSavedRevenueMap: Record<string, string> = {};
+
+export async function saveMonthlyRevenueToFirebase(data: MonthlyRevenueData): Promise<void> {
+  if (isQuotaExceeded || !data.id) return;
+  const serialized = JSON.stringify(data);
+  if (lastSavedRevenueMap[data.id] === serialized) return;
+
+  const path = `${REVENUE_COLLECTION}/${data.id}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, REVENUE_COLLECTION, data.id);
+    await setDoc(docRef, { ...data, updatedAt: new Date().toISOString() });
+    lastSavedRevenueMap[data.id] = serialized;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export function subscribeMonthlyRevenue(docId: string, callback: (data: MonthlyRevenueData | null) => void) {
+  if (!docId) return () => {};
+  const docRef = doc(db, REVENUE_COLLECTION, docId);
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data() as MonthlyRevenueData);
+      } else {
+        callback(null);
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, `${REVENUE_COLLECTION}/${docId}`);
+      callback(null);
+    }
+  );
+}
+
 
 
 
