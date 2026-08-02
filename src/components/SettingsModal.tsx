@@ -1,16 +1,17 @@
 import React, { useRef } from 'react';
-import { Settings, Download, Upload, History, RotateCcw, X, FileCode, Cloud, ShieldCheck, Users, FolderTree } from 'lucide-react';
+import { Settings, Download, Upload, History, RotateCcw, X, FileCode, Cloud, ShieldCheck, Users, FolderTree, RefreshCw } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTab: 'cashCount' | 'receiptSubstitute';
+  activeTab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue';
   onDownloadJson: () => void;
   onImportJson: (file: File) => void;
   onOpenHistory: () => void;
   onClearDraft: () => void;
   onOpenManageStaff?: () => void;
   onOpenManageCategories?: () => void;
+  onManualSync?: () => void;
   isFirebaseSyncing?: boolean;
 }
 
@@ -24,6 +25,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onClearDraft,
   onOpenManageStaff,
   onOpenManageCategories,
+  onManualSync,
   isFirebaseSyncing = false,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -175,6 +177,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                   <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2.5 py-1 rounded-full">
                     จัดการรายชื่อ
+                  </span>
+                </button>
+              </div>
+
+              <div className="border-t border-slate-200 dark:border-slate-800"></div>
+            </>
+          )}
+
+          {/* Section: Manual System Sync */}
+          {onManualSync && (
+            <>
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <RefreshCw className="w-4 h-4 text-sky-500" />
+                  ดึงข้อมูลระบบล่าสุด (Manual System Sync)
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onManualSync();
+                    onClose();
+                  }}
+                  className="w-full flex items-center justify-between p-3.5 rounded-xl border border-sky-200 dark:border-sky-900/40 bg-sky-50/50 dark:bg-sky-950/20 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-all text-left group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-lg group-hover:scale-105 transition-transform">
+                      <RefreshCw className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-slate-100">ดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์</div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400">ซิงค์ข้อมูล Real-time ล่าสุดจาก Firebase เข้าสู่ระบบ</div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold text-sky-700 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/60 px-2.5 py-1 rounded-full">
+                    ดึงข้อมูลระบบ
                   </span>
                 </button>
               </div>

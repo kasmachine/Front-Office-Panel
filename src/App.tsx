@@ -933,8 +933,16 @@ export default function App() {
         savedCashCounts={savedCashCounts}
         savedReceipts={savedReceipts}
         savedRevenueHistory={savedRevenueHistory}
-        onLoadCashCount={setCashCountData}
-        onLoadReceipt={setReceiptData}
+        onLoadCashCount={(item) => {
+          setCashCountData(item);
+          setActiveTab('cashCount');
+          showToast('ดึงข้อมูลตารางนับเงินเรียบร้อยแล้ว');
+        }}
+        onLoadReceipt={(item) => {
+          setReceiptData(item);
+          setActiveTab('receiptSubstitute');
+          showToast('ดึงข้อมูลใบรับรองแทนใบเสร็จเรียบร้อยแล้ว');
+        }}
         onLoadRevenueHistory={handleLoadRevenueHistory}
         onDeleteCashCount={handleDeleteCashCount}
         onDeleteReceipt={handleDeleteReceipt}
@@ -958,6 +966,7 @@ export default function App() {
             handleResetReceipt();
           }
         }}
+        onManualSync={handleManualSync}
         isFirebaseSyncing={isFirebaseSyncing}
       />
       </div>
