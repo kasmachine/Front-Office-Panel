@@ -568,15 +568,19 @@ export function createRevenueHistoryRecord(data: MonthlyRevenueData): RevenueHis
   const now = new Date();
   const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear() + 543} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} น.`;
 
+  const monthStr = String(data.month).padStart(2, '0');
+  const monthId = `rev-hist-${data.year}-${monthStr}`;
+
   return {
-    id: `rev-hist-${data.year}-${String(data.month).padStart(2, '0')}-${Date.now()}`,
-    docId: data.id || `revenue-${data.year}-${String(data.month).padStart(2, '0')}`,
+    id: monthId,
+    docId: data.id || `revenue-${data.year}-${monthStr}`,
     year: data.year,
     month: data.month,
     monthName: `${MONTH_TH[(data.month || 1) - 1]} ${(data.year || 2026) + 543}`,
     updatedAt: formattedDate,
     totalRevenue: totalRev,
     data: data,
+    createdAt: Date.now(),
   };
 }
 
@@ -645,8 +649,56 @@ export function subscribeRevenueHistory(callback: (items: RevenueHistoryRecord[]
   return onSnapshot(
     collection(db, REVENUE_HISTORY_COLLECTION),
     (snapshot) => {
-      const list: RevenueHistoryRecord[] = snapshot.docs.map((d) => d.data() as RevenueHistoryRecord);
-      list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      const rawList: RevenueHistoryRecord[] = snapshot.docs.map((d) => d.data() as RevenueHistoryRecord);
+      const map = new Map<string, { record: RevenueHistoryRecord; legacyDocIds: string[] }>();
+
+      for (const item of rawList) {
+        if (!item || !item.year || !item.month) continue;
+        const monthKey = `${item.year}-${String(item.month).padStart(2, '0')}`;
+        const canonicalId = `rev-hist-${monthKey}`;
+        const existing = map.get(monthKey);
+
+        if (!existing) {
+          map.set(monthKey, {
+            record: item,
+            legacyDocIds: item.id && item.id !== canonicalId ? [item.id] : [],
+          });
+        } else {
+          const existingTime = existing.record.createdAt || 0;
+          const itemTime = item.createdAt || 0;
+
+          if (itemTime >= existingTime) {
+            const newLegacy = [...existing.legacyDocIds];
+            if (existing.record.id && existing.record.id !== canonicalId) {
+              newLegacy.push(existing.record.id);
+            }
+            if (item.id && item.id !== canonicalId) {
+              newLegacy.push(item.id);
+            }
+            map.set(monthKey, { record: item, legacyDocIds: newLegacy });
+          } else {
+            if (item.id && item.id !== canonicalId) {
+              existing.legacyDocIds.push(item.id);
+            }
+          }
+        }
+      }
+
+      // Automatically clean up old duplicate snapshot documents in Firebase
+      map.forEach((value) => {
+        if (value.legacyDocIds.length > 0 && !isQuotaExceeded) {
+          value.legacyDocIds.forEach((dupId) => {
+            if (dupId) deleteRevenueHistoryFromFirebase(dupId).catch(() => {});
+          });
+        }
+      });
+
+      const list = Array.from(map.values()).map((v) => v.record);
+      list.sort((a, b) => {
+        if (b.year !== a.year) return b.year - a.year;
+        return b.month - a.month;
+      });
+
       callback(list);
     },
     (err) => {

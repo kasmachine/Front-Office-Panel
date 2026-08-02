@@ -69,8 +69,9 @@ interface MonthGroup {
   records: RevenueHistoryRecord[];
 }
 
-  // Group Revenue History by Month/Year Key
+  // Group Revenue History by Month/Year Key (Overwriting duplicates to show clean monthly history)
   const revenueByMonthMap = savedRevenueHistory.reduce<Record<string, MonthGroup>>((acc, item) => {
+    if (!item || !item.year || !item.month) return acc;
     const key = `${item.year}-${String(item.month).padStart(2, '0')}`;
     if (!acc[key]) {
       acc[key] = {
@@ -78,10 +79,18 @@ interface MonthGroup {
         year: item.year,
         month: item.month,
         monthName: item.monthName || `เดือน ${item.month}/${item.year + 543}`,
-        records: [],
+        records: [item],
       };
+    } else {
+      // Keep newer record first
+      const existingTime = acc[key].records[0]?.createdAt || 0;
+      const itemTime = item.createdAt || 0;
+      if (itemTime >= existingTime) {
+        acc[key].records = [item, ...acc[key].records];
+      } else {
+        acc[key].records.push(item);
+      }
     }
-    acc[key].records.push(item);
     return acc;
   }, {});
 
@@ -215,7 +224,7 @@ interface MonthGroup {
                               {group.monthName}
                             </span>
                             <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-bold border border-emerald-200 ml-1">
-                              {group.records.length} เวอร์ชัน
+                              {group.records.length === 1 ? 'ข้อมูลประจำเดือน' : `${group.records.length} เวอร์ชัน`}
                             </span>
                           </div>
                           <span className="text-xs text-slate-500 font-mono">

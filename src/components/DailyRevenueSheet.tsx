@@ -99,7 +99,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
     try {
       const localHistRaw = localStorage.getItem('nan_seasons_revenue_history');
       let localHist: RevenueHistoryRecord[] = localHistRaw ? JSON.parse(localHistRaw) : [];
-      localHist = [historyRecord, ...localHist.filter(h => h.id !== historyRecord.id)];
+      localHist = [historyRecord, ...localHist.filter(h => h.id !== historyRecord.id && !(h.year === historyRecord.year && h.month === historyRecord.month))];
       localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(localHist));
     } catch (e) {
       console.error('Failed to update local revenue history', e);
