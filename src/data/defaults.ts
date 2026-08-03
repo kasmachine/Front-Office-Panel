@@ -118,3 +118,109 @@ export function getInitialMonthlyRevenueData(year?: number, month?: number): Mon
     updatedAt: new Date().toISOString(),
   };
 }
+
+export const MORNING_SHIFT_DEFAULT_TASKS = [
+  'End transfer call #21#',
+  'Count money',
+  'Read task and email -New Booking and reply email for agency, Send remind',
+  'Charge credit card for booking.com and PMS',
+  'Reservation Tour and Guide, Transport ,Remind Guide',
+  'Extra bed, Fruit & Flower ดอกไม้กบ',
+  'Check VIP room. Guest room walk / Everything Clean',
+  'Check missed call & call back',
+  'Check breakfast line and Clean table',
+  'Check guest bathroom +toilet paper',
+  'Check swimming pool +toilet & shower',
+  'Clear Kitchen & Clean Coffee Machine',
+  'Check payment due out room ,Minibar , Key',
+  'Regis daily income check out room (Z)',
+  'Give good bye letter to HK',
+  'Check credit card net amount.',
+  'Prepare welcome drink & drinking water',
+  'Regis staff work time in book',
+  'Expense Tour Zoho,Invoice, Check payment Tour',
+  'Work order list',
+  'Check in & check out tour room',
+  'Check bicycle / Clear post box',
+  'Check breakfast item with kitchen for tomorrow',
+  'Clean & fill up wine cellar',
+  'Clean lobby, toilet&restaurant',
+  'Check the water pump',
+  'Walk around the hotel area',
+  'Record the expense',
+  'The Lamp on the table 16.30pm',
+  'Count money',
+  'Face Hand over & Line Hand Over',
+  'Check list Garden',
+  'Clean front desk & PC Computer',
+  'Check list must be done before 14.00',
+];
+
+export const AFTERNOON_SHIFT_DEFAULT_TASKS = [
+  'Count money',
+  'Check the check in room(check in time 14:00)',
+  'Read task and email',
+  'Print check in paper work/breakfast/welcome letter',
+  'Check guest bathroom +toilet paper',
+  'Check stock Ocha (Beer/soft drink/shop)/ Ocha (Wine ,Cocktail @MB) THU&MON only',
+  'Regis daily income POS and (Z)',
+  'Check what to sell with kitchen',
+  'Record minibar item',
+  'Clean lobby, toilet & restaurant',
+  '16:00 Check swimming pool+toilet Shower',
+  'Report immigration',
+  'Daily expenses / Cash Equivalent Certificate',
+  'Add hotel Commission',
+  'Collect guest breakfast choice',
+  'Regis daily tour income at Zoho',
+  'Close Ocha Bills',
+  'Count money & Z (20.30)',
+  '20:30 Send line staff working time',
+  'Clean computer & desk',
+  'Check folio due out room tomorrow',
+  'Check in all room',
+  'Send name for tour to insurance (tomorrow)',
+  'Charge the light and credit card machine',
+  'Close room & turn off the light',
+  'Work order list Status',
+  'Close front door & back door',
+  'Close store room +Laundry room',
+  'Close Kitchen (ปิดหน้าต่าง)',
+  'Store bicycle /Collect umbrella swimming pool (19.00)',
+  'Stock Minibar / Expire',
+  'Transfer call *21*0817745223#',
+  'Take out the kitchen trash',
+  'Check list must be done before 20.30',
+];
+
+export function getInitialFrontOfficeChecklistData(targetDate?: string): import('../types').FrontOfficeChecklistData {
+  const today = new Date();
+  const dateStr = targetDate || today.toISOString().split('T')[0];
+  const [y, m, d] = dateStr.split('-');
+  const thaiYear = parseInt(y, 10) + 543;
+  const dateDisplay = `${d}/${m}/${thaiYear}`;
+
+  return {
+    id: `checklist-${dateStr}`,
+    date: dateStr,
+    dateDisplay,
+    morningTasks: MORNING_SHIFT_DEFAULT_TASKS.map((task, idx) => ({
+      id: `m-${idx + 1}`,
+      title: task,
+      completed: false,
+      staff: '',
+      kas: '',
+      note: '',
+    })),
+    afternoonTasks: AFTERNOON_SHIFT_DEFAULT_TASKS.map((task, idx) => ({
+      id: `a-${idx + 1}`,
+      title: task,
+      completed: false,
+      staff: '',
+      kas: '',
+      note: '',
+    })),
+    remarks: '***เช็คขนมปังเผื่อขายด้วยค่ะ** // สรุปจำนวนอาหารเช้า...',
+    updatedAt: new Date().toISOString(),
+  };
+}

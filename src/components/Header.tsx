@@ -3,8 +3,8 @@ import { NanSeasonsLogo } from './NanSeasonsLogo';
 import { FileText, Calculator, CheckCircle2, Loader2, Settings, RefreshCw, BarChart3, Menu } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue';
-  onSelectTab: (tab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue') => void;
+  activeTab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
+  onSelectTab: (tab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
   onOpenSettings?: () => void;
   onManualSync?: () => void;
   saveStatus?: 'saving' | 'saved' | 'idle';
@@ -44,7 +44,9 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'ตารางนับเงินประจำกะ'
                   : activeTab === 'receiptSubstitute'
                   ? 'ใบรับรองแทนใบเสร็จ'
-                  : 'Revenue ประจำวัน'}
+                  : activeTab === 'dailyRevenue'
+                  ? 'Revenue ประจำวัน'
+                  : 'Checklist Front Office'}
               </span>
 
               {saveStatus === 'saving' ? (
@@ -68,7 +70,9 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'ตารางนับเงินสดเข้า-ออกประจำกะ (Shift Cash Reconciliation Sheet)'
                 : activeTab === 'receiptSubstitute'
                 ? 'ใบรับรองแทนใบเสร็จรับเงินพร้อมแนบสำเนาบัตรประชาชน'
-                : 'ยอดขายและเป้าหมายประจำวัน (Salesplan and Targets / Daily Revenue)'}
+                : activeTab === 'dailyRevenue'
+                ? 'ยอดขายและเป้าหมายประจำวัน (Salesplan and Targets / Daily Revenue)'
+                : 'แบบฟอร์มตรวจสอบรายการงานประจำกะเช้าและกะบ่าย (Front Office Shift Checklist)'}
             </p>
           </div>
         </div>

@@ -18,7 +18,7 @@ import {
 setLogLevel('silent');
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories } from '../types';
+import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories, FrontOfficeChecklistData } from '../types';
 
 // Construct effective Firebase config (supports Vercel env vars or fallback to firebase-applet-config.json)
 const effectiveFirebaseConfig = {
@@ -755,6 +755,66 @@ export async function deleteRevenueHistoryFromFirebase(historyId: string): Promi
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
+}
+
+/**
+ * Realtime Front Office Checklist Persistence & Live Synchronization
+ */
+const CHECKLIST_COLLECTION = 'front_office_checklists';
+
+export async function saveChecklistToFirebase(data: FrontOfficeChecklistData): Promise<void> {
+  if (isQuotaExceeded || !data) return;
+  const path = `${CHECKLIST_COLLECTION}/${data.id}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, CHECKLIST_COLLECTION, data.id);
+    await setDoc(docRef, {
+      ...data,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export function subscribeChecklist(
+  dateDocId: string,
+  callback: (data: FrontOfficeChecklistData | null, hasPendingWrites: boolean) => void
+) {
+  initAuth().catch(() => {});
+  const docRef = doc(db, CHECKLIST_COLLECTION, dateDocId);
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (snapshot.exists()) {
+        callback(snapshot.data() as FrontOfficeChecklistData, snapshot.metadata.hasPendingWrites);
+      } else {
+        callback(null, false);
+      }
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, `${CHECKLIST_COLLECTION}/${dateDocId}`);
+      callback(null, false);
+    }
+  );
+}
+
+export async function fetchChecklistFromFirebase(dateDocId: string): Promise<FrontOfficeChecklistData | null> {
+  try {
+    await initAuth();
+    const docRef = doc(db, CHECKLIST_COLLECTION, dateDocId);
+    const snap = await getDocFromServer(docRef);
+    if (snap.exists()) {
+      return snap.data() as FrontOfficeChecklistData;
+    }
+  } catch (err) {
+    try {
+      const docRef = doc(db, CHECKLIST_COLLECTION, dateDocId);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) return snap.data() as FrontOfficeChecklistData;
+    } catch (e) { /* ignore */ }
+  }
+  return null;
 }
 
 

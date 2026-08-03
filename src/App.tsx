@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { CashCountSheet } from './components/CashCountSheet';
 import { ReceiptSubstituteSheet } from './components/ReceiptSubstituteSheet';
 import { DailyRevenueSheet } from './components/DailyRevenueSheet';
+import { FrontOfficeChecklist } from './components/FrontOfficeChecklist';
 import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
 import { StaffManagerModal } from './components/StaffManagerModal';
@@ -41,7 +42,7 @@ import { syncMinusExpensesToReceipt, isWithin7Days, formatDateToDisplay, getToda
 import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'cashCount' | 'receiptSubstitute' | 'dailyRevenue'>('cashCount');
+  const [activeTab, setActiveTab] = useState<'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist'>('cashCount');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Active form states
@@ -901,8 +902,10 @@ export default function App() {
               showToast('ดึงรายการหัก (-) จากตารางนับเงินทั้งสองกะเรียบร้อยแล้ว');
             }}
           />
-        ) : (
+        ) : activeTab === 'dailyRevenue' ? (
           <DailyRevenueSheet />
+        ) : (
+          <FrontOfficeChecklist />
         )}
       </main>
 

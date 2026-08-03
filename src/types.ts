@@ -95,3 +95,23 @@ export interface RevenueHistoryRecord {
   createdAt?: number;
 }
 
+export interface ChecklistTask {
+  id: string;
+  title: string;
+  completed: boolean;
+  staff: string;
+  kas: string;
+  note?: string;
+  updatedAt?: string;
+}
+
+export interface FrontOfficeChecklistData {
+  id: string;
+  date: string; // YYYY-MM-DD
+  dateDisplay?: string; // DD/MM/YYYY
+  morningTasks: ChecklistTask[];
+  afternoonTasks: ChecklistTask[];
+  remarks: string;
+  updatedAt?: string;
+}
+

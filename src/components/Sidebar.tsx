@@ -4,6 +4,7 @@ import {
   Calculator,
   FileText,
   BarChart3,
+  CheckSquare,
   Settings,
   RefreshCw,
   CheckCircle2,
@@ -14,8 +15,8 @@ import {
 } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue';
-  onSelectTab: (tab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue') => void;
+  activeTab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
+  onSelectTab: (tab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
   onOpenSettings: () => void;
   onOpenHistory?: () => void;
   onManualSync?: () => void;
@@ -54,6 +55,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Revenue',
       sublabel: 'ยอดขาย & เป้าหมายประจำวัน',
       icon: BarChart3,
+    },
+    {
+      id: 'frontOfficeChecklist' as const,
+      label: 'Checklist Front Office',
+      sublabel: 'แบบฟอร์มกะเช้า & กะบ่าย',
+      icon: CheckSquare,
     },
   ];
 
