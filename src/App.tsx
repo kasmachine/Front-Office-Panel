@@ -844,7 +844,7 @@ export default function App() {
               </button>
 
               {isPrintMenuOpen && (
-                <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs font-semibold text-slate-800 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs font-semibold text-slate-800 animate-in fade-in zoom-in-95 duration-100">
                   <button
                     type="button"
                     onClick={() => {
@@ -853,25 +853,10 @@ export default function App() {
                     }}
                     className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 text-slate-800 hover:text-emerald-700 flex items-center gap-2.5 transition-colors"
                   >
-                    <Printer className="w-4 h-4 text-sky-600 shrink-0" />
+                    <Printer className="w-4 h-4 text-emerald-600 shrink-0" />
                     <div>
-                      <div className="font-bold">พิมพ์เอกสาร (Print)</div>
-                      <div className="text-[10px] text-slate-500 font-normal">สั่งพิมพ์ผ่านเครื่องพิมพ์</div>
-                    </div>
-                  </button>
-                  <div className="border-t border-slate-100 my-1"></div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPrintMenuOpen(false);
-                      handleExportPdf();
-                    }}
-                    className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 text-slate-800 hover:text-emerald-700 flex items-center gap-2.5 transition-colors"
-                  >
-                    <Download className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <div>
-                      <div className="font-bold">ส่งออกเป็น PDF (Download)</div>
-                      <div className="text-[10px] text-slate-500 font-normal">บันทึกเป็นไฟล์ PDF ลงเครื่อง</div>
+                      <div className="font-bold">พิมพ์เอกสาร / PDF (Print)</div>
+                      <div className="text-[10px] text-slate-500 font-normal">สั่งพิมพ์ผ่านเครื่องพิมพ์ หรือบันทึกเป็น PDF</div>
                     </div>
                   </button>
                 </div>
