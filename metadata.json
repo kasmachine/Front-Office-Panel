@@ -1,6 +1,6 @@
 {
   "name": "Front Office Panel - ตารางนับเงิน & ใบรับรองแทนใบเสร็จ",
   "description": "ระบบตารางนับเงินเข้า-ออกประจำกะ และสร้างใบรับรองแทนใบเสร็จรับเงินสำหรับ Front Office Panel พร้อมดาวน์โหลด JSON และจัดเก็บข้อมูลบน Firebase Firestore",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
