@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MonthlyRevenueData, RevenueCategories, RevenueHistoryRecord } from '../types';
 import { getInitialMonthlyRevenueData } from '../data/defaults';
-import { saveMonthlyRevenueToFirebase, subscribeMonthlyRevenue, saveRevenueHistoryToFirebase, createRevenueHistoryRecord } from '../lib/firebase';
+import {
+  saveMonthlyRevenueToFirebase,
+  subscribeMonthlyRevenue,
+  saveRevenueHistoryToFirebase,
+  createRevenueHistoryRecord,
+  fetchMonthlyRevenueFromFirebase,
+} from '../lib/firebase';
 import {
   Calendar,
   TrendingUp,
@@ -21,6 +27,16 @@ import {
   Info,
   CheckCircle,
   BookmarkCheck,
+  Target,
+  BarChart3,
+  ArrowUpRight,
+  ArrowDownRight,
+  Percent,
+  Edit,
+  Zap,
+  CheckCircle2,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 
 interface DailyRevenueSheetProps {
@@ -36,6 +52,23 @@ const MONTH_TH = [
 const MONTH_EN = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
+const REVENUE_CAT_CONFIG: {
+  key: keyof RevenueCategories;
+  label: string;
+  labelEn: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+}[] = [
+  { key: 'rooms', label: 'ห้องพัก', labelEn: 'Rooms', icon: Building2, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
+  { key: 'foodBeverage', label: 'อาหาร & เครื่องดื่ม', labelEn: 'Food & Beverage', icon: Utensils, color: 'text-emerald-600', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200' },
+  { key: 'shop', label: 'ร้านค้า / ของที่ระลึก', labelEn: 'Shop', icon: ShoppingBag, color: 'text-amber-600', bgColor: 'bg-amber-50', borderColor: 'border-amber-200' },
+  { key: 'toursEtc', label: 'ทัวร์และนำเที่ยว', labelEn: 'Tours etc.', icon: Compass, color: 'text-indigo-600', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' },
+  { key: 'massage', label: 'นวดสปา', labelEn: 'Massage', icon: Sparkles, color: 'text-pink-600', bgColor: 'bg-pink-50', borderColor: 'border-pink-200' },
+  { key: 'laundryOthers', label: 'ซักรีดและอื่นๆ', labelEn: 'Laundry & others', icon: Shirt, color: 'text-purple-600', bgColor: 'bg-purple-50', borderColor: 'border-purple-200' },
 ];
 
 export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
@@ -60,6 +93,9 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [isAutoFetching, setIsAutoFetching] = useState(false);
+  const [autoFetchMsg, setAutoFetchMsg] = useState<string | null>(null);
 
   // Subscribe to real-time Firebase changes for selected month
   useEffect(() => {
@@ -115,6 +151,69 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
       setIsSaving(false);
       setSaveSuccess(false);
     }, 2000);
+  };
+
+  // Auto-fetch Last Year Revenue data from Firebase/LocalStorage
+  const handleAutoFetchLastYear = async () => {
+    const lastYearNum = selectedYear - 1;
+    const lastYearDocId = `revenue-${lastYearNum}-${String(selectedMonth).padStart(2, '0')}`;
+    setIsAutoFetching(true);
+    setAutoFetchMsg(null);
+
+    try {
+      // 1. Try Firebase
+      let prevData = await fetchMonthlyRevenueFromFirebase(lastYearDocId);
+
+      // 2. Try LocalStorage fallback
+      if (!prevData) {
+        const saved = localStorage.getItem(`nan_seasons_${lastYearDocId}`);
+        if (saved) {
+          try {
+            prevData = JSON.parse(saved);
+          } catch (e) { /* ignore */ }
+        }
+      }
+
+      if (prevData && prevData.days) {
+        const totals: RevenueCategories = {
+          rooms: 0,
+          foodBeverage: 0,
+          shop: 0,
+          toursEtc: 0,
+          massage: 0,
+          laundryOthers: 0,
+        };
+
+        Object.values(prevData.days).forEach((dayItem) => {
+          totals.rooms += dayItem.rooms || 0;
+          totals.foodBeverage += dayItem.foodBeverage || 0;
+          totals.shop += dayItem.shop || 0;
+          totals.toursEtc += dayItem.toursEtc || 0;
+          totals.massage += dayItem.massage || 0;
+          totals.laundryOthers += dayItem.laundryOthers || 0;
+        });
+
+        const updatedData: MonthlyRevenueData = {
+          ...data,
+          lastYear: totals,
+          updatedAt: new Date().toISOString(),
+        };
+
+        setData(updatedData);
+        localStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(updatedData));
+        saveMonthlyRevenueToFirebase(updatedData);
+
+        const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
+        setAutoFetchMsg(`ดึงข้อมูลปี ${lastYearNum + 543} สำเร็จ! ยอดรวม ฿${grandTotal.toLocaleString('en-US')}`);
+      } else {
+        setAutoFetchMsg(`ไม่พบข้อมูลยอดขายย้อนหลังของเดือน ${MONTH_TH[selectedMonth - 1]} พ.ศ. ${lastYearNum + 543}`);
+      }
+    } catch (err) {
+      setAutoFetchMsg('เกิดข้อผิดพลาดในการดึงข้อมูลปีที่แล้ว');
+    } finally {
+      setIsAutoFetching(false);
+      setTimeout(() => setAutoFetchMsg(null), 5000);
+    }
   };
 
   // Reset serialized ref when month/year changes
@@ -274,12 +373,14 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
   const roomsTotal = getCategoryTotal('rooms');
   const fbTotal = getCategoryTotal('foodBeverage');
   const targetTotal = getBenchmarkTotal('target');
+  const lastYearTotal = getBenchmarkTotal('lastYear');
   const targetPercent = targetTotal > 0 ? (monthTotal / targetTotal) * 100 : 0;
+  const yoyPercent = lastYearTotal > 0 ? ((monthTotal - lastYearTotal) / lastYearTotal) * 100 : 0;
 
   return (
     <div id="revenue-document" className="space-y-6 pb-12 print:p-0 print:m-0 print:pb-0">
       {/* Control Bar (No Print) */}
-      <div className="no-print bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="no-print bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Month Navigation & Picker */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -338,6 +439,16 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
+            onClick={() => setIsTargetModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-300 rounded-xl shadow-2xs transition-all cursor-pointer"
+            title="ตั้งค่าเป้าหมาย (Target) และยอดปีที่แล้ว (Last Year) รายหมวดหมู่"
+          >
+            <Target className="w-4 h-4 text-indigo-600" />
+            <span>ตั้งค่า Target & ปีที่แล้ว</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleManualSaveHistory}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl shadow-2xs transition-all"
             title="บันทึกภาพรวมยอดขายของเดือนนี้ลงในประวัติย้อนหลังทันที"
@@ -369,6 +480,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
       {/* Overview Stat Cards (No Print) */}
       <div className="no-print grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Month Grand Total Card */}
         <div className="bg-gradient-to-br from-orange-600 to-amber-700 text-white p-4 rounded-2xl shadow-md border border-orange-500/30">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-orange-100 uppercase tracking-wider">ยอดขายรวมประจำเดือน</span>
@@ -386,9 +498,56 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
           </div>
         </div>
 
+        {/* Target Comparison Card */}
         <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">ห้องพัก (Rooms)</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">เป้าหมายรวม (Target)</span>
+            <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100">
+              <Target className="w-4 h-4 text-indigo-600" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl sm:text-2xl font-bold text-slate-800">
+                {targetPercent.toFixed(1)}%
+              </span>
+              <span className={`text-xs font-bold ${monthTotal >= targetTotal && targetTotal > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {monthTotal >= targetTotal && targetTotal > 0 ? '✓ ทะลุเป้า' : targetTotal > 0 ? `ขาดอีก ฿${(targetTotal - monthTotal).toLocaleString('en-US')}` : 'ยังไม่ตั้งเป้า'}
+              </span>
+            </div>
+            <div className="text-xs text-slate-500 mt-1">
+              เป้าหมาย: ฿{targetTotal.toLocaleString('en-US')}
+            </div>
+          </div>
+        </div>
+
+        {/* Last Year YoY Comparison Card */}
+        <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">เทียบปีที่แล้ว (YoY)</span>
+            <div className="bg-purple-50 p-2 rounded-xl border border-purple-100">
+              <BarChart3 className="w-4 h-4 text-purple-600" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="flex items-baseline gap-2">
+              <span className={`text-xl sm:text-2xl font-bold ${yoyPercent >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                {yoyPercent >= 0 ? '+' : ''}{yoyPercent.toFixed(1)}%
+              </span>
+              <span className="text-xs font-medium text-slate-500">
+                ({monthTotal - lastYearTotal >= 0 ? '+' : ''}฿{(monthTotal - lastYearTotal).toLocaleString('en-US')})
+              </span>
+            </div>
+            <div className="text-xs text-slate-500 mt-1">
+              ปีที่แล้ว ({selectedYear - 1}): ฿{lastYearTotal.toLocaleString('en-US')}
+            </div>
+          </div>
+        </div>
+
+        {/* Rooms Share Card */}
+        <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">สัดส่วนห้องพัก (Rooms)</span>
             <div className="bg-blue-50 p-2 rounded-xl border border-blue-100">
               <Building2 className="w-4 h-4 text-blue-600" />
             </div>
@@ -402,39 +561,202 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">อาหาร & เครื่องดื่ม (F&B)</span>
-            <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100">
-              <Utensils className="w-4 h-4 text-emerald-600" />
-            </div>
+      {/* Target & YoY Detailed Comparison Table (Categorized by Revenue Streams) */}
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
+        <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-indigo-600" />
+              รายงานวิเคราะห์เปรียบเทียบ Target และยอดปีที่แล้ว (แยกตามแต่ละรายได้)
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              สรุปยอดขายจริงเทียบเป้าหมาย (Target) และยอดขายเดือนเดียวกันของปีก่อน (YoY)
+            </p>
           </div>
-          <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-bold text-slate-800">
-              ฿{fbTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div className="text-xs text-slate-500 mt-1">
-              คิดเป็น {monthTotal > 0 ? ((fbTotal / monthTotal) * 100).toFixed(1) : '0.0'}% ของยอดรวม
-            </div>
+
+          <div className="no-print flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAutoFetchLastYear}
+              disabled={isAutoFetching}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors cursor-pointer"
+            >
+              <Zap className="w-3.5 h-3.5 text-indigo-600" />
+              {isAutoFetching ? 'กำลังดึงข้อมูล...' : 'ดึงยอดปีที่แล้วอัตโนมัติ'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsTargetModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors cursor-pointer"
+            >
+              <Edit className="w-3.5 h-3.5 text-slate-600" />
+              แก้ไข Target / YoY
+            </button>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">เทียบกับเป้าหมาย (Target)</span>
-            <div className="bg-purple-50 p-2 rounded-xl border border-purple-100">
-              <TrendingUp className="w-4 h-4 text-purple-600" />
-            </div>
+        {autoFetchMsg && (
+          <div className="px-5 py-2.5 bg-indigo-50 border-b border-indigo-100 text-xs font-bold text-indigo-800 flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span>{autoFetchMsg}</span>
           </div>
-          <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-bold text-slate-800">
-              {targetPercent.toFixed(1)}%
-            </div>
-            <div className="text-xs text-slate-500 mt-1">
-              เป้าหมาย: ฿{targetTotal.toLocaleString('en-US')}
-            </div>
-          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 text-center">
+                <th className="px-4 py-3 text-left min-w-[160px]">ประเภทรายได้ (Revenue Stream)</th>
+                <th className="px-3 py-3 text-right min-w-[120px] bg-amber-50/50 text-amber-900 font-bold">
+                  ยอดจริงเดือนนี้ (Actual)
+                </th>
+                <th className="px-3 py-3 text-right min-w-[110px]">เป้าหมาย (Target)</th>
+                <th className="px-3 py-3 text-center min-w-[150px]">เทียบเป้าหมาย (vs Target)</th>
+                <th className="px-3 py-3 text-right min-w-[110px]">ปีที่แล้ว (Last Year)</th>
+                <th className="px-3 py-3 text-center min-w-[150px]">การเติบโต (YoY Growth)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {REVENUE_CAT_CONFIG.map((cat) => {
+                const actual = getCategoryTotal(cat.key);
+                const target = data.target?.[cat.key] || 0;
+                const lastYear = data.lastYear?.[cat.key] || 0;
+
+                const targetAchievedPct = target > 0 ? (actual / target) * 100 : 0;
+                const targetDiff = actual - target;
+
+                const yoyGrowthPct = lastYear > 0 ? ((actual - lastYear) / lastYear) * 100 : 0;
+                const yoyDiff = actual - lastYear;
+
+                const IconComponent = cat.icon;
+
+                return (
+                  <tr key={cat.key} className="hover:bg-slate-50 transition-colors">
+                    {/* Category Label */}
+                    <td className="px-4 py-2.5 font-bold text-slate-800 flex items-center gap-2">
+                      <div className={`p-1.5 rounded-lg border ${cat.bgColor} ${cat.borderColor}`}>
+                        <IconComponent className={`w-4 h-4 ${cat.color}`} />
+                      </div>
+                      <div>
+                        <div>{cat.label}</div>
+                        <div className="text-[10px] text-slate-400 font-normal">{cat.labelEn}</div>
+                      </div>
+                    </td>
+
+                    {/* Current Month Actual */}
+                    <td className="px-3 py-2.5 text-right font-mono font-extrabold text-amber-950 bg-amber-50/30">
+                      ฿{actual.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                    </td>
+
+                    {/* Target */}
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-slate-700">
+                      ฿{target.toLocaleString('en-US')}
+                    </td>
+
+                    {/* Target Achievement */}
+                    <td className="px-3 py-2.5 text-center">
+                      {target > 0 ? (
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center gap-1 font-bold font-mono">
+                            <span className={targetAchievedPct >= 100 ? 'text-emerald-600' : 'text-amber-600'}>
+                              {targetAchievedPct.toFixed(1)}%
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-normal">
+                              ({targetDiff >= 0 ? '+' : ''}฿{targetDiff.toLocaleString('en-US')})
+                            </span>
+                          </div>
+                          {/* Progress bar */}
+                          <div className="w-24 bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
+                            <div
+                              className={`h-full rounded-full ${targetAchievedPct >= 100 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                              style={{ width: `${Math.min(targetAchievedPct, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">-</span>
+                      )}
+                    </td>
+
+                    {/* Last Year */}
+                    <td className="px-3 py-2.5 text-right font-mono font-semibold text-slate-700">
+                      ฿{lastYear.toLocaleString('en-US')}
+                    </td>
+
+                    {/* YoY Growth */}
+                    <td className="px-3 py-2.5 text-center">
+                      {lastYear > 0 ? (
+                        <div className="inline-flex flex-col items-center">
+                          <span
+                            className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-bold font-mono ${
+                              yoyDiff >= 0
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            }`}
+                          >
+                            {yoyDiff >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                            {yoyGrowthPct >= 0 ? '+' : ''}{yoyGrowthPct.toFixed(1)}%
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            {yoyDiff >= 0 ? '+' : ''}฿{yoyDiff.toLocaleString('en-US')}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">-</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* Grand Total Row */}
+              <tr className="bg-slate-100 font-extrabold border-t-2 border-slate-300 text-slate-900">
+                <td className="px-4 py-3 font-black text-slate-900 text-sm">
+                  รวมรายได้ทั้งหมด (Grand Total)
+                </td>
+                <td className="px-3 py-3 text-right font-mono text-sm font-black text-amber-950 bg-amber-100/50">
+                  ฿{monthTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                </td>
+                <td className="px-3 py-3 text-right font-mono font-bold text-slate-800">
+                  ฿{targetTotal.toLocaleString('en-US')}
+                </td>
+                <td className="px-3 py-3 text-center">
+                  {targetTotal > 0 ? (
+                    <div className="flex flex-col items-center">
+                      <span className={`font-mono font-bold ${targetPercent >= 100 ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {targetPercent.toFixed(1)}%
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        ({monthTotal - targetTotal >= 0 ? '+' : ''}฿{(monthTotal - targetTotal).toLocaleString('en-US')})
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </td>
+                <td className="px-3 py-3 text-right font-mono font-bold text-slate-800">
+                  ฿{lastYearTotal.toLocaleString('en-US')}
+                </td>
+                <td className="px-3 py-3 text-center">
+                  {lastYearTotal > 0 ? (
+                    <div className="flex flex-col items-center">
+                      <span className={`font-mono font-bold ${yoyPercent >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {yoyPercent >= 0 ? '+' : ''}{yoyPercent.toFixed(1)}%
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        ({monthTotal - lastYearTotal >= 0 ? '+' : ''}฿{(monthTotal - lastYearTotal).toLocaleString('en-US')})
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -449,7 +771,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
                   colSpan={8}
                   className="px-4 py-3 text-center text-sm font-bold text-slate-800 tracking-wide uppercase border-b border-slate-300"
                 >
-                  Salesplan and Targets
+                  Salesplan and Targets ({MONTH_TH[selectedMonth - 1]} พ.ศ. {selectedYear + 543})
                 </th>
               </tr>
 
@@ -628,10 +950,35 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
                 </td>
               </tr>
 
+              {/* Benchmark Row: Target */}
+              <tr className="bg-indigo-50/60 font-semibold border-t border-slate-300 text-slate-800">
+                <td className="px-3 py-2 border-r border-slate-300 font-bold text-indigo-900 flex items-center gap-1">
+                  <Target className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  Target
+                </td>
+                <td className="px-3 py-2 border-r border-slate-300 text-right font-mono bg-indigo-100/50 font-bold text-indigo-950">
+                  {getBenchmarkTotal('target').toLocaleString('en-US')}
+                </td>
+                {(['rooms', 'foodBeverage', 'shop', 'toursEtc', 'massage', 'laundryOthers'] as (keyof RevenueCategories)[]).map((col, idx) => (
+                  <td key={col} className={`p-0 ${idx < 5 ? 'border-r border-slate-300' : ''}`}>
+                    <input
+                      type="number"
+                      step="any"
+                      value={data.target?.[col] === 0 ? '' : data.target?.[col]}
+                      placeholder="0"
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => handleBenchmarkChange('target', col, e.target.value)}
+                      className="w-full text-right px-2.5 py-1.5 text-xs font-mono bg-transparent focus:bg-amber-100/70 focus:outline-none border-none text-indigo-900 font-semibold"
+                    />
+                  </td>
+                ))}
+              </tr>
+
               {/* Benchmark Row: Last Year */}
               <tr className="bg-slate-100 font-semibold border-t border-slate-300 text-slate-700">
-                <td className="px-3 py-2 border-r border-slate-300 font-bold text-slate-600">
-                  Last Year
+                <td className="px-3 py-2 border-r border-slate-300 font-bold text-slate-600 flex items-center gap-1">
+                  <BarChart3 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                  Last Year ({selectedYear - 1})
                 </td>
                 <td className="px-3 py-2 border-r border-slate-300 text-right font-mono bg-slate-200/50 font-bold text-slate-800">
                   {getBenchmarkTotal('lastYear').toLocaleString('en-US')}
@@ -652,11 +999,11 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               </tr>
 
               {/* Benchmark Row: Plan */}
-              <tr className="bg-slate-100 font-semibold border-t border-slate-300 text-slate-700">
-                <td className="px-3 py-2 border-r border-slate-300 font-bold text-slate-600">
+              <tr className="bg-slate-50 font-semibold border-t border-slate-300 text-slate-600">
+                <td className="px-3 py-2 border-r border-slate-300 font-bold text-slate-500">
                   Plan
                 </td>
-                <td className="px-3 py-2 border-r border-slate-300 text-right font-mono bg-slate-200/50 font-bold text-slate-800">
+                <td className="px-3 py-2 border-r border-slate-300 text-right font-mono bg-slate-100 font-bold text-slate-700">
                   {getBenchmarkTotal('plan').toLocaleString('en-US')}
                 </td>
                 {(['rooms', 'foodBeverage', 'shop', 'toursEtc', 'massage', 'laundryOthers'] as (keyof RevenueCategories)[]).map((col, idx) => (
@@ -668,30 +1015,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
                       placeholder="0"
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => handleBenchmarkChange('plan', col, e.target.value)}
-                      className="w-full text-right px-2.5 py-1.5 text-xs font-mono bg-transparent focus:bg-amber-100/70 focus:outline-none border-none text-slate-700"
-                    />
-                  </td>
-                ))}
-              </tr>
-
-              {/* Benchmark Row: Target */}
-              <tr className="bg-slate-100 font-semibold border-t border-slate-300 text-slate-700">
-                <td className="px-3 py-2 border-r border-slate-300 font-bold text-slate-600">
-                  Target
-                </td>
-                <td className="px-3 py-2 border-r border-slate-300 text-right font-mono bg-slate-200/50 font-bold text-slate-800">
-                  {getBenchmarkTotal('target').toLocaleString('en-US')}
-                </td>
-                {(['rooms', 'foodBeverage', 'shop', 'toursEtc', 'massage', 'laundryOthers'] as (keyof RevenueCategories)[]).map((col, idx) => (
-                  <td key={col} className={`p-0 ${idx < 5 ? 'border-r border-slate-300' : ''}`}>
-                    <input
-                      type="number"
-                      step="any"
-                      value={data.target?.[col] === 0 ? '' : data.target?.[col]}
-                      placeholder="0"
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => handleBenchmarkChange('target', col, e.target.value)}
-                      className="w-full text-right px-2.5 py-1.5 text-xs font-mono bg-transparent focus:bg-amber-100/70 focus:outline-none border-none text-slate-700"
+                      className="w-full text-right px-2.5 py-1.5 text-xs font-mono bg-transparent focus:bg-amber-100/70 focus:outline-none border-none text-slate-600"
                     />
                   </td>
                 ))}
@@ -700,6 +1024,130 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Target & Last Year Management Modal */}
+      {isTargetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs no-print">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base">
+                    ตั้งค่าเป้าหมาย (Target) และยอดปีที่แล้ว ({selectedYear - 1})
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    ประจำเดือน {MONTH_TH[selectedMonth - 1]} พ.ศ. {selectedYear + 543}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsTargetModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/50 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs">
+                <span className="text-indigo-900 font-medium">
+                  คุณสามารถกดดึงยอดปีที่แล้ว ({selectedYear - 1}) อัตโนมัติ หรือกรอกตัวเลขด้วยตนเอง
+                </span>
+                <button
+                  type="button"
+                  onClick={handleAutoFetchLastYear}
+                  disabled={isAutoFetching}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors shrink-0 cursor-pointer"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  {isAutoFetching ? 'กำลังดึง...' : 'ดึงข้อมูลปีที่แล้ว'}
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {REVENUE_CAT_CONFIG.map((cat) => {
+                  const IconComp = cat.icon;
+                  return (
+                    <div key={cat.key} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2 font-bold text-slate-800 text-xs">
+                        <div className={`p-1.5 rounded-md ${cat.bgColor}`}>
+                          <IconComp className={`w-4 h-4 ${cat.color}`} />
+                        </div>
+                        <span>{cat.label} ({cat.labelEn})</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        <div>
+                          <label className="block text-[11px] font-bold text-indigo-900 mb-1">
+                            เป้าหมาย (Target)
+                          </label>
+                          <input
+                            type="number"
+                            step="any"
+                            value={data.target?.[cat.key] === 0 ? '' : data.target?.[cat.key]}
+                            placeholder="0"
+                            onChange={(e) => handleBenchmarkChange('target', cat.key, e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs font-mono font-bold bg-white border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-purple-900 mb-1">
+                            ยอดปีที่แล้ว ({selectedYear - 1})
+                          </label>
+                          <input
+                            type="number"
+                            step="any"
+                            value={data.lastYear?.[cat.key] === 0 ? '' : data.lastYear?.[cat.key]}
+                            placeholder="0"
+                            onChange={(e) => handleBenchmarkChange('lastYear', cat.key, e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs font-mono font-bold bg-white border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                            แผนงาน (Plan)
+                          </label>
+                          <input
+                            type="number"
+                            step="any"
+                            value={data.plan?.[cat.key] === 0 ? '' : data.plan?.[cat.key]}
+                            placeholder="0"
+                            onChange={(e) => handleBenchmarkChange('plan', cat.key, e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs font-mono bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-400 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-6 py-3.5 bg-slate-50 border-t border-slate-200">
+              <div className="text-xs text-slate-500 font-medium">
+                * ข้อมูลจะถูกบันทึกและซิงค์ไปยังสมาชิกทุกคนแบบเรียลไทม์
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTargetModalOpen(false)}
+                className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-colors cursor-pointer"
+              >
+                เสร็จสิ้น / บันทึก
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

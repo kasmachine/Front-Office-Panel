@@ -628,6 +628,20 @@ export function subscribeMonthlyRevenue(docId: string, callback: (data: MonthlyR
   );
 }
 
+export async function fetchMonthlyRevenueFromFirebase(docId: string): Promise<MonthlyRevenueData | null> {
+  await initAuth();
+  try {
+    const docRef = doc(db, REVENUE_COLLECTION, docId);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return snap.data() as MonthlyRevenueData;
+    }
+  } catch (err) {
+    handleFirestoreError(err, OperationType.GET, `${REVENUE_COLLECTION}/${docId}`);
+  }
+  return null;
+}
+
 export function subscribeAllMonthlyRevenues(callback: (items: MonthlyRevenueData[]) => void) {
   return onSnapshot(
     collection(db, REVENUE_COLLECTION),
