@@ -348,138 +348,144 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
         </div>
 
 
-        {/* Staff, Approver & Thai ID Card Section (3-column layout on right side) */}
-        <div className="mt-6 print:mt-4 grid grid-cols-1 md:grid-cols-12 gap-5 print:gap-3 text-xs md:text-sm">
-          {/* Column 1: Requester */}
-          <div className="md:col-span-4 print:col-span-4 space-y-2.5 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-200 pb-4 md:pb-0 md:pr-3">
+        {/* Bottom Section: 2 Columns Layout */}
+        <div className="mt-6 print:mt-3 grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-6 print:gap-4 text-xs md:text-sm border-t border-slate-300 pt-4 print:pt-3">
+          {/* LEFT COLUMN: Requester & Approver stacked vertically */}
+          <div className="flex flex-col justify-between space-y-4 print:space-y-3 pr-0 md:pr-3 print:pr-3 border-b md:border-b-0 md:border-r print:border-r border-slate-300 pb-4 md:pb-0 print:pb-0">
+            {/* 1. Requester */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-800 whitespace-nowrap">ข้าพเจ้า:</span>
-                <input
-                  type="text"
-                  value={data.requesterName ?? 'นางสาว ขวัญทิชา ตั้งเสรีกล'}
-                  onChange={(e) => onChange({ ...data, requesterName: e.target.value })}
-                  placeholder="ชื่อ-นามสกุล ผู้เบิกจ่าย"
-                  className="no-print border-b border-slate-400 px-1 py-0.5 text-xs font-medium flex-1 outline-none"
-                />
-                <span className="hidden print:inline font-bold underline text-xs">{data.requesterName || 'นางสาว ขวัญทิชา ตั้งเสรีกล'}</span>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-800 whitespace-nowrap text-xs">ข้าพเจ้า:</span>
+                  <input
+                    type="text"
+                    value={data.requesterName ?? 'นางสาว ขวัญทิชา ตั้งเสรีกล'}
+                    onChange={(e) => onChange({ ...data, requesterName: e.target.value })}
+                    placeholder="ชื่อ-นามสกุล ผู้เบิกจ่าย"
+                    className="no-print border-b border-slate-400 px-1 py-0.5 text-xs font-medium flex-1 outline-none"
+                  />
+                  <span className="hidden print:inline font-bold underline text-xs">{data.requesterName || 'นางสาว ขวัญทิชา ตั้งเสรีกล'}</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-800 whitespace-nowrap text-xs">ตำแหน่ง:</span>
+                  <input
+                    type="text"
+                    value={data.requesterPosition}
+                    onChange={(e) => onChange({ ...data, requesterPosition: e.target.value })}
+                    placeholder="ตำแหน่ง"
+                    className="no-print border-b border-slate-400 px-1 py-0.5 text-xs font-medium flex-1 outline-none"
+                  />
+                  <span className="hidden print:inline font-bold underline text-xs">{data.requesterPosition || '...........................................'}</span>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-800 whitespace-nowrap">ตำแหน่ง:</span>
-                <input
-                  type="text"
-                  value={data.requesterPosition}
-                  onChange={(e) => onChange({ ...data, requesterPosition: e.target.value })}
-                  placeholder="ตำแหน่ง"
-                  className="no-print border-b border-slate-400 px-1 py-0.5 text-xs font-medium flex-1 outline-none"
-                />
-                <span className="hidden print:inline font-bold underline text-xs">{data.requesterPosition || '...........................................'}</span>
+              {/* Requester Signature Line */}
+              <div className="pt-1 flex flex-col items-center">
+                <div className="relative w-full max-w-[220px] min-h-[38px] flex items-center justify-center border-b border-slate-800 border-dotted mb-0.5">
+                  {data.requesterSignature ? (
+                    <div className="relative group flex flex-col items-center">
+                      <img
+                        src={data.requesterSignature}
+                        alt="Requester Signature"
+                        className="max-h-9 object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onChange({ ...data, requesterSignature: null })}
+                        className="no-print absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-xs text-[10px]"
+                        title="ลบลายเซ็น"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSigModal('requester')}
+                      className="no-print inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors cursor-pointer my-0.5"
+                    >
+                      <PenTool className="w-3 h-3" />
+                      เซ็นชื่อดิจิทัล
+                    </button>
+                  )}
+                </div>
+                <p className="font-bold text-slate-800 text-center text-xs">(ผู้เบิกจ่าย)</p>
               </div>
             </div>
 
-            {/* Requester Signature Line */}
-            <div className="pt-2 flex flex-col items-center">
-              <div className="relative w-full min-h-[42px] flex items-center justify-center border-b border-slate-800 border-dotted mb-1">
-                {data.requesterSignature ? (
-                  <div className="relative group flex flex-col items-center">
-                    <img
-                      src={data.requesterSignature}
-                      alt="Requester Signature"
-                      className="max-h-10 object-contain"
-                    />
+            {/* Divider between Requester and Approver */}
+            <div className="border-t border-slate-200 my-1"></div>
+
+            {/* 2. Approver */}
+            <div className="space-y-2">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-800 whitespace-nowrap text-xs">ผู้อนุมัติ:</span>
+                  <input
+                    type="text"
+                    value={data.approverName ?? 'นายเกษม มนตรี'}
+                    onChange={(e) => onChange({ ...data, approverName: e.target.value })}
+                    placeholder="ชื่อ-นามสกุล ผู้อนุมัติ"
+                    className="no-print border-b border-slate-400 px-1 py-0.5 text-xs font-medium flex-1 outline-none"
+                  />
+                  <span className="hidden print:inline font-bold underline text-xs">{data.approverName || 'นายเกษม มนตรี'}</span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-800 whitespace-nowrap text-xs">ตำแหน่ง:</span>
+                  <input
+                    type="text"
+                    value={data.approverPosition}
+                    onChange={(e) => onChange({ ...data, approverPosition: e.target.value })}
+                    placeholder="ตำแหน่ง (เช่น เจ้าของกิจการ)"
+                    className="no-print border-b border-slate-400 px-1 py-0.5 text-xs font-medium flex-1 outline-none"
+                  />
+                  <span className="hidden print:inline font-bold underline text-xs">{data.approverPosition || 'เจ้าของกิจการ'}</span>
+                </div>
+              </div>
+
+              {/* Approver Signature Line */}
+              <div className="pt-1 flex flex-col items-center">
+                <div className="relative w-full max-w-[220px] min-h-[38px] flex items-center justify-center border-b border-slate-800 border-dotted mb-0.5">
+                  {data.approverSignature ? (
+                    <div className="relative group flex flex-col items-center">
+                      <img
+                        src={data.approverSignature}
+                        alt="Approver Signature"
+                        className="max-h-9 object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onChange({ ...data, approverSignature: null })}
+                        className="no-print absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-xs text-[10px]"
+                        title="ลบลายเซ็น"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
                     <button
                       type="button"
-                      onClick={() => onChange({ ...data, requesterSignature: null })}
-                      className="no-print absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-xs text-[10px]"
-                      title="ลบลายเซ็น"
+                      onClick={() => setActiveSigModal('approver')}
+                      className="no-print inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors cursor-pointer my-0.5"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <PenTool className="w-3 h-3" />
+                      เซ็นอนุมัติดิจิทัล
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setActiveSigModal('requester')}
-                    className="no-print inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors cursor-pointer my-0.5"
-                  >
-                    <PenTool className="w-3 h-3" />
-                    เซ็นชื่อดิจิทัล
-                  </button>
-                )}
+                  )}
+                </div>
+                <p className="font-bold text-slate-800 text-center text-xs">(ผู้อนุมัติ)</p>
               </div>
-              <p className="font-bold text-slate-800 text-center text-xs">(ผู้เบิกจ่าย)</p>
             </div>
           </div>
 
-          {/* Column 2: Approver */}
-          <div className="md:col-span-4 print:col-span-4 space-y-2.5 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-200 pb-4 md:pb-0 md:pr-3">
-            <div className="space-y-2">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-800 whitespace-nowrap">ผู้อนุมัติ:</span>
-                <input
-                  type="text"
-                  value={data.approverName ?? 'นายเกษม มนตรี'}
-                  onChange={(e) => onChange({ ...data, approverName: e.target.value })}
-                  placeholder="ชื่อ-นามสกุล ผู้อนุมัติ"
-                  className="no-print border-b border-slate-400 px-1 py-0.5 text-xs font-medium flex-1 outline-none"
-                />
-                <span className="hidden print:inline font-bold underline text-xs">{data.approverName || 'นายเกษม มนตรี'}</span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-slate-800 whitespace-nowrap">ตำแหน่ง:</span>
-                <input
-                  type="text"
-                  value={data.approverPosition}
-                  onChange={(e) => onChange({ ...data, approverPosition: e.target.value })}
-                  placeholder="ตำแหน่ง (เช่น เจ้าของกิจการ)"
-                  className="no-print border-b border-slate-400 px-1 py-0.5 text-xs font-medium flex-1 outline-none"
-                />
-                <span className="hidden print:inline font-bold underline text-xs">{data.approverPosition || 'เจ้าของกิจการ'}</span>
-              </div>
-            </div>
-
-            {/* Approver Signature Line */}
-            <div className="pt-2 flex flex-col items-center">
-              <div className="relative w-full min-h-[42px] flex items-center justify-center border-b border-slate-800 border-dotted mb-1">
-                {data.approverSignature ? (
-                  <div className="relative group flex flex-col items-center">
-                    <img
-                      src={data.approverSignature}
-                      alt="Approver Signature"
-                      className="max-h-10 object-contain"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => onChange({ ...data, approverSignature: null })}
-                      className="no-print absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-xs text-[10px]"
-                      title="ลบลายเซ็น"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setActiveSigModal('approver')}
-                    className="no-print inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors cursor-pointer my-0.5"
-                  >
-                    <PenTool className="w-3 h-3" />
-                    เซ็นอนุมัติดิจิทัล
-                  </button>
-                )}
-              </div>
-              <p className="font-bold text-slate-800 text-center text-xs">(ผู้อนุมัติ)</p>
-            </div>
-          </div>
-
-          {/* Column 3: Thai ID Card Attachment Section */}
-          <div className="md:col-span-4 print:col-span-4 flex flex-col justify-between space-y-2">
+          {/* RIGHT COLUMN: Thai ID Card Attachment Section */}
+          <div className="flex flex-col justify-between space-y-2 pl-0 md:pl-2 print:pl-2">
             <div className="flex items-center justify-between gap-1">
-              <span className="font-bold text-slate-900 text-[11px] md:text-xs flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 no-print" />
-                สำเนาบัตรประชาชนผู้เบิกจ่าย
+              <span className="font-bold text-slate-900 text-xs flex items-center gap-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 no-print" />
+                สำเนาบัตรประจำตัวประชาชนผู้เบิกจ่าย
               </span>
               <div className="no-print">
                 <input
@@ -492,7 +498,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-md transition-colors"
                 >
                   <Upload className="w-3 h-3" />
                   อัปโหลด
@@ -501,50 +507,50 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
             </div>
 
             {/* ID Card Display Box with Watermark */}
-            <div className="relative border-2 border-slate-300 border-dashed rounded-lg p-1.5 bg-slate-50 flex flex-col items-center justify-center min-h-[110px] overflow-hidden">
+            <div className="relative border-2 border-slate-300 border-dashed rounded-lg p-2 bg-slate-50 flex flex-col items-center justify-center flex-1 min-h-[160px] overflow-hidden">
               {data.idCardImage ? (
                 <div className="relative w-full h-auto rounded border border-slate-300 overflow-hidden shadow-2xs">
                   <img
                     src={data.idCardImage}
                     alt="Thai ID Card Copy"
-                    className="w-full object-contain max-h-[110px]"
+                    className="w-full object-contain max-h-[170px]"
                   />
                   {/* Diagonal Watermark Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden">
-                    <div className="bg-slate-900/60 text-white font-black text-[9px] px-2 py-1 transform -rotate-12 tracking-wide text-center border-y border-white shadow-xs w-[120%]">
+                    <div className="bg-slate-900/60 text-white font-black text-[10px] md:text-xs px-2.5 py-1 transform -rotate-12 tracking-wide text-center border-y border-white shadow-xs w-[120%]">
                       {data.watermarkText}
                     </div>
                   </div>
                 </div>
               ) : (
                 /* Default Styled Mock Thai ID Card Placeholder */
-                <div className="relative w-full aspect-[85/54] max-w-[210px] bg-gradient-to-br from-sky-100 via-sky-50 to-blue-100 border border-sky-300 rounded-lg p-1.5 shadow-2xs flex flex-col justify-between overflow-hidden">
+                <div className="relative w-full aspect-[85/54] max-w-[260px] bg-gradient-to-br from-sky-100 via-sky-50 to-blue-100 border border-sky-300 rounded-xl p-2.5 shadow-2xs flex flex-col justify-between overflow-hidden my-auto">
                   {/* Card Top */}
-                  <div className="flex items-center justify-between border-b border-sky-200 pb-0.5">
+                  <div className="flex items-center justify-between border-b border-sky-200 pb-1">
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px]">🇹🇭</span>
-                      <span className="text-[8px] font-extrabold text-sky-900 leading-none">
+                      <span className="text-xs">🇹🇭</span>
+                      <span className="text-[9px] font-extrabold text-sky-900 leading-none">
                         บัตรประจำตัวประชาชน Thai National ID Card
                       </span>
                     </div>
                   </div>
 
                   {/* Card Middle */}
-                  <div className="flex gap-1.5 items-center my-1">
-                    <div className="w-10 h-12 bg-slate-300 rounded border border-slate-400 flex flex-col items-center justify-center text-slate-500 text-[8px]">
-                      <ImageIcon className="w-4 h-4 text-slate-400 mb-0.5" />
-                      รูป
+                  <div className="flex gap-2 items-center my-1.5">
+                    <div className="w-12 h-14 bg-slate-300 rounded border border-slate-400 flex flex-col items-center justify-center text-slate-500 text-[9px]">
+                      <ImageIcon className="w-5 h-5 text-slate-400 mb-0.5" />
+                      รูปถ่าย
                     </div>
-                    <div className="space-y-0.5 text-slate-700 text-[9px] font-mono flex-1 leading-tight">
-                      <p className="font-bold text-slate-900 text-[9px]">1 5599 00256 60 7</p>
-                      <p className="text-[8px] font-semibold truncate">ชื่อ: {data.requesterName || 'นางสาว ขวัญทิชา ตั้งเสรีกล'}</p>
-                      <p className="text-[7.5px] text-slate-600">เกิดวันที่ 21 มี.ค. 2537</p>
+                    <div className="space-y-0.5 text-slate-700 text-[10px] font-mono flex-1 leading-tight">
+                      <p className="font-bold text-slate-900 text-[10px]">1 5599 00256 60 7</p>
+                      <p className="text-[9px] font-semibold truncate">ชื่อ: {data.requesterName || 'นางสาว ขวัญทิชา ตั้งเสรีกล'}</p>
+                      <p className="text-[8.5px] text-slate-600">เกิดวันที่ 21 มี.ค. 2537</p>
                     </div>
                   </div>
 
                   {/* Card Watermark */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-                    <div className="bg-slate-900/80 text-white font-black text-[8px] px-2 py-1 transform -rotate-12 tracking-wider text-center border-y border-white shadow-xs w-[115%]">
+                    <div className="bg-slate-900/80 text-white font-black text-[9px] px-2 py-1 transform -rotate-12 tracking-wider text-center border-y border-white shadow-xs w-[115%]">
                       {data.watermarkText}
                     </div>
                   </div>
@@ -552,13 +558,16 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
               )}
 
               {/* Custom Watermark Input (No-Print) */}
-              <div className="no-print w-full mt-1.5 pt-1 border-t border-slate-200 text-[10px]">
+              <div className="no-print w-full mt-2 pt-1.5 border-t border-slate-200 text-[11px]">
+                <label className="block text-slate-600 font-medium mb-0.5 text-[10px]">
+                  ข้อความลายน้ำ (Security Watermark):
+                </label>
                 <input
                   type="text"
                   value={data.watermarkText}
                   onChange={(e) => onChange({ ...data, watermarkText: e.target.value })}
                   placeholder="ข้อความลายน้ำ"
-                  className="w-full border border-slate-300 rounded px-1.5 py-0.5 text-[10px] font-medium text-slate-800 bg-white"
+                  className="w-full border border-slate-300 rounded px-2 py-0.5 text-[11px] font-medium text-slate-800 bg-white"
                 />
               </div>
             </div>
