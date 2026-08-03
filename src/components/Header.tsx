@@ -1,11 +1,12 @@
 import React from 'react';
 import { NanSeasonsLogo } from './NanSeasonsLogo';
-import { FileText, Calculator, CheckCircle2, Loader2, Settings, RefreshCw, BarChart3, Menu } from 'lucide-react';
+import { FileText, Calculator, CheckCircle2, Loader2, Settings, RefreshCw, BarChart3, Menu, Percent } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
   onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
   onOpenSettings?: () => void;
+  onOpenVatCalc?: () => void;
   onManualSync?: () => void;
   saveStatus?: 'saving' | 'saved' | 'idle';
   lastSavedTime?: string;
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
   onOpenSettings,
+  onOpenVatCalc,
   onManualSync,
   saveStatus = 'saved',
   lastSavedTime = '',
@@ -80,10 +82,26 @@ export const Header: React.FC<HeaderProps> = ({
             </p>
           </div>
         </div>
+
+        {/* Right Header Actions */}
+        {onOpenVatCalc && (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenVatCalc}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+              title="เปิดเครื่องคิดเลข VAT 7%"
+            >
+              <Percent className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">สูตรคำนวณ VAT 7%</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
 };
+
 
 
 

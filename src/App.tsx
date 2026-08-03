@@ -10,7 +10,8 @@ import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
 import { StaffManagerModal } from './components/StaffManagerModal';
 import { CategoryManagerModal } from './components/CategoryManagerModal';
-import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord } from './types';
+import { VatCalculatorModal } from './components/VatCalculatorModal';
+import { CashCountData, ReceiptSubstituteData, ReceiptSubstituteItem, MonthlyRevenueData, RevenueHistoryRecord } from './types';
 import { getInitialCashCountData, getInitialReceiptData } from './data/defaults';
 import { exportToPdf, printDocument } from './utils/pdfExport';
 import { downloadJsonFile, parseJsonFile } from './utils/jsonExport';
@@ -116,8 +117,25 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isStaffManagerOpen, setIsStaffManagerOpen] = useState(false);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const [isVatModalOpen, setIsVatModalOpen] = useState(false);
   const [isPrintMenuOpen, setIsPrintMenuOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleApplyVatToReceipt = (
+    items: ReceiptSubstituteItem[],
+    calcMode: 'exclusive' | 'inclusive',
+    vatPercent: number
+  ) => {
+    setReceiptData((prev) => ({
+      ...prev,
+      items: [...prev.items, ...items],
+    }));
+    setActiveTab('receiptSubstitute');
+    if (toastMessage !== undefined) {
+      setToastMessage(`ส่ง ${items.length} รายการจากการคำนวณ VAT ${vatPercent}% ลงใบรับรองแทนใบเสร็จเรียบร้อยแล้ว`);
+      setTimeout(() => setToastMessage(null), 4000);
+    }
+  };
 
   // Active Draft sync tracking refs to prevent typing overwrites & state echo loops
   const lastRemoteCashSerializedRef = useRef<string>('');
@@ -769,6 +787,7 @@ export default function App() {
         onSelectTab={setActiveTab}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
+        onOpenVatCalc={() => setIsVatModalOpen(true)}
         onManualSync={handleManualSync}
         saveStatus={saveStatus}
         lastSavedTime={lastSavedTime}
@@ -783,6 +802,7 @@ export default function App() {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenVatCalc={() => setIsVatModalOpen(true)}
           onManualSync={handleManualSync}
           saveStatus={saveStatus}
           lastSavedTime={lastSavedTime}
@@ -889,6 +909,7 @@ export default function App() {
             savedCashCounts={savedCashCounts}
             savedReceipts={savedReceipts}
             onManualSync={handleManualSync}
+            onOpenVatCalc={() => setIsVatModalOpen(true)}
           />
         ) : activeTab === 'cashCount' ? (
           <CashCountSheet
@@ -911,6 +932,7 @@ export default function App() {
               setReceiptData((prev) => syncMinusExpensesToReceipt(cashCountData, savedCashCounts, prev));
               showToast('ดึงรายการหัก (-) จากตารางนับเงินทั้งสองกะเรียบร้อยแล้ว');
             }}
+            onOpenVatCalc={() => setIsVatModalOpen(true)}
           />
         ) : activeTab === 'dailyRevenue' ? (
           <DailyRevenueSheet />
@@ -926,6 +948,13 @@ export default function App() {
           <span>ระบบนับเงิน & ใบรับรองแทนใบเสร็จ Front Office Panel | น่าน ซีซั่นส์ บูติก รีสอร์ท (Firebase Cloud Storage Enabled)</span>
         </div>
       </footer>
+
+      {/* VAT 7% Calculator Modal */}
+      <VatCalculatorModal
+        isOpen={isVatModalOpen}
+        onClose={() => setIsVatModalOpen(false)}
+        onApplyToReceipt={handleApplyVatToReceipt}
+      />
 
       {/* Staff Manager Modal */}
       <StaffManagerModal

@@ -4,7 +4,7 @@ import { ArabicToBahtText } from '../utils/bahttext';
 import { extractMinusExpenses, getTodayFormatted, formatDateToDisplay, isNonReceiptExpense } from '../utils/syncUtils';
 import { getStoredCategories } from './ExpenseCategorySelect';
 import { getStoredStaffList } from './StaffSelect';
-import { Plus, Trash2, Upload, Image as ImageIcon, ShieldCheck, Calendar, PenTool, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Upload, Image as ImageIcon, ShieldCheck, Calendar, PenTool, CheckCircle2, Percent } from 'lucide-react';
 import { SignatureModal } from './SignatureModal';
 
 interface ReceiptSubstituteSheetProps {
@@ -15,6 +15,7 @@ interface ReceiptSubstituteSheetProps {
   savedReceipts?: ReceiptSubstituteData[];
   savedCashCounts?: CashCountData[];
   onManualSync?: () => void;
+  onOpenVatCalc?: () => void;
 }
 
 const getInputValueDate = (dateStr?: string) => {
@@ -36,6 +37,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
   savedReceipts = [],
   savedCashCounts = [],
   onManualSync,
+  onOpenVatCalc,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeSigModal, setActiveSigModal] = useState<'requester' | 'approver' | null>(null);
@@ -332,15 +334,26 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
             </tfoot>
           </table>
 
-          {/* Add Row Button */}
-          <div className="no-print mt-2 flex justify-start">
+          {/* Add Row Button & VAT Calculator */}
+          <div className="no-print mt-2 flex flex-wrap items-center justify-between gap-2">
             <button
               type="button"
               onClick={addItem}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-md border border-orange-200"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-md border border-orange-200 cursor-pointer"
             >
               <Plus className="w-4 h-4" /> เพิ่มรายการรายจ่าย
             </button>
+
+            {onOpenVatCalc && (
+              <button
+                type="button"
+                onClick={onOpenVatCalc}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-md border border-amber-300 shadow-2xs transition-all cursor-pointer"
+              >
+                <Percent className="w-4 h-4 text-amber-700" />
+                <span>คำนวณ VAT 7% / ถอดภาษี</span>
+              </button>
+            )}
           </div>
 
           {/* Thai Baht Text Display */}

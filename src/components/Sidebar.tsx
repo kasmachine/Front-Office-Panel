@@ -13,6 +13,7 @@ import {
   X,
   History,
   Building2,
+  Percent,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,6 +21,7 @@ interface SidebarProps {
   onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
   onOpenSettings: () => void;
   onOpenHistory?: () => void;
+  onOpenVatCalc?: () => void;
   onManualSync?: () => void;
   saveStatus?: 'saving' | 'saved' | 'idle';
   lastSavedTime?: string;
@@ -32,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   onOpenSettings,
   onOpenHistory,
+  onOpenVatCalc,
   onManualSync,
   saveStatus = 'saved',
   lastSavedTime = '',
@@ -160,9 +163,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div className="pt-3 pb-1">
             <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              SYSTEM (การจัดการ & ตั้งค่า)
+              TOOLS & SYSTEM (เครื่องมือ & ตั้งค่า)
             </div>
           </div>
+
+          {/* VAT 7% Calculator Menu Item */}
+          {onOpenVatCalc && (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenVatCalc();
+                if (onCloseMobile) onCloseMobile();
+              }}
+              className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold text-orange-300 hover:bg-slate-800/80 hover:text-white transition-all group"
+            >
+              <div className="p-2 rounded-lg bg-orange-500/20 text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                <Percent className="w-4 h-4" />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <div className="truncate text-xs font-bold text-orange-200 group-hover:text-white">
+                  VAT 7% Calculator
+                </div>
+                <div className="truncate text-[10px] text-orange-300/80 font-normal">
+                  สูตรคำนวณถอด/บวก VAT 7%
+                </div>
+              </div>
+            </button>
+          )}
 
           {/* Setting Menu Item */}
           <button

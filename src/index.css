@@ -23,13 +23,28 @@
       size: A4 portrait;
       margin: 4mm 5mm;
     }
-    #cash-count-document, #receipt-substitute-document, #revenue-document {
+    #cash-count-document, #receipt-substitute-document, #revenue-document, #vat-calc-print-document {
       width: 100% !important;
       max-width: 100% !important;
       margin: 0 !important;
       padding: 0 !important;
       box-shadow: none !important;
       border: none !important;
+    }
+
+    body.print-vat-mode > *:not(#vat-calc-print-root) {
+      display: none !important;
+    }
+
+    body.print-vat-mode #vat-calc-print-root {
+      display: block !important;
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      z-index: 999999 !important;
     }
     #revenue-document table {
       width: 100% !important;

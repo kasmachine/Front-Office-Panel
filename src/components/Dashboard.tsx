@@ -7,8 +7,10 @@ import {
   CheckSquare,
   DollarSign,
   TrendingUp,
+  TrendingDown,
   Target,
   ArrowUpRight,
+  ArrowDownRight,
   Clock,
   CheckCircle2,
   AlertCircle,
@@ -35,6 +37,7 @@ import {
 } from '../types';
 import { getInitialFrontOfficeChecklistData, getInitialMonthlyRevenueData } from '../data/defaults';
 import { MONTH_EN, MONTH_TH } from '../data/defaults';
+import { Percent } from 'lucide-react';
 
 interface DashboardProps {
   onNavigate: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
@@ -43,15 +46,17 @@ interface DashboardProps {
   savedCashCounts: CashCountData[];
   savedReceipts: ReceiptSubstituteData[];
   onManualSync?: () => void;
+  onOpenVatCalc?: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   onNavigate,
   cashCountData,
   receiptData,
-  savedCashCounts,
-  savedReceipts,
+  savedCashCounts = [],
+  savedReceipts = [],
   onManualSync,
+  onOpenVatCalc,
 }) => {
   const [currentDateStr] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [now] = useState<Date>(new Date());
@@ -624,8 +629,33 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <ChevronRight className="w-3.5 h-3.5" />
             </div>
           </button>
+
+          {onOpenVatCalc && (
+            <button
+              type="button"
+              onClick={onOpenVatCalc}
+              className="p-5 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-md hover:shadow-lg hover:scale-[1.02] transition-all text-left group cursor-pointer border border-orange-400/30"
+            >
+              <div className="p-3 rounded-xl bg-white/20 text-white w-fit group-hover:bg-white group-hover:text-orange-600 transition-colors">
+                <Percent className="w-6 h-6" />
+              </div>
+              <div className="mt-3">
+                <div className="text-sm font-bold text-white transition-colors flex items-center gap-1.5">
+                  <span>VAT 7% Calculator</span>
+                  <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-bold">New</span>
+                </div>
+                <div className="text-xs text-orange-100 mt-0.5">สูตรคำนวณยอดรวม & ถอด/บวก VAT 7%</div>
+              </div>
+              <div className="mt-3 flex items-center text-xs font-bold text-amber-200 gap-1">
+                <span>เปิดเครื่องคิดเลข</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </div>
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 };
+
+
