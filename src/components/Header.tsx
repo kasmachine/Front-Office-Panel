@@ -41,12 +41,12 @@ export const Header: React.FC<HeaderProps> = ({
             <h1 className="text-sm sm:text-base font-bold tracking-tight text-white flex flex-wrap items-center gap-2">
               <span>
                 {activeTab === 'cashCount'
-                  ? 'ตารางนับเงินประจำกะ'
+                  ? 'Cash Count (ตารางนับเงินประจำกะ)'
                   : activeTab === 'receiptSubstitute'
-                  ? 'ใบรับรองแทนใบเสร็จ'
+                  ? 'Receipt Substitute (ใบรับรองแทนใบเสร็จ)'
                   : activeTab === 'dailyRevenue'
-                  ? 'Revenue ประจำวัน'
-                  : 'Checklist Front Office'}
+                  ? 'Daily Revenue (ยอดขายประจำวัน)'
+                  : 'Front Office Checklist (แบบฟอร์มกะเช้า & กะบ่าย)'}
               </span>
 
               {saveStatus === 'saving' ? (

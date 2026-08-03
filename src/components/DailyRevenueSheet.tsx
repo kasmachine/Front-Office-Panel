@@ -204,12 +204,12 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
         saveMonthlyRevenueToFirebase(updatedData);
 
         const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
-        setAutoFetchMsg(`ดึงข้อมูลปี ${lastYearNum + 543} สำเร็จ! ยอดรวม ฿${grandTotal.toLocaleString('en-US')}`);
+        setAutoFetchMsg(`Fetched ${lastYearNum} data successfully! Total ฿${grandTotal.toLocaleString('en-US')} (ดึงข้อมูลปี ${lastYearNum + 543} สำเร็จ)`);
       } else {
-        setAutoFetchMsg(`ไม่พบข้อมูลยอดขายย้อนหลังของเดือน ${MONTH_TH[selectedMonth - 1]} พ.ศ. ${lastYearNum + 543}`);
+        setAutoFetchMsg(`No history data found for ${MONTH_EN[selectedMonth - 1]} ${lastYearNum} (ไม่พบข้อมูลเดือน ${MONTH_TH[selectedMonth - 1]} พ.ศ. ${lastYearNum + 543})`);
       }
     } catch (err) {
-      setAutoFetchMsg('เกิดข้อผิดพลาดในการดึงข้อมูลปีที่แล้ว');
+      setAutoFetchMsg('Error fetching last year data (เกิดข้อผิดพลาดในการดึงข้อมูลปีที่แล้ว)');
     } finally {
       setIsAutoFetching(false);
       setTimeout(() => setAutoFetchMsg(null), 5000);
@@ -357,7 +357,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
   // Clear current month
   const handleClearMonth = () => {
-    if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการล้างข้อมูลยอดขายของเดือน ${MONTH_TH[selectedMonth - 1]} ${selectedYear + 543} ทั้งหมด?`)) {
+    if (window.confirm(`Are you sure you want to clear all revenue data for ${MONTH_EN[selectedMonth - 1]} ${selectedYear}? (คุณแน่ใจหรือไม่ว่าต้องการล้างข้อมูลเดือน ${MONTH_TH[selectedMonth - 1]} ${selectedYear + 543} ทั้งหมด?)`)) {
       const fresh = getInitialMonthlyRevenueData(selectedYear, selectedMonth);
       setData(fresh);
       localStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(fresh));
@@ -388,21 +388,21 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               type="button"
               onClick={handlePrevMonth}
               className="p-2 hover:bg-white rounded-lg transition-all text-slate-700 hover:text-orange-600 shadow-2xs"
-              title="เดือนก่อนหน้า"
+              title="Previous Month (เดือนก่อนหน้า)"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2 px-3 py-1 font-bold text-slate-800 text-sm sm:text-base">
               <Calendar className="w-4 h-4 text-orange-600" />
               <span>
-                {MONTH_TH[selectedMonth - 1]} {selectedYear + 543} ({MONTH_EN[selectedMonth - 1]} {String(selectedYear).slice(-2)})
+                {MONTH_EN[selectedMonth - 1]} {selectedYear} ({MONTH_TH[selectedMonth - 1]} พ.ศ. {selectedYear + 543})
               </span>
             </div>
             <button
               type="button"
               onClick={handleNextMonth}
               className="p-2 hover:bg-white rounded-lg transition-all text-slate-700 hover:text-orange-600 shadow-2xs"
-              title="เดือนถัดไป"
+              title="Next Month (เดือนถัดไป)"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -414,9 +414,9 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               onChange={(e) => handleMonthChange(Number(e.target.value), selectedYear)}
               className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-orange-500"
             >
-              {MONTH_TH.map((m, idx) => (
+              {MONTH_EN.map((m, idx) => (
                 <option key={idx + 1} value={idx + 1}>
-                  {m} ({MONTH_EN[idx]})
+                  {m} ({MONTH_TH[idx]})
                 </option>
               ))}
             </select>
@@ -428,7 +428,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
             >
               {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
                 <option key={y} value={y}>
-                  พ.ศ. {y + 543} ({y})
+                  {y} (พ.ศ. {y + 543})
                 </option>
               ))}
             </select>
@@ -441,30 +441,30 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
             type="button"
             onClick={() => setIsTargetModalOpen(true)}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-300 rounded-xl shadow-2xs transition-all cursor-pointer"
-            title="ตั้งค่าเป้าหมาย (Target) และยอดปีที่แล้ว (Last Year) รายหมวดหมู่"
+            title="Set Target & Last Year Revenue per category"
           >
             <Target className="w-4 h-4 text-indigo-600" />
-            <span>ตั้งค่า Target & ปีที่แล้ว</span>
+            <span>Target & Last Year (ตั้งค่าเป้าหมาย)</span>
           </button>
 
           <button
             type="button"
             onClick={handleManualSaveHistory}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-xl shadow-2xs transition-all"
-            title="บันทึกภาพรวมยอดขายของเดือนนี้ลงในประวัติย้อนหลังทันที"
+            title="Save monthly revenue snapshot to history"
           >
             <BookmarkCheck className="w-4 h-4 text-emerald-600" />
-            <span>{saveSuccess ? 'บันทึกประวัติสำเร็จ!' : 'บันทึกลงประวัติ'}</span>
+            <span>{saveSuccess ? 'Saved to History!' : 'Save History (บันทึกประวัติ)'}</span>
           </button>
 
           <button
             type="button"
             onClick={handleClearMonth}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-xl transition-all"
-            title="ล้างข้อมูลทั้งหมดของเดือนนี้"
+            title="Clear current month data"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>ล้างเดือนนี้</span>
+            <span>Clear Month (ล้างเดือนนี้)</span>
           </button>
 
           <button
@@ -473,7 +473,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
             className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-xl shadow-xs transition-all"
           >
             <Printer className="w-4 h-4 text-orange-400" />
-            <span>พิมพ์ / พิมพ์ PDF</span>
+            <span>Print / Export PDF (พิมพ์ PDF)</span>
           </button>
         </div>
       </div>
@@ -483,7 +483,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
         {/* Month Grand Total Card */}
         <div className="bg-gradient-to-br from-orange-600 to-amber-700 text-white p-4 rounded-2xl shadow-md border border-orange-500/30">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-orange-100 uppercase tracking-wider">ยอดขายรวมประจำเดือน</span>
+            <span className="text-xs font-semibold text-orange-100 uppercase tracking-wider">MONTHLY TOTAL REVENUE (ยอดขายรวม)</span>
             <div className="bg-white/20 p-2 rounded-xl">
               <DollarSign className="w-5 h-5 text-white" />
             </div>
@@ -493,7 +493,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               ฿{monthTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs text-orange-100/80 mt-1">
-              {MONTH_TH[selectedMonth - 1]} {selectedYear + 543} ({daysInMonth} วัน)
+              {MONTH_EN[selectedMonth - 1]} {selectedYear} ({MONTH_TH[selectedMonth - 1]} พ.ศ. {selectedYear + 543}) • {daysInMonth} Days
             </div>
           </div>
         </div>
@@ -501,7 +501,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
         {/* Target Comparison Card */}
         <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">เป้าหมายรวม (Target)</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">TOTAL TARGET (เป้าหมายรวม)</span>
             <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100">
               <Target className="w-4 h-4 text-indigo-600" />
             </div>
@@ -512,11 +512,11 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
                 {targetPercent.toFixed(1)}%
               </span>
               <span className={`text-xs font-bold ${monthTotal >= targetTotal && targetTotal > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {monthTotal >= targetTotal && targetTotal > 0 ? '✓ ทะลุเป้า' : targetTotal > 0 ? `ขาดอีก ฿${(targetTotal - monthTotal).toLocaleString('en-US')}` : 'ยังไม่ตั้งเป้า'}
+                {monthTotal >= targetTotal && targetTotal > 0 ? '✓ Target Surpassed (ทะลุเป้า)' : targetTotal > 0 ? `Remaining (ขาด) ฿${(targetTotal - monthTotal).toLocaleString('en-US')}` : 'Not set (ยังไม่ตั้งเป้า)'}
               </span>
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              เป้าหมาย: ฿{targetTotal.toLocaleString('en-US')}
+              Target (เป้าหมาย): ฿{targetTotal.toLocaleString('en-US')}
             </div>
           </div>
         </div>
@@ -524,7 +524,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
         {/* Last Year YoY Comparison Card */}
         <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">เทียบปีที่แล้ว (YoY)</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">LAST YEAR (เทียบปีที่แล้ว YoY)</span>
             <div className="bg-purple-50 p-2 rounded-xl border border-purple-100">
               <BarChart3 className="w-4 h-4 text-purple-600" />
             </div>
@@ -539,7 +539,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               </span>
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              ปีที่แล้ว ({selectedYear - 1}): ฿{lastYearTotal.toLocaleString('en-US')}
+              Last Year ({selectedYear - 1}): ฿{lastYearTotal.toLocaleString('en-US')}
             </div>
           </div>
         </div>
@@ -547,7 +547,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
         {/* Rooms Share Card */}
         <div className="bg-white p-4 rounded-2xl shadow-xs border border-slate-200">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">สัดส่วนห้องพัก (Rooms)</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">ROOMS SHARE (สัดส่วนห้องพัก)</span>
             <div className="bg-blue-50 p-2 rounded-xl border border-blue-100">
               <Building2 className="w-4 h-4 text-blue-600" />
             </div>
@@ -557,7 +557,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               ฿{roomsTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              คิดเป็น {monthTotal > 0 ? ((roomsTotal / monthTotal) * 100).toFixed(1) : '0.0'}% ของยอดรวม
+              {monthTotal > 0 ? ((roomsTotal / monthTotal) * 100).toFixed(1) : '0.0'}% of Total Revenue (ของยอดรวม)
             </div>
           </div>
         </div>
@@ -569,10 +569,10 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
           <div>
             <h3 className="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-indigo-600" />
-              รายงานวิเคราะห์เปรียบเทียบ Target และยอดปีที่แล้ว (แยกตามแต่ละรายได้)
+              Target & YoY Revenue Analysis Report (รายงานวิเคราะห์เปรียบเทียบ Target และยอดปีที่แล้ว)
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              สรุปยอดขายจริงเทียบเป้าหมาย (Target) และยอดขายเดือนเดียวกันของปีก่อน (YoY)
+              Actual revenue vs Target & Last Year's same month comparison (สรุปยอดขายจริงเทียบเป้าหมายและปีที่แล้ว)
             </p>
           </div>
 
@@ -584,7 +584,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors cursor-pointer"
             >
               <Zap className="w-3.5 h-3.5 text-indigo-600" />
-              {isAutoFetching ? 'กำลังดึงข้อมูล...' : 'ดึงยอดปีที่แล้วอัตโนมัติ'}
+              {isAutoFetching ? 'Fetching...' : 'Auto-fetch Last Year (ดึงยอดปีที่แล้ว)'}
             </button>
 
             <button
@@ -593,7 +593,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors cursor-pointer"
             >
               <Edit className="w-3.5 h-3.5 text-slate-600" />
-              แก้ไข Target / YoY
+              Edit Target / YoY (แก้ไข)
             </button>
           </div>
         </div>
@@ -609,14 +609,14 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
           <table className="w-full text-xs text-left border-collapse">
             <thead>
               <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 text-center">
-                <th className="px-4 py-3 text-left min-w-[160px]">ประเภทรายได้ (Revenue Stream)</th>
+                <th className="px-4 py-3 text-left min-w-[160px]">Revenue Stream (ประเภทรายได้)</th>
                 <th className="px-3 py-3 text-right min-w-[120px] bg-amber-50/50 text-amber-900 font-bold">
-                  ยอดจริงเดือนนี้ (Actual)
+                  Actual (ยอดจริง)
                 </th>
-                <th className="px-3 py-3 text-right min-w-[110px]">เป้าหมาย (Target)</th>
-                <th className="px-3 py-3 text-center min-w-[150px]">เทียบเป้าหมาย (vs Target)</th>
-                <th className="px-3 py-3 text-right min-w-[110px]">ปีที่แล้ว (Last Year)</th>
-                <th className="px-3 py-3 text-center min-w-[150px]">การเติบโต (YoY Growth)</th>
+                <th className="px-3 py-3 text-right min-w-[110px]">Target (เป้าหมาย)</th>
+                <th className="px-3 py-3 text-center min-w-[150px]">vs Target (เทียบเป้าหมาย)</th>
+                <th className="px-3 py-3 text-right min-w-[110px]">Last Year (ปีที่แล้ว)</th>
+                <th className="px-3 py-3 text-center min-w-[150px]">YoY Growth (การเติบโต)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -641,8 +641,8 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
                         <IconComponent className={`w-4 h-4 ${cat.color}`} />
                       </div>
                       <div>
-                        <div>{cat.label}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">{cat.labelEn}</div>
+                        <div>{cat.labelEn}</div>
+                        <div className="text-[10px] text-slate-400 font-normal">{cat.label}</div>
                       </div>
                     </td>
 
@@ -715,7 +715,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               {/* Grand Total Row */}
               <tr className="bg-slate-100 font-extrabold border-t-2 border-slate-300 text-slate-900">
                 <td className="px-4 py-3 font-black text-slate-900 text-sm">
-                  รวมรายได้ทั้งหมด (Grand Total)
+                  Grand Total (รวมรายได้ทั้งหมด)
                 </td>
                 <td className="px-3 py-3 text-right font-mono text-sm font-black text-amber-950 bg-amber-100/50">
                   ฿{monthTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
@@ -771,7 +771,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
                   colSpan={8}
                   className="px-4 py-3 text-center text-sm font-bold text-slate-800 tracking-wide uppercase border-b border-slate-300"
                 >
-                  Salesplan and Targets ({MONTH_TH[selectedMonth - 1]} พ.ศ. {selectedYear + 543})
+                  Salesplan and Targets ({MONTH_EN[selectedMonth - 1]} {selectedYear} / {MONTH_TH[selectedMonth - 1]} พ.ศ. {selectedYear + 543})
                 </th>
               </tr>
 
@@ -925,7 +925,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               {/* Summary Row: Total */}
               <tr className="bg-slate-300/80 font-black border-t-2 border-slate-500 text-slate-900">
                 <td className="px-3 py-2 border-r border-slate-400 font-extrabold text-blue-900">
-                  Total
+                  Total (รวม)
                 </td>
                 <td className="px-3 py-2 border-r border-slate-400 text-right font-mono text-sm bg-blue-200/60 text-blue-950 font-black">
                   {monthTotal === 0 ? '0' : monthTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
@@ -954,7 +954,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               <tr className="bg-indigo-50/60 font-semibold border-t border-slate-300 text-slate-800">
                 <td className="px-3 py-2 border-r border-slate-300 font-bold text-indigo-900 flex items-center gap-1">
                   <Target className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                  Target
+                  Target (เป้าหมาย)
                 </td>
                 <td className="px-3 py-2 border-r border-slate-300 text-right font-mono bg-indigo-100/50 font-bold text-indigo-950">
                   {getBenchmarkTotal('target').toLocaleString('en-US')}
@@ -978,7 +978,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               <tr className="bg-slate-100 font-semibold border-t border-slate-300 text-slate-700">
                 <td className="px-3 py-2 border-r border-slate-300 font-bold text-slate-600 flex items-center gap-1">
                   <BarChart3 className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                  Last Year ({selectedYear - 1})
+                  Last Year ({selectedYear - 1}) (ปีที่แล้ว)
                 </td>
                 <td className="px-3 py-2 border-r border-slate-300 text-right font-mono bg-slate-200/50 font-bold text-slate-800">
                   {getBenchmarkTotal('lastYear').toLocaleString('en-US')}
@@ -1001,7 +1001,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
               {/* Benchmark Row: Plan */}
               <tr className="bg-slate-50 font-semibold border-t border-slate-300 text-slate-600">
                 <td className="px-3 py-2 border-r border-slate-300 font-bold text-slate-500">
-                  Plan
+                  Plan (แผนงาน)
                 </td>
                 <td className="px-3 py-2 border-r border-slate-300 text-right font-mono bg-slate-100 font-bold text-slate-700">
                   {getBenchmarkTotal('plan').toLocaleString('en-US')}
@@ -1037,10 +1037,10 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-800 text-base">
-                    ตั้งค่าเป้าหมาย (Target) และยอดปีที่แล้ว ({selectedYear - 1})
+                    Set Target & Last Year Revenue ({selectedYear - 1}) (ตั้งค่าเป้าหมาย และยอดปีที่แล้ว)
                   </h3>
                   <p className="text-xs text-slate-500">
-                    ประจำเดือน {MONTH_TH[selectedMonth - 1]} พ.ศ. {selectedYear + 543}
+                    For {MONTH_EN[selectedMonth - 1]} {selectedYear} ({MONTH_TH[selectedMonth - 1]} พ.ศ. {selectedYear + 543})
                   </p>
                 </div>
               </div>
@@ -1058,7 +1058,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
             <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
               <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs">
                 <span className="text-indigo-900 font-medium">
-                  คุณสามารถกดดึงยอดปีที่แล้ว ({selectedYear - 1}) อัตโนมัติ หรือกรอกตัวเลขด้วยตนเอง
+                  Auto-fetch last year ({selectedYear - 1}) data or enter numbers manually (ดึงยอดปีที่แล้ว หรือกรอกเอง)
                 </span>
                 <button
                   type="button"
@@ -1067,7 +1067,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors shrink-0 cursor-pointer"
                 >
                   <Zap className="w-3.5 h-3.5" />
-                  {isAutoFetching ? 'กำลังดึง...' : 'ดึงข้อมูลปีที่แล้ว'}
+                  {isAutoFetching ? 'Fetching...' : 'Fetch Last Year Data (ดึงข้อมูลปีที่แล้ว)'}
                 </button>
               </div>
 
@@ -1080,13 +1080,13 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
                         <div className={`p-1.5 rounded-md ${cat.bgColor}`}>
                           <IconComp className={`w-4 h-4 ${cat.color}`} />
                         </div>
-                        <span>{cat.label} ({cat.labelEn})</span>
+                        <span>{cat.labelEn} ({cat.label})</span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                         <div>
                           <label className="block text-[11px] font-bold text-indigo-900 mb-1">
-                            เป้าหมาย (Target)
+                            Target (เป้าหมาย)
                           </label>
                           <input
                             type="number"
@@ -1100,7 +1100,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
                         <div>
                           <label className="block text-[11px] font-bold text-purple-900 mb-1">
-                            ยอดปีที่แล้ว ({selectedYear - 1})
+                            Last Year ({selectedYear - 1}) (ปีที่แล้ว)
                           </label>
                           <input
                             type="number"
@@ -1114,7 +1114,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
                         <div>
                           <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                            แผนงาน (Plan)
+                            Plan (แผนงาน)
                           </label>
                           <input
                             type="number"
@@ -1135,14 +1135,14 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
             {/* Modal Footer */}
             <div className="flex items-center justify-between px-6 py-3.5 bg-slate-50 border-t border-slate-200">
               <div className="text-xs text-slate-500 font-medium">
-                * ข้อมูลจะถูกบันทึกและซิงค์ไปยังสมาชิกทุกคนแบบเรียลไทม์
+                * Data is automatically saved and synced to all devices (* ซิงค์ข้อมูลเรียลไทม์)
               </div>
               <button
                 type="button"
                 onClick={() => setIsTargetModalOpen(false)}
                 className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-colors cursor-pointer"
               >
-                เสร็จสิ้น / บันทึก
+                Done / Save (เสร็จสิ้น / บันทึก)
               </button>
             </div>
           </div>

@@ -292,7 +292,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
   const filterTasks = (tasks: ChecklistTask[]) => {
     if (!searchQuery.trim()) return tasks;
     const q = searchQuery.toLowerCase();
-    return tasks.filter((t) => t.title.toLowerCase().includes(q) || t.staff.toLowerCase().includes(q) || t.kas.toLowerCase().includes(q));
+    return tasks.filter((t) => t.title.toLowerCase().includes(q) || t.staff.toLowerCase().includes(q));
   };
 
   return (
@@ -349,8 +349,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
             <table className="w-full text-[9px] border-collapse border border-black">
               <thead>
                 <tr className="bg-gray-100 border-b border-black">
-                  <th className="border-r border-black p-0.5 text-center w-6">Staff</th>
-                  <th className="border-r border-black p-0.5 text-center w-6">Kas</th>
+                  <th className="border-r border-black p-0.5 text-center w-8">Staff</th>
                   <th className="p-0.5 text-left">Morning Check List</th>
                 </tr>
               </thead>
@@ -360,7 +359,6 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
                     <td className="border-r border-black p-0.5 text-center font-bold">
                       {task.staff || (task.completed ? '✓' : '')}
                     </td>
-                    <td className="border-r border-black p-0.5 text-center">{task.kas}</td>
                     <td className="p-0.5 flex items-center justify-between gap-1">
                       <span className={task.completed ? 'line-through text-gray-600' : ''}>
                         {i + 1}. {task.title}
@@ -381,8 +379,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
             <table className="w-full text-[9px] border-collapse border border-black">
               <thead>
                 <tr className="bg-gray-100 border-b border-black">
-                  <th className="border-r border-black p-0.5 text-center w-6">Staff</th>
-                  <th className="border-r border-black p-0.5 text-center w-6">Kas</th>
+                  <th className="border-r border-black p-0.5 text-center w-8">Staff</th>
                   <th className="p-0.5 text-left">Afternoon Check List</th>
                 </tr>
               </thead>
@@ -392,7 +389,6 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
                     <td className="border-r border-black p-0.5 text-center font-bold">
                       {task.staff || (task.completed ? '✓' : '')}
                     </td>
-                    <td className="border-r border-black p-0.5 text-center">{task.kas}</td>
                     <td className="p-0.5 flex items-center justify-between gap-1">
                       <span className={task.completed ? 'line-through text-gray-600' : ''}>
                         {i + 1}. {task.title}
@@ -736,9 +732,8 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
                         )}
                       </div>
 
-                      {/* Staff & Kas Input Fields */}
+                      {/* Staff Input Field */}
                       <div className="flex items-center gap-1 shrink-0">
-                        {/* Staff Input */}
                         <div className="flex flex-col items-end">
                           <span className="text-[9px] text-slate-400 font-semibold uppercase">
                             Staff
@@ -748,21 +743,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
                             placeholder="Staff"
                             value={task.staff || ''}
                             onChange={(e) => updateTaskField('morning', task.id, 'staff', e.target.value)}
-                            className="w-12 px-1.5 py-0.5 text-center text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-md focus:border-amber-500 focus:outline-hidden uppercase"
-                          />
-                        </div>
-
-                        {/* Kas Input */}
-                        <div className="flex flex-col items-end">
-                          <span className="text-[9px] text-slate-400 font-semibold uppercase">
-                            Kas
-                          </span>
-                          <input
-                            type="text"
-                            placeholder="Kas"
-                            value={task.kas || ''}
-                            onChange={(e) => updateTaskField('morning', task.id, 'kas', e.target.value)}
-                            className="w-12 px-1.5 py-0.5 text-center text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-md focus:border-amber-500 focus:outline-hidden"
+                            className="w-14 px-1.5 py-0.5 text-center text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-md focus:border-amber-500 focus:outline-hidden uppercase"
                           />
                         </div>
 
@@ -916,9 +897,8 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
                         )}
                       </div>
 
-                      {/* Staff & Kas Input Fields */}
+                      {/* Staff Input Field */}
                       <div className="flex items-center gap-1 shrink-0">
-                        {/* Staff Input */}
                         <div className="flex flex-col items-end">
                           <span className="text-[9px] text-slate-400 font-semibold uppercase">
                             Staff
@@ -928,21 +908,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
                             placeholder="Staff"
                             value={task.staff || ''}
                             onChange={(e) => updateTaskField('afternoon', task.id, 'staff', e.target.value)}
-                            className="w-12 px-1.5 py-0.5 text-center text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-md focus:border-indigo-500 focus:outline-hidden uppercase"
-                          />
-                        </div>
-
-                        {/* Kas Input */}
-                        <div className="flex flex-col items-end">
-                          <span className="text-[9px] text-slate-400 font-semibold uppercase">
-                            Kas
-                          </span>
-                          <input
-                            type="text"
-                            placeholder="Kas"
-                            value={task.kas || ''}
-                            onChange={(e) => updateTaskField('afternoon', task.id, 'kas', e.target.value)}
-                            className="w-12 px-1.5 py-0.5 text-center text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-md focus:border-indigo-500 focus:outline-hidden"
+                            className="w-14 px-1.5 py-0.5 text-center text-xs font-bold text-slate-800 bg-white border border-slate-300 rounded-md focus:border-indigo-500 focus:outline-hidden uppercase"
                           />
                         </div>
 

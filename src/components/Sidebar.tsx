@@ -40,25 +40,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     {
       id: 'cashCount' as const,
-      label: 'ตารางนับเงิน',
-      sublabel: 'ประจำกะ (Cash Count)',
+      label: 'Cash Count',
+      sublabel: 'ตารางนับเงินประจำกะ',
       icon: Calculator,
     },
     {
       id: 'receiptSubstitute' as const,
-      label: 'ใบรับรองใบเสร็จ',
-      sublabel: 'แทนใบเสร็จรับเงิน',
+      label: 'Receipt Substitute',
+      sublabel: 'ใบรับรองแทนใบเสร็จ',
       icon: FileText,
     },
     {
       id: 'dailyRevenue' as const,
-      label: 'Revenue',
+      label: 'Daily Revenue',
       sublabel: 'ยอดขาย & เป้าหมายประจำวัน',
       icon: BarChart3,
     },
     {
       id: 'frontOfficeChecklist' as const,
-      label: 'Checklist Front Office',
+      label: 'Front Office Checklist',
       sublabel: 'แบบฟอร์มกะเช้า & กะบ่าย',
       icon: CheckSquare,
     },
@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Front Office Panel
             </h1>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              ระบบการเงิน & เอกสาร บูติกรีสอร์ท
+              Financial & Document System (ระบบการเงิน & เอกสาร)
             </p>
           </div>
         </div>
@@ -110,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Navigation Menu Links */}
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
           <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            เมนูหลัก (Navigation)
+            NAVIGATION (เมนูหลัก)
           </div>
 
           {menuItems.map((item) => {
@@ -153,7 +153,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div className="pt-3 pb-1">
             <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              การจัดการ & ตั้งค่า (System)
+              SYSTEM (การจัดการ & ตั้งค่า)
             </div>
           </div>
 
@@ -170,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Settings className="w-4 h-4" />
             </div>
             <div className="text-left flex-1 min-w-0">
-              <div className="truncate text-xs font-bold">Setting</div>
+              <div className="truncate text-xs font-bold">Settings</div>
               <div className="truncate text-[10px] text-slate-400 font-normal">
                 ตั้งค่าระบบ & ประวัติ 7 วัน
               </div>
@@ -190,7 +190,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <History className="w-4 h-4" />
               </div>
               <div className="text-left flex-1 min-w-0">
-                <div className="truncate text-xs font-bold">ประวัติย้อนหลัง 7 วัน</div>
+                <div className="truncate text-xs font-bold">7-Day History</div>
+                <div className="truncate text-[10px] text-slate-400 font-normal">
+                  ประวัติย้อนหลัง 7 วัน
+                </div>
               </div>
             </button>
           )}
