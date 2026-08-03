@@ -44,6 +44,7 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
   // 'inclusive' = ราคารวม VAT แล้ว (ถอด VAT 7% ออก)
   const [calcMode, setCalcMode] = useState<'exclusive' | 'inclusive'>('exclusive');
   const [vatRate, setVatRate] = useState<number>(7); // Default 7%
+  const [showVatLine, setShowVatLine] = useState<boolean>(true); // Option to show/hide VAT row in summary
   const [whtRate, setWhtRate] = useState<number>(0); // Withholding tax rate: 0%, 1%, 2%, 3%, 5%
 
   // Multi-item rows
@@ -188,7 +189,9 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
 
     lines.push(`---------------------------------------`);
     lines.push(`ยอดรวมก่อน VAT (Subtotal): ฿${calculations.subtotalBeforeVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
-    lines.push(`ภาษีมูลค่าเพิ่ม (VAT ${vatRate}%): ฿${calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    if (showVatLine && vatRate > 0) {
+      lines.push(`ภาษีมูลค่าเพิ่ม (VAT ${vatRate}%): ฿${calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+    }
     lines.push(`ยอดรวมทั้งสิ้น (Grand Total): ฿${calculations.grandTotalInclVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
     if (whtRate > 0) {
@@ -373,6 +376,16 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
                       </button>
                     ))}
                   </div>
+
+                  <label className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100 cursor-pointer text-xs font-semibold text-slate-700 select-none">
+                    <input
+                      type="checkbox"
+                      checked={showVatLine}
+                      onChange={(e) => setShowVatLine(e.target.checked)}
+                      className="rounded border-slate-300 text-orange-600 focus:ring-orange-500 w-4 h-4 cursor-pointer"
+                    />
+                    <span>แสดงรายการภาษี VAT ({vatRate}%) ในใบสรุปเอกสาร</span>
+                  </label>
                 </div>
 
                 <div>
@@ -566,16 +579,24 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
                 </div>
 
                 {/* Box 2: VAT Amount */}
-                <div className="bg-orange-500/10 border border-orange-500/30 p-4 rounded-2xl space-y-1">
+                <div className={`p-4 rounded-2xl space-y-1 ${
+                  showVatLine && vatRate > 0 
+                    ? 'bg-orange-500/10 border border-orange-500/30' 
+                    : 'bg-white/5 border border-white/10 opacity-60'
+                }`}>
                   <div className="text-[11px] text-orange-300 font-bold uppercase flex items-center justify-between">
                     <span>ภาษีมูลค่าเพิ่ม (VAT {vatRate}%)</span>
                     <Percent className="w-3.5 h-3.5 text-orange-400" />
                   </div>
                   <div className="text-xl sm:text-2xl font-black font-mono text-orange-400 tracking-tight">
-                    ฿{calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {showVatLine && vatRate > 0
+                      ? `฿${calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : '(ซ่อนในรายงาน)'}
                   </div>
                   <div className="text-[10px] text-orange-200/80">
-                    {calcMode === 'exclusive'
+                    {!showVatLine
+                      ? 'ถูกซ่อนจากการแสดงผลในเอกสาร'
+                      : calcMode === 'exclusive'
                       ? `= ฿${calculations.subtotalBeforeVat.toLocaleString()} x ${vatRate}%`
                       : `= ฿${calculations.grandTotalInclVat.toLocaleString()} x (${vatRate}/107)`}
                   </div>
@@ -753,10 +774,12 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
                 <span>ยอดรวมสินค้า/บริการก่อน VAT:</span>
                 <span className="font-mono font-bold">฿{calculations.subtotalBeforeVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
-              <div className="flex justify-between text-slate-800 font-bold border-b border-slate-200 pb-1.5">
-                <span>ภาษีมูลค่าเพิ่ม VAT ({vatRate}%):</span>
-                <span className="font-mono text-orange-700">฿{calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
+              {showVatLine && vatRate > 0 && (
+                <div className="flex justify-between text-slate-800 font-bold border-b border-slate-200 pb-1.5">
+                  <span>ภาษีมูลค่าเพิ่ม VAT ({vatRate}%):</span>
+                  <span className="font-mono text-orange-700">฿{calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-b border-slate-300 pb-2">
                 <span>ยอดเงินรวมทั้งสิ้น (Grand Total):</span>
                 <span className="font-mono text-emerald-700">฿{calculations.grandTotalInclVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
