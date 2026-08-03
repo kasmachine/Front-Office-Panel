@@ -23,13 +23,11 @@
       size: A4 portrait;
       margin: 4mm 5mm;
     }
-    #cash-count-document, #receipt-substitute-document, #revenue-document, #vat-calc-print-document {
+    #cash-count-document, #receipt-substitute-document, #revenue-document, #vat-calc-print-document, #vat-calc-print-root {
       width: 100% !important;
       max-width: 100% !important;
       margin: 0 !important;
-      padding: 0 !important;
       box-shadow: none !important;
-      border: none !important;
     }
 
     body.print-vat-mode > *:not(#vat-calc-print-root) {
@@ -42,9 +40,11 @@
       left: 0 !important;
       top: 0 !important;
       width: 100% !important;
+      padding: 8mm 10mm !important;
       background: #ffffff !important;
       color: #000000 !important;
       z-index: 999999 !important;
+      box-sizing: border-box !important;
     }
     #revenue-document table {
       width: 100% !important;

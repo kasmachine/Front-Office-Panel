@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Percent,
   Calculator,
@@ -678,126 +679,129 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
       </div>
 
       {/* Printable VAT Summary Document Sheet */}
-      <div id="vat-calc-print-root" className="hidden font-sans text-slate-900 p-8 bg-white max-w-4xl mx-auto border border-slate-300">
-        <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-start">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">โรงแรม น่าน ซีซันส์ บูทีค รีสอร์ท</h1>
-            <p className="text-xs text-slate-600 mt-0.5">NAN SEASONS BOUTIQUE RESORT</p>
-            <h2 className="text-base font-black text-orange-700 mt-2 uppercase tracking-wide">
-              ใบสรุปและบันทึกการคำนวณภาษีมูลค่าเพิ่ม (VAT 7% Calculation Report)
-            </h2>
-          </div>
-          <div className="text-right text-xs text-slate-600 space-y-1">
-            <div><strong className="text-slate-800">วันที่พิมพ์:</strong> {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            <div><strong className="text-slate-800">เวลา:</strong> {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</div>
-            <div className="mt-2 inline-block px-2.5 py-1 bg-slate-100 border border-slate-300 text-slate-800 font-bold rounded">
-              {calcMode === 'exclusive' ? 'โหมด: ราคาก่อน VAT (Exclusive)' : 'โหมด: ราคารวม VAT แล้ว (Inclusive)'}
+      {typeof document !== 'undefined' && createPortal(
+        <div id="vat-calc-print-root" className="hidden font-sans text-slate-900 p-8 bg-white max-w-4xl mx-auto border border-slate-300">
+          <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-start">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">โรงแรม น่าน ซีซันส์ บูทีค รีสอร์ท</h1>
+              <p className="text-xs text-slate-600 mt-0.5">NAN SEASONS BOUTIQUE RESORT</p>
+              <h2 className="text-base font-black text-orange-700 mt-2 uppercase tracking-wide">
+                ใบสรุปและบันทึกการคำนวณภาษีมูลค่าเพิ่ม (VAT 7% Calculation Report)
+              </h2>
+            </div>
+            <div className="text-right text-xs text-slate-600 space-y-1">
+              <div><strong className="text-slate-800">วันที่พิมพ์:</strong> {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+              <div><strong className="text-slate-800">เวลา:</strong> {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</div>
+              <div className="mt-2 inline-block px-2.5 py-1 bg-slate-100 border border-slate-300 text-slate-800 font-bold rounded">
+                {calcMode === 'exclusive' ? 'โหมด: ราคาก่อน VAT (Exclusive)' : 'โหมด: ราคารวม VAT แล้ว (Inclusive)'}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Items Table */}
-        <div className="mb-6">
-          <h3 className="text-xs font-bold uppercase text-slate-700 mb-2">รายการสินค้า / บริการที่คำนวณ:</h3>
-          <table className="w-full text-xs text-left border-collapse border border-slate-300">
-            <thead>
-              <tr className="bg-slate-100 font-bold border-b border-slate-300 text-slate-800">
-                <th className="py-2 px-3 border-r border-slate-300 text-center w-10">ลำดับ</th>
-                <th className="py-2 px-3 border-r border-slate-300">รายการ (Description)</th>
-                <th className="py-2 px-3 border-r border-slate-300 text-right w-28">ราคาต่อหน่วย (฿)</th>
-                <th className="py-2 px-3 border-r border-slate-300 text-center w-16">จำนวน</th>
-                <th className="py-2 px-3 text-right w-32">จำนวนเงินรวม (฿)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {typeof quickAmount === 'number' && quickAmount > 0 ? (
-                <tr className="border-b border-slate-200">
-                  <td className="py-2 px-3 border-r border-slate-200 text-center font-bold">1</td>
-                  <td className="py-2 px-3 border-r border-slate-200">
-                    รายการคำนวณยอดเงินรวมก้อนเดียว (Quick Amount Input)
-                  </td>
-                  <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
-                    {quickAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">1</td>
-                  <td className="py-2 px-3 text-right font-mono font-bold">
-                    {quickAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
+          {/* Items Table */}
+          <div className="mb-6">
+            <h3 className="text-xs font-bold uppercase text-slate-700 mb-2">รายการสินค้า / บริการที่คำนวณ:</h3>
+            <table className="w-full text-xs text-left border-collapse border border-slate-300">
+              <thead>
+                <tr className="bg-slate-100 font-bold border-b border-slate-300 text-slate-800">
+                  <th className="py-2 px-3 border-r border-slate-300 text-center w-10">ลำดับ</th>
+                  <th className="py-2 px-3 border-r border-slate-300">รายการ (Description)</th>
+                  <th className="py-2 px-3 border-r border-slate-300 text-right w-28">ราคาต่อหน่วย (฿)</th>
+                  <th className="py-2 px-3 border-r border-slate-300 text-center w-16">จำนวน</th>
+                  <th className="py-2 px-3 text-right w-32">จำนวนเงินรวม (฿)</th>
                 </tr>
-              ) : (
-                items.map((it, idx) => {
-                  const amt = typeof it.amount === 'number' ? it.amount : parseFloat(it.amount || '0') || 0;
-                  const qty = typeof it.quantity === 'number' ? it.quantity : parseFloat(it.quantity || '0') || 0;
-                  const total = amt * qty;
-                  return (
-                    <tr key={it.id || idx} className="border-b border-slate-200">
-                      <td className="py-2 px-3 border-r border-slate-200 text-center font-bold">{idx + 1}</td>
-                      <td className="py-2 px-3 border-r border-slate-200">{it.description || '-'}</td>
-                      <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">{amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">{qty}</td>
-                      <td className="py-2 px-3 text-right font-mono font-bold">{total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    </tr>
-                  );
-                })
+              </thead>
+              <tbody>
+                {typeof quickAmount === 'number' && quickAmount > 0 ? (
+                  <tr className="border-b border-slate-200">
+                    <td className="py-2 px-3 border-r border-slate-200 text-center font-bold">1</td>
+                    <td className="py-2 px-3 border-r border-slate-200">
+                      รายการคำนวณยอดเงินรวมก้อนเดียว (Quick Amount Input)
+                    </td>
+                    <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
+                      {quickAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">1</td>
+                    <td className="py-2 px-3 text-right font-mono font-bold">
+                      {quickAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((it, idx) => {
+                    const amt = typeof it.amount === 'number' ? it.amount : parseFloat(it.amount || '0') || 0;
+                    const qty = typeof it.quantity === 'number' ? it.quantity : parseFloat(it.quantity || '0') || 0;
+                    const total = amt * qty;
+                    return (
+                      <tr key={it.id || idx} className="border-b border-slate-200">
+                        <td className="py-2 px-3 border-r border-slate-200 text-center font-bold">{idx + 1}</td>
+                        <td className="py-2 px-3 border-r border-slate-200">{it.description || '-'}</td>
+                        <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">{amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">{qty}</td>
+                        <td className="py-2 px-3 text-right font-mono font-bold">{total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Summary Box */}
+          <div className="flex justify-end mb-6">
+            <div className="w-80 border border-slate-300 rounded-lg p-3 space-y-2 bg-slate-50 text-xs">
+              <div className="flex justify-between text-slate-700">
+                <span>ยอดรวมสินค้า/บริการก่อน VAT:</span>
+                <span className="font-mono font-bold">฿{calculations.subtotalBeforeVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-slate-800 font-bold border-b border-slate-200 pb-1.5">
+                <span>ภาษีมูลค่าเพิ่ม VAT ({vatRate}%):</span>
+                <span className="font-mono text-orange-700">฿{calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+              <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-b border-slate-300 pb-2">
+                <span>ยอดเงินรวมทั้งสิ้น (Grand Total):</span>
+                <span className="font-mono text-emerald-700">฿{calculations.grandTotalInclVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+
+              {whtRate > 0 && (
+                <>
+                  <div className="flex justify-between text-slate-700 pt-1">
+                    <span>หัก ณ ที่จ่าย WHT ({whtRate}%):</span>
+                    <span className="font-mono text-rose-700">- ฿{calculations.whtAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-black text-blue-900 bg-blue-50 p-1.5 rounded border border-blue-200">
+                    <span>ยอดจ่ายสุทธิหลังหักภาษี:</span>
+                    <span className="font-mono">฿{calculations.netPayable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                </>
               )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Summary Box */}
-        <div className="flex justify-end mb-6">
-          <div className="w-80 border border-slate-300 rounded-lg p-3 space-y-2 bg-slate-50 text-xs">
-            <div className="flex justify-between text-slate-700">
-              <span>ยอดรวมสินค้า/บริการก่อน VAT:</span>
-              <span className="font-mono font-bold">฿{calculations.subtotalBeforeVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
-            <div className="flex justify-between text-slate-800 font-bold border-b border-slate-200 pb-1.5">
-              <span>ภาษีมูลค่าเพิ่ม VAT ({vatRate}%):</span>
-              <span className="font-mono text-orange-700">฿{calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-            <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-b border-slate-300 pb-2">
-              <span>ยอดเงินรวมทั้งสิ้น (Grand Total):</span>
-              <span className="font-mono text-emerald-700">฿{calculations.grandTotalInclVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-
-            {whtRate > 0 && (
-              <>
-                <div className="flex justify-between text-slate-700 pt-1">
-                  <span>หัก ณ ที่จ่าย WHT ({whtRate}%):</span>
-                  <span className="font-mono text-rose-700">- ฿{calculations.whtAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-sm font-black text-blue-900 bg-blue-50 p-1.5 rounded border border-blue-200">
-                  <span>ยอดจ่ายสุทธิหลังหักภาษี:</span>
-                  <span className="font-mono">฿{calculations.netPayable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Thai Baht Text */}
-        <div className="mb-8 p-3 bg-slate-100 border border-slate-300 rounded-lg text-xs flex items-center justify-between">
-          <span className="font-bold text-slate-700">จำนวนเงินตัวอักษร:</span>
-          <span className="font-serif font-bold text-slate-900">({whtRate > 0 ? calculations.bahtTextNet : calculations.bahtTextGrand})</span>
-        </div>
-
-        {/* Signatures */}
-        <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-300 text-xs text-slate-800 text-center">
-          <div>
-            <div className="border-b border-dotted border-slate-400 h-10 mb-2 w-48 mx-auto"></div>
-            <div>(............................................................)</div>
-            <div className="font-bold mt-1">ผู้คำนวณ / เจ้าหน้าที่ผู้จัดทำ</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">วันที่ ........ / ........ / ................</div>
           </div>
 
-          <div>
-            <div className="border-b border-dotted border-slate-400 h-10 mb-2 w-48 mx-auto"></div>
-            <div>(............................................................)</div>
-            <div className="font-bold mt-1">ผู้ตรวจสอบ / แผนกบัญชีและการเงิน</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">วันที่ ........ / ........ / ................</div>
+          {/* Thai Baht Text */}
+          <div className="mb-8 p-3 bg-slate-100 border border-slate-300 rounded-lg text-xs flex items-center justify-between">
+            <span className="font-bold text-slate-700">จำนวนเงินตัวอักษร:</span>
+            <span className="font-serif font-bold text-slate-900">({whtRate > 0 ? calculations.bahtTextNet : calculations.bahtTextGrand})</span>
           </div>
-        </div>
-      </div>
+
+          {/* Signatures */}
+          <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-300 text-xs text-slate-800 text-center">
+            <div>
+              <div className="border-b border-dotted border-slate-400 h-10 mb-2 w-48 mx-auto"></div>
+              <div>(............................................................)</div>
+              <div className="font-bold mt-1">ผู้คำนวณ / เจ้าหน้าที่ผู้จัดทำ</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">วันที่ ........ / ........ / ................</div>
+            </div>
+
+            <div>
+              <div className="border-b border-dotted border-slate-400 h-10 mb-2 w-48 mx-auto"></div>
+              <div>(............................................................)</div>
+              <div className="font-bold mt-1">ผู้ตรวจสอบ / แผนกบัญชีและการเงิน</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">วันที่ ........ / ........ / ................</div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 };
