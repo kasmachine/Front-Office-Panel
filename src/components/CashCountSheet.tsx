@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CashCountData, ExpenseRow } from '../types';
 import { NanSeasonsLogo } from './NanSeasonsLogo';
-import { Plus, Trash2, RotateCcw, Calendar } from 'lucide-react';
+import { Plus, Trash2, RotateCcw, Calendar, PenTool } from 'lucide-react';
+import { SignatureModal } from './SignatureModal';
 
 function toIsoDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -50,6 +51,8 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
   onOpenManageStaff,
   onOpenManageCategories,
 }) => {
+  const [activeSigModal, setActiveSigModal] = useState<'staffIn' | 'staffOut' | null>(null);
+
   const isMinusItem = (itemStr: string): boolean => {
     if (!itemStr) return false;
     const trimmed = itemStr.trim();
@@ -441,6 +444,32 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
               onOpenManageStaff={onOpenManageStaff}
             />
             <span className="hidden print:inline font-bold underline text-sm">{data.staffIn || '-'}</span>
+
+            {/* E-Signature Staff IN */}
+            <div className="mt-1 pt-1.5 border-t border-slate-200 flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-600">ลายเซ็น Staff IN:</span>
+              {data.staffInSignature ? (
+                <div className="flex items-center gap-2">
+                  <img src={data.staffInSignature} alt="Staff IN Signature" className="h-7 max-w-[120px] object-contain bg-white rounded border border-slate-200 p-0.5" />
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...data, staffInSignature: null })}
+                    className="no-print text-[10px] font-bold text-rose-600 hover:underline"
+                  >
+                    ลบ
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveSigModal('staffIn')}
+                  className="no-print inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors"
+                >
+                  <PenTool className="w-3 h-3" />
+                  เซ็นชื่อดิจิทัล
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Staff OUT (นับเงินออกเมื่อเลิกงาน) */}
@@ -469,8 +498,53 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
               onOpenManageStaff={onOpenManageStaff}
             />
             <span className="hidden print:inline font-bold underline text-sm">{data.staffOut || '-'}</span>
+
+            {/* E-Signature Staff OUT */}
+            <div className="mt-1 pt-1.5 border-t border-slate-200 flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-600">ลายเซ็น Staff OUT:</span>
+              {data.staffOutSignature ? (
+                <div className="flex items-center gap-2">
+                  <img src={data.staffOutSignature} alt="Staff OUT Signature" className="h-7 max-w-[120px] object-contain bg-white rounded border border-slate-200 p-0.5" />
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...data, staffOutSignature: null })}
+                    className="no-print text-[10px] font-bold text-rose-600 hover:underline"
+                  >
+                    ลบ
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveSigModal('staffOut')}
+                  className="no-print inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors"
+                >
+                  <PenTool className="w-3 h-3" />
+                  เซ็นชื่อดิจิทัล
+                </button>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Signature Modals for Cash Count */}
+        <SignatureModal
+          isOpen={activeSigModal === 'staffIn'}
+          onClose={() => setActiveSigModal(null)}
+          onSave={(sigUrl) => onChange({ ...data, staffInSignature: sigUrl })}
+          title="เซ็นชื่อพนักงานนับเงินเข้า (Staff IN E-Signature)"
+          signerName={data.staffIn}
+          initialSignature={data.staffInSignature}
+        />
+
+        <SignatureModal
+          isOpen={activeSigModal === 'staffOut'}
+          onClose={() => setActiveSigModal(null)}
+          onSave={(sigUrl) => onChange({ ...data, staffOutSignature: sigUrl })}
+          title="เซ็นชื่อพนักงานนับเงินออก (Staff OUT E-Signature)"
+          signerName={data.staffOut}
+          initialSignature={data.staffOutSignature}
+        />
 
         {/* Cash Count Main Grid - Separated into 2 distinct tables for IN and OUT */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2 print:gap-3">

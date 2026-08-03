@@ -15,10 +15,10 @@ function colorToRgb(match: string): string {
     canvas.height = 1;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.fillStyle = '#123456';
+      ctx.fillStyle = '#000000';
       ctx.fillStyle = match;
       const converted = ctx.fillStyle;
-      if (converted && !/(oklch|oklab|lch|lab)/i.test(converted) && converted !== '#123456') {
+      if (converted && !/(oklch|oklab|lch|lab|color-mix|light-dark|color)/i.test(converted)) {
         colorCache.set(match, converted);
         return converted;
       }
@@ -34,7 +34,7 @@ function colorToRgb(match: string): string {
     document.body.appendChild(tempDiv);
     const computedColor = window.getComputedStyle(tempDiv).color;
     document.body.removeChild(tempDiv);
-    if (computedColor && !/(oklch|oklab|lch|lab)/i.test(computedColor)) {
+    if (computedColor && !/(oklch|oklab|lch|lab|color-mix|light-dark|color)/i.test(computedColor)) {
       colorCache.set(match, computedColor);
       return computedColor;
     }
@@ -43,21 +43,21 @@ function colorToRgb(match: string): string {
   }
 
   // 3. Safe fallback color
-  const fallback = 'rgb(100, 116, 139)';
+  const fallback = 'rgb(15, 23, 42)';
   colorCache.set(match, fallback);
   return fallback;
 }
 
-function replaceUnsupportedColorsInString(str: string): string {
-  if (!str || !/(oklch|oklab|lch|lab)\s*\(/i.test(str)) return str;
+export function replaceUnsupportedColorsInString(str: string): string {
+  if (!str || !/(oklch|oklab|lch|lab|color-mix|light-dark|color)\s*\(/i.test(str)) return str;
 
   let result = '';
   let i = 0;
   const lowerStr = str.toLowerCase();
 
   while (i < str.length) {
-    // Find match for oklch(, oklab(, lch(, lab(
-    const match = lowerStr.slice(i).match(/(oklch|oklab|lch|lab)\s*\(/i);
+    // Find match for oklch(, oklab(, lch(, lab(, color-mix(, light-dark(, color(
+    const match = lowerStr.slice(i).match(/(oklch|oklab|lch|lab|color-mix|light-dark|color)\s*\(/i);
     if (!match || match.index === undefined) {
       result += str.slice(i);
       break;
@@ -105,44 +105,91 @@ export async function exportToPdf(elementId: string, filename: string = 'documen
       windowWidth: element.scrollWidth,
       windowHeight: element.scrollHeight,
       onclone: (clonedDoc) => {
-        // 1. Sanitize all <style> elements in the cloned document
-        clonedDoc.querySelectorAll('style').forEach((styleEl) => {
-          if (styleEl.textContent && /(oklch|oklab|lch|lab)/i.test(styleEl.textContent)) {
-            styleEl.textContent = replaceUnsupportedColorsInString(styleEl.textContent);
-          }
-        });
-
-        // 2. Sanitize inline style attributes on all elements in cloned document
-        clonedDoc.querySelectorAll('*').forEach((el) => {
-          const styleAttr = el.getAttribute('style');
-          if (styleAttr && /(oklch|oklab|lch|lab)/i.test(styleAttr)) {
-            el.setAttribute('style', replaceUnsupportedColorsInString(styleAttr));
-          }
-        });
-
-        // 3. Sanitize styleSheets rules if accessible
-        try {
-          Array.from(clonedDoc.styleSheets).forEach((sheet) => {
-            try {
-              const rules = Array.from(sheet.cssRules || []);
-              rules.forEach((rule, idx) => {
-                if (rule.cssText && /(oklch|oklab|lch|lab)/i.test(rule.cssText)) {
-                  const sanitized = replaceUnsupportedColorsInString(rule.cssText);
-                  try {
-                    sheet.deleteRule(idx);
-                    sheet.insertRule(sanitized, idx);
-                  } catch {
-                    /* ignore */
-                  }
+        // A. Proxy getComputedStyle on clonedDoc window to automatically intercept any oklab/oklch colors
+        if (clonedDoc.defaultView) {
+          const origGetComputedStyle = clonedDoc.defaultView.getComputedStyle;
+          clonedDoc.defaultView.getComputedStyle = function (elt: Element, pseudoElt?: string | null) {
+            const style = origGetComputedStyle.call(clonedDoc.defaultView, elt, pseudoElt);
+            return new Proxy(style, {
+              get(target, prop, receiver) {
+                if (prop === 'getPropertyValue') {
+                  return function (propertyName: string) {
+                    const propVal = target.getPropertyValue(propertyName);
+                    if (typeof propVal === 'string' && /(oklch|oklab|lch|lab|color-mix|light-dark|color)\s*\(/i.test(propVal)) {
+                      return replaceUnsupportedColorsInString(propVal);
+                    }
+                    return propVal;
+                  };
                 }
-              });
-            } catch {
-              /* cross-origin sheet ignore */
-            }
-          });
-        } catch {
-          /* ignore */
+                const val = Reflect.get(target, prop, receiver);
+                if (typeof val === 'string' && /(oklch|oklab|lch|lab|color-mix|light-dark|color)\s*\(/i.test(val)) {
+                  return replaceUnsupportedColorsInString(val);
+                }
+                if (typeof val === 'function') {
+                  return val.bind(target);
+                }
+                return val;
+              },
+            });
+          };
         }
+
+        // B. Sanitize all <style> elements text content and css rules
+        clonedDoc.querySelectorAll('style').forEach((styleEl) => {
+          try {
+            let cssText = styleEl.textContent || '';
+            if (styleEl.sheet) {
+              try {
+                const rules = Array.from(styleEl.sheet.cssRules || []);
+                cssText = rules.map((r) => r.cssText).join('\n');
+              } catch {
+                /* ignore */
+              }
+            }
+            if (cssText && /(oklch|oklab|lch|lab|color-mix|light-dark|color)\s*\(/i.test(cssText)) {
+              styleEl.textContent = replaceUnsupportedColorsInString(cssText);
+            }
+          } catch {
+            /* ignore */
+          }
+        });
+
+        // C. Sanitize inline style attributes and force explicit RGB values on key color properties
+        const colorProps = [
+          'color',
+          'backgroundColor',
+          'borderColor',
+          'borderTopColor',
+          'borderRightColor',
+          'borderBottomColor',
+          'borderLeftColor',
+          'outlineColor',
+          'fill',
+          'stroke',
+          'boxShadow',
+          'textShadow',
+        ];
+
+        clonedDoc.querySelectorAll('*').forEach((el) => {
+          const htmlEl = el as HTMLElement;
+          const styleAttr = htmlEl.getAttribute('style');
+          if (styleAttr && /(oklch|oklab|lch|lab|color-mix|light-dark|color)\s*\(/i.test(styleAttr)) {
+            htmlEl.setAttribute('style', replaceUnsupportedColorsInString(styleAttr));
+          }
+
+          try {
+            const computed = window.getComputedStyle(htmlEl);
+            colorProps.forEach((prop) => {
+              const val = (computed as any)[prop];
+              if (typeof val === 'string' && /(oklch|oklab|lch|lab|color-mix|light-dark|color)\s*\(/i.test(val)) {
+                const safeVal = replaceUnsupportedColorsInString(val);
+                htmlEl.style[prop as any] = safeVal;
+              }
+            });
+          } catch {
+            /* ignore */
+          }
+        });
       },
     });
 
@@ -190,3 +237,4 @@ export async function exportToPdf(elementId: string, filename: string = 'documen
 export function printDocument() {
   window.print();
 }
+

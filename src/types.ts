@@ -23,6 +23,8 @@ export interface CashCountData {
   beerShiftDiff: number;
   staffIn: string;
   staffOut: string;
+  staffInSignature?: string | null;
+  staffOutSignature?: string | null;
   expensesIn: ExpenseRow[];
   expensesOut: ExpenseRow[];
   remarks: string;
@@ -48,6 +50,8 @@ export interface ReceiptSubstituteData {
   requesterPosition: string;
   approverName: string;
   approverPosition: string;
+  requesterSignature?: string | null;
+  approverSignature?: string | null;
   idCardImage: string | null;
   watermarkText: string;
   createdAt: number;
