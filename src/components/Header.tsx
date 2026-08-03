@@ -3,8 +3,8 @@ import { NanSeasonsLogo } from './NanSeasonsLogo';
 import { FileText, Calculator, CheckCircle2, Loader2, Settings, RefreshCw, BarChart3, Menu } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
-  onSelectTab: (tab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
+  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
+  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
   onOpenSettings?: () => void;
   onManualSync?: () => void;
   saveStatus?: 'saving' | 'saved' | 'idle';
@@ -40,7 +40,9 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <h1 className="text-sm sm:text-base font-bold tracking-tight text-white flex flex-wrap items-center gap-2">
               <span>
-                {activeTab === 'cashCount'
+                {activeTab === 'dashboard'
+                  ? 'Dashboard (ภาพรวมระบบ & สรุปผลงาน)'
+                  : activeTab === 'cashCount'
                   ? 'Cash Count (ตารางนับเงินประจำกะ)'
                   : activeTab === 'receiptSubstitute'
                   ? 'Receipt Substitute (ใบรับรองแทนใบเสร็จ)'
@@ -66,7 +68,9 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </h1>
             <p className="text-[11px] text-slate-400 hidden sm:block">
-              {activeTab === 'cashCount'
+              {activeTab === 'dashboard'
+                ? 'ภาพรวมระบบยอดขายประจำเดือน, สถานะเงินสดประจำกะ, และความคืบหน้าการตรวจเช็คงาน (Executive Control Panel)'
+                : activeTab === 'cashCount'
                 ? 'ตารางนับเงินสดเข้า-ออกประจำกะ (Shift Cash Reconciliation Sheet)'
                 : activeTab === 'receiptSubstitute'
                 ? 'ใบรับรองแทนใบเสร็จรับเงินพร้อมแนบสำเนาบัตรประชาชน'

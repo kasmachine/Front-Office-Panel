@@ -1,6 +1,7 @@
 import React from 'react';
 import { NanSeasonsLogo } from './NanSeasonsLogo';
 import {
+  LayoutDashboard,
   Calculator,
   FileText,
   BarChart3,
@@ -15,8 +16,8 @@ import {
 } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
-  onSelectTab: (tab: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
+  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
+  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
   onOpenSettings: () => void;
   onOpenHistory?: () => void;
   onManualSync?: () => void;
@@ -38,6 +39,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const menuItems = [
+    {
+      id: 'dashboard' as const,
+      label: 'Dashboard',
+      sublabel: 'ภาพรวมระบบ & สรุปผลงาน',
+      icon: LayoutDashboard,
+    },
     {
       id: 'cashCount' as const,
       label: 'Cash Count',

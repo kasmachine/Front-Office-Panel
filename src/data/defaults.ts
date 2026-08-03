@@ -1,5 +1,15 @@
 import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, DailyRevenueItem } from '../types';
 
+export const MONTH_TH = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+export const MONTH_EN = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+];
+
 export const DEFAULT_DENOMINATIONS = [
   { value: 1000, label: 'THB 1000.00' },
   { value: 500, label: 'THB 500.00' },

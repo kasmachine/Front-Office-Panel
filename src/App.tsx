@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
+import { Dashboard } from './components/Dashboard';
 import { CashCountSheet } from './components/CashCountSheet';
 import { ReceiptSubstituteSheet } from './components/ReceiptSubstituteSheet';
 import { DailyRevenueSheet } from './components/DailyRevenueSheet';
@@ -42,7 +43,7 @@ import { syncMinusExpensesToReceipt, isWithin7Days, formatDateToDisplay, getToda
 import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist'>('cashCount');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Active form states
@@ -880,7 +881,16 @@ export default function App() {
         </div>
         )}
 
-        {activeTab === 'cashCount' ? (
+        {activeTab === 'dashboard' ? (
+          <Dashboard
+            onNavigate={(tab) => setActiveTab(tab)}
+            cashCountData={cashCountData}
+            receiptData={receiptData}
+            savedCashCounts={savedCashCounts}
+            savedReceipts={savedReceipts}
+            onManualSync={handleManualSync}
+          />
+        ) : activeTab === 'cashCount' ? (
           <CashCountSheet
             data={cashCountData}
             onChange={setCashCountData}
