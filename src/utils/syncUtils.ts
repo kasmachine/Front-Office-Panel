@@ -44,6 +44,27 @@ export function isWithin7Days(createdAt?: number, dateStr?: string): boolean {
   return true;
 }
 
+export function isNonReceiptExpense(itemStr: string): boolean {
+  if (!itemStr) return false;
+  const lower = itemStr.trim().toLowerCase();
+  // Exclude Kas paid out / Kas transfers and Part Time wages from receipt substitute
+  if (
+    lower.includes('kas paid') ||
+    lower.includes('kas_paid') ||
+    lower.includes('kas-paid')
+  ) {
+    return true;
+  }
+  if (
+    lower.includes('part time') ||
+    lower.includes('part-time') ||
+    lower.includes('parttime')
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function extractMinusExpenses(cashCountData: CashCountData) {
   return [
     ...(cashCountData.expensesIn || []),
@@ -53,6 +74,7 @@ export function extractMinusExpenses(cashCountData: CashCountData) {
       exp &&
       exp.item &&
       exp.item.trim().startsWith('-') &&
+      !isNonReceiptExpense(exp.item) &&
       (exp.amount > 0 || exp.item.trim().length > 1)
   );
 }
@@ -118,9 +140,15 @@ export function syncMinusExpensesToReceipt(
 
   const autoItems = Array.from(autoItemsMap.values());
 
-  // Preserve any manually added items in receipt substitute
+  // Preserve any manually added items in receipt substitute, filtering out non-receipt items
   const manualItems = currentReceiptData.items
-    .filter((item) => !item.id.startsWith('cc-') && (item.description.trim() !== '' || item.amount !== 0))
+    .filter((item) => {
+      const desc = item.description ? item.description.replace(/^[-+\s]+/, '').trim() : '';
+      if (isNonReceiptExpense(desc) || isNonReceiptExpense(item.description)) {
+        return false;
+      }
+      return !item.id.startsWith('cc-') && (desc !== '' || item.amount !== 0);
+    })
     .map((item) => ({
       ...item,
       date: formatDateToDisplay(item.date),

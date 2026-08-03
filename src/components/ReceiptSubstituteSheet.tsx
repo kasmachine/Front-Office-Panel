@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { ReceiptSubstituteData, ReceiptSubstituteItem, CashCountData } from '../types';
 import { ArabicToBahtText } from '../utils/bahttext';
-import { extractMinusExpenses, getTodayFormatted, formatDateToDisplay } from '../utils/syncUtils';
+import { extractMinusExpenses, getTodayFormatted, formatDateToDisplay, isNonReceiptExpense } from '../utils/syncUtils';
 import { getStoredCategories } from './ExpenseCategorySelect';
 import { getStoredStaffList } from './StaffSelect';
 import { Plus, Trash2, Upload, Image as ImageIcon, ShieldCheck, Calendar, PenTool, CheckCircle2 } from 'lucide-react';
@@ -121,7 +121,9 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
     });
   };
 
-  const minusCategories = getStoredCategories().minus.map((cat) => cat.replace(/^[-+\s]+/, ''));
+  const minusCategories = getStoredCategories()
+    .minus.map((cat) => cat.replace(/^[-+\s]+/, ''))
+    .filter((cat) => !isNonReceiptExpense(cat));
   const storedStaffList = getStoredStaffList();
 
   const totalAmount = data.items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
