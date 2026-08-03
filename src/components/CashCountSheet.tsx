@@ -978,6 +978,93 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
             {data.remarks || '-'}
           </p>
         </div>
+
+        {/* Document Signatures Footer Block */}
+        <div className="mt-4 print:mt-3 grid grid-cols-2 md:grid-cols-2 gap-4 border-t-2 border-slate-800 pt-3 print:pt-2">
+          {/* Staff IN Signature Block */}
+          <div className="flex flex-col items-center justify-between border border-slate-300 rounded-lg p-2.5 bg-slate-50/50 print:bg-transparent">
+            <div className="text-center w-full">
+              <span className="text-xs font-bold text-slate-800">ผู้ส่งมอบกะ / นับเงินเข้า (Staff IN)</span>
+            </div>
+
+            <div className="my-1.5 min-h-[48px] flex items-center justify-center w-full">
+              {data.staffInSignature ? (
+                <div className="relative group flex flex-col items-center">
+                  <img
+                    src={data.staffInSignature}
+                    alt="Staff IN Signature"
+                    className="max-h-12 max-w-[160px] object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...data, staffInSignature: null })}
+                    className="no-print text-[10px] font-bold text-rose-600 hover:underline mt-0.5"
+                  >
+                    ลบลายเซ็น
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveSigModal('staffIn')}
+                  className="no-print inline-flex items-center gap-1 px-3 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors"
+                >
+                  <PenTool className="w-3.5 h-3.5" />
+                  เซ็นชื่อ Staff IN
+                </button>
+              )}
+            </div>
+
+            <div className="text-center w-full border-t border-slate-300 pt-1">
+              <p className="text-xs font-bold text-slate-900">
+                ({data.staffIn || '...........................................'})
+              </p>
+              <p className="text-[10px] text-slate-500 print:text-slate-700 font-medium">พนักงานนับเงินเข้า</p>
+            </div>
+          </div>
+
+          {/* Staff OUT Signature Block */}
+          <div className="flex flex-col items-center justify-between border border-slate-300 rounded-lg p-2.5 bg-slate-50/50 print:bg-transparent">
+            <div className="text-center w-full">
+              <span className="text-xs font-bold text-slate-800">ผู้รับมอบกะ / นับเงินออก (Staff OUT)</span>
+            </div>
+
+            <div className="my-1.5 min-h-[48px] flex items-center justify-center w-full">
+              {data.staffOutSignature ? (
+                <div className="relative group flex flex-col items-center">
+                  <img
+                    src={data.staffOutSignature}
+                    alt="Staff OUT Signature"
+                    className="max-h-12 max-w-[160px] object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...data, staffOutSignature: null })}
+                    className="no-print text-[10px] font-bold text-rose-600 hover:underline mt-0.5"
+                  >
+                    ลบลายเซ็น
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveSigModal('staffOut')}
+                  className="no-print inline-flex items-center gap-1 px-3 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors"
+                >
+                  <PenTool className="w-3.5 h-3.5" />
+                  เซ็นชื่อ Staff OUT
+                </button>
+              )}
+            </div>
+
+            <div className="text-center w-full border-t border-slate-300 pt-1">
+              <p className="text-xs font-bold text-slate-900">
+                ({data.staffOut || '...........................................'})
+              </p>
+              <p className="text-[10px] text-slate-500 print:text-slate-700 font-medium">พนักงานนับเงินออกเมื่อเลิกงาน</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -629,6 +629,13 @@ export default function App() {
   };
 
   const handleExportPdf = async () => {
+    // Auto-save current document state and signatures to Firebase & history on print/PDF
+    try {
+      await handleSaveRecord();
+    } catch (e) {
+      /* continue export even if save has warning */
+    }
+
     const elementId = activeTab === 'cashCount' ? 'cash-count-document' : 'receipt-substitute-document';
     const filename = activeTab === 'cashCount'
       ? `ตารางนับเงิน_NanSeasons_${cashCountData.shift}_${cashCountData.date.replace(/\//g, '-')}.pdf`
@@ -638,7 +645,13 @@ export default function App() {
     await exportToPdf(elementId, filename);
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    // Auto-save current document state and signatures to Firebase & history on print/PDF
+    try {
+      await handleSaveRecord();
+    } catch (e) {
+      /* continue print even if save has warning */
+    }
     printDocument();
   };
 
