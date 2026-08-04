@@ -123,7 +123,7 @@ export default function App() {
 
   const handleApplyVatToReceipt = (
     items: ReceiptSubstituteItem[],
-    calcMode: 'exclusive' | 'inclusive',
+    calcMode: 'exclusive' | 'inclusive' | 'sum',
     vatPercent: number
   ) => {
     setReceiptData((prev) => ({
@@ -132,7 +132,11 @@ export default function App() {
     }));
     setActiveTab('receiptSubstitute');
     if (toastMessage !== undefined) {
-      setToastMessage(`ส่ง ${items.length} รายการจากการคำนวณ VAT ${vatPercent}% ลงใบรับรองแทนใบเสร็จเรียบร้อยแล้ว`);
+      const modeText =
+        calcMode === 'sum'
+          ? 'รวมยอดที่เป็นภาษีแล้ว'
+          : `คำนวณ VAT ${vatPercent}%`;
+      setToastMessage(`ส่ง ${items.length} รายการ (${modeText}) ลงใบรับรองแทนใบเสร็จเรียบร้อยแล้ว`);
       setTimeout(() => setToastMessage(null), 4000);
     }
   };
