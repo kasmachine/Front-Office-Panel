@@ -73,6 +73,20 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
     ]);
   };
 
+  // Add 5 Rows at once
+  const handleAddMultipleItems = (count: number = 5) => {
+    setItems((prev) => {
+      const newItems: VatItemRow[] = Array.from({ length: count }, (_, i) => ({
+        id: `vat-item-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 5)}`,
+        description: `รายการสินค้า/บริการที่ ${prev.length + i + 1}`,
+        amount: '',
+        quantity: 1,
+        note: '',
+      }));
+      return [...prev, ...newItems];
+    });
+  };
+
   // Update Row
   const handleUpdateItem = (id: string, field: keyof VatItemRow, value: any) => {
     setItems((prev) =>
@@ -166,6 +180,32 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
       bahtTextNet,
     };
   }, [items, quickAmount, calcMode, vatRate, whtRate]);
+
+  // Prepare items split into 2 columns for print document
+  const printItemsList = useMemo(() => {
+    if (typeof quickAmount === 'number' && quickAmount > 0) {
+      return [{
+        id: 'quick-1',
+        description: 'รายการคำนวณยอดเงินรวมก้อนเดียว (Quick Amount Input)',
+        amount: quickAmount,
+        quantity: 1,
+        note: ''
+      }];
+    }
+    return items;
+  }, [quickAmount, items]);
+
+  const { col1Items, col2Items } = useMemo(() => {
+    const total = printItemsList.length;
+    if (total <= 5) {
+      return { col1Items: printItemsList, col2Items: [] };
+    }
+    const half = Math.ceil(total / 2);
+    return {
+      col1Items: printItemsList.slice(0, half),
+      col2Items: printItemsList.slice(half)
+    };
+  }, [printItemsList]);
 
   // Copy Summary Text
   const handleCopyText = () => {
@@ -417,14 +457,26 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
                     ตารางกรอกยอดเงินและรายการคำนวณ
                   </h3>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-xl">
+                    {items.length} รายการ
+                  </span>
                   <button
                     type="button"
                     onClick={handleAddItem}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>เพิ่มช่องกรอกรายการ</span>
+                    <span>เพิ่ม 1 รายการ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddMultipleItems(5)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                    title="เพิ่มครั้งละ 5 ช่องเพื่อให้กรอกข้อมูลได้มากขึ้น"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ เพิ่ม 5 ช่อง</span>
                   </button>
                   <button
                     type="button"
@@ -699,111 +751,144 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
         </div>
       </div>
 
-      {/* Printable VAT Summary Document Sheet */}
+      {/* Printable VAT Summary Document Sheet - 2 Column Layout */}
       {typeof document !== 'undefined' && createPortal(
-        <div id="vat-calc-print-root" className="hidden font-sans text-slate-900 p-8 bg-white max-w-4xl mx-auto border border-slate-300">
-          <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-start">
+        <div id="vat-calc-print-root" className="hidden font-sans text-slate-900 p-6 bg-white max-w-4xl mx-auto border border-slate-300">
+          <div className="border-b-2 border-slate-900 pb-3 mb-4 flex justify-between items-start">
             <div>
-              <h1 className="text-xl font-bold text-slate-900">โรงแรม น่าน ซีซันส์ บูทีค รีสอร์ท</h1>
-              <p className="text-xs text-slate-600 mt-0.5">NAN SEASONS BOUTIQUE RESORT</p>
-              <h2 className="text-base font-black text-orange-700 mt-2 uppercase tracking-wide">
+              <h1 className="text-lg font-bold text-slate-900 leading-tight">โรงแรม น่าน ซีซันส์ บูทีค รีสอร์ท</h1>
+              <p className="text-[11px] text-slate-600">NAN SEASONS BOUTIQUE RESORT</p>
+              <h2 className="text-xs font-black text-orange-700 mt-1 uppercase tracking-wide">
                 ใบสรุปและบันทึกการคำนวณภาษีมูลค่าเพิ่ม (VAT 7% Calculation Report)
               </h2>
             </div>
-            <div className="text-right text-xs text-slate-600 space-y-1">
+            <div className="text-right text-[11px] text-slate-600 space-y-0.5">
               <div><strong className="text-slate-800">วันที่พิมพ์:</strong> {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
               <div><strong className="text-slate-800">เวลา:</strong> {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</div>
-              <div className="mt-2 inline-block px-2.5 py-1 bg-slate-100 border border-slate-300 text-slate-800 font-bold rounded">
-                {calcMode === 'exclusive' ? 'โหมด: ราคาก่อน VAT (Exclusive)' : 'โหมด: ราคารวม VAT แล้ว (Inclusive)'}
+              <div className="mt-1 inline-block px-2 py-0.5 bg-slate-100 border border-slate-300 text-slate-800 font-bold rounded text-[10px]">
+                {calcMode === 'exclusive' ? 'โหมด: ราคาก่อน VAT (Exclusive)' : 'โหมด: ราคารวม VAT (Inclusive)'}
               </div>
             </div>
           </div>
 
-          {/* Items Table */}
-          <div className="mb-6">
-            <h3 className="text-xs font-bold uppercase text-slate-700 mb-2">รายการสินค้า / บริการที่คำนวณ:</h3>
-            <table className="w-full text-xs text-left border-collapse border border-slate-300">
-              <thead>
-                <tr className="bg-slate-100 font-bold border-b border-slate-300 text-slate-800">
-                  <th className="py-2 px-3 border-r border-slate-300 text-center w-10">ลำดับ</th>
-                  <th className="py-2 px-3 border-r border-slate-300">รายการ (Description)</th>
-                  <th className="py-2 px-3 border-r border-slate-300 text-right w-28">ราคาต่อหน่วย (฿)</th>
-                  <th className="py-2 px-3 border-r border-slate-300 text-center w-16">จำนวน</th>
-                  <th className="py-2 px-3 text-right w-32">จำนวนเงินรวม (฿)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {typeof quickAmount === 'number' && quickAmount > 0 ? (
-                  <tr className="border-b border-slate-200">
-                    <td className="py-2 px-3 border-r border-slate-200 text-center font-bold">1</td>
-                    <td className="py-2 px-3 border-r border-slate-200">
-                      รายการคำนวณยอดเงินรวมก้อนเดียว (Quick Amount Input)
-                    </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
-                      {quickAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">1</td>
-                    <td className="py-2 px-3 text-right font-mono font-bold">
-                      {quickAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
+          {/* 2-Column Grid Layout */}
+          <div className="grid grid-cols-2 gap-4 items-start">
+            {/* COLUMN 1 (LEFT) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-1">
+                <span>รายการสินค้า / บริการที่คำนวณ {col2Items.length > 0 ? '(ช่องที่ 1)' : ''}</span>
+                <span className="text-[10px] text-slate-500 font-normal">จำนวน {col1Items.length} รายการ</span>
+              </div>
+              
+              <table className="w-full text-[11px] text-left border-collapse border border-slate-300">
+                <thead>
+                  <tr className="bg-slate-100 font-bold border-b border-slate-300 text-slate-800">
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-center w-7">#</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300">รายการ (Description)</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">ราคา</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-center w-7">จำนวน</th>
+                    <th className="py-1 px-1.5 text-right w-20">รวม (฿)</th>
                   </tr>
-                ) : (
-                  items.map((it, idx) => {
+                </thead>
+                <tbody>
+                  {col1Items.map((it, idx) => {
                     const amt = typeof it.amount === 'number' ? it.amount : parseFloat(it.amount || '0') || 0;
                     const qty = typeof it.quantity === 'number' ? it.quantity : parseFloat(it.quantity || '0') || 0;
                     const total = amt * qty;
                     return (
                       <tr key={it.id || idx} className="border-b border-slate-200">
-                        <td className="py-2 px-3 border-r border-slate-200 text-center font-bold">{idx + 1}</td>
-                        <td className="py-2 px-3 border-r border-slate-200">{it.description || '-'}</td>
-                        <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">{amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">{qty}</td>
-                        <td className="py-2 px-3 text-right font-mono font-bold">{total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-center font-bold text-slate-600">{idx + 1}</td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 break-words">{it.description || '-'}</td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-right font-mono">{amt > 0 ? amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-center font-mono">{qty}</td>
+                        <td className="py-1 px-1.5 text-right font-mono font-bold">{total > 0 ? total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-          {/* Summary Box */}
-          <div className="flex justify-end mb-6">
-            <div className="w-80 border border-slate-300 rounded-lg p-3 space-y-2 bg-slate-50 text-xs">
-              <div className="flex justify-between text-slate-700">
-                <span>ยอดรวมสินค้า/บริการก่อน VAT:</span>
-                <span className="font-mono font-bold">฿{calculations.subtotalBeforeVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              {showVatLine && vatRate > 0 && (
-                <div className="flex justify-between text-slate-800 font-bold border-b border-slate-200 pb-1.5">
-                  <span>ภาษีมูลค่าเพิ่ม VAT ({vatRate}%):</span>
-                  <span className="font-mono text-orange-700">฿{calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            {/* COLUMN 2 (RIGHT) */}
+            <div className="space-y-3">
+              {col2Items.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 border-b border-slate-300 pb-1 mb-1">
+                    <span>รายการสินค้า / บริการที่คำนวณ (ช่องที่ 2)</span>
+                    <span className="text-[10px] text-slate-500 font-normal">จำนวน {col2Items.length} รายการ</span>
+                  </div>
+                  <table className="w-full text-[11px] text-left border-collapse border border-slate-300 mb-3">
+                    <thead>
+                      <tr className="bg-slate-100 font-bold border-b border-slate-300 text-slate-800">
+                        <th className="py-1 px-1.5 border-r border-slate-300 text-center w-7">#</th>
+                        <th className="py-1 px-1.5 border-r border-slate-300">รายการ (Description)</th>
+                        <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">ราคา</th>
+                        <th className="py-1 px-1.5 border-r border-slate-300 text-center w-7">จำนวน</th>
+                        <th className="py-1 px-1.5 text-right w-20">รวม (฿)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {col2Items.map((it, idx) => {
+                        const amt = typeof it.amount === 'number' ? it.amount : parseFloat(it.amount || '0') || 0;
+                        const qty = typeof it.quantity === 'number' ? it.quantity : parseFloat(it.quantity || '0') || 0;
+                        const total = amt * qty;
+                        const actualIdx = col1Items.length + idx + 1;
+                        return (
+                          <tr key={it.id || idx} className="border-b border-slate-200">
+                            <td className="py-1 px-1.5 border-r border-slate-200 text-center font-bold text-slate-600">{actualIdx}</td>
+                            <td className="py-1 px-1.5 border-r border-slate-200 break-words">{it.description || '-'}</td>
+                            <td className="py-1 px-1.5 border-r border-slate-200 text-right font-mono">{amt > 0 ? amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
+                            <td className="py-1 px-1.5 border-r border-slate-200 text-center font-mono">{qty}</td>
+                            <td className="py-1 px-1.5 text-right font-mono font-bold">{total > 0 ? total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
-              <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-b border-slate-300 pb-2">
-                <span>ยอดเงินรวมทั้งสิ้น (Grand Total):</span>
-                <span className="font-mono text-emerald-700">฿{calculations.grandTotalInclVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+
+              {/* Calculation Summary Box */}
+              <div className="border border-slate-300 rounded-lg p-2.5 space-y-1.5 bg-slate-50 text-xs">
+                <div className="font-bold text-slate-800 border-b border-slate-200 pb-1 flex justify-between">
+                  <span>สรุปผลการคำนวณยอดรวม:</span>
+                  <span className="text-[10px] text-orange-700 font-mono">VAT {vatRate}%</span>
+                </div>
+                <div className="flex justify-between text-slate-700 text-[11px]">
+                  <span>ยอดรวมสินค้า/บริการก่อน VAT:</span>
+                  <span className="font-mono font-bold">฿{calculations.subtotalBeforeVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                {showVatLine && vatRate > 0 && (
+                  <div className="flex justify-between text-slate-800 font-bold border-b border-slate-200 pb-1 text-[11px]">
+                    <span>ภาษีมูลค่าเพิ่ม VAT ({vatRate}%):</span>
+                    <span className="font-mono text-orange-700">฿{calculations.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs font-black text-slate-900 pt-0.5 border-b border-slate-300 pb-1">
+                  <span>ยอดเงินรวมทั้งสิ้น (Grand Total):</span>
+                  <span className="font-mono text-emerald-700">฿{calculations.grandTotalInclVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+
+                {whtRate > 0 && (
+                  <>
+                    <div className="flex justify-between text-slate-700 text-[11px] pt-0.5">
+                      <span>หัก ณ ที่จ่าย WHT ({whtRate}%):</span>
+                      <span className="font-mono text-rose-700">- ฿{calculations.whtAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-black text-blue-900 bg-blue-50 p-1 rounded border border-blue-200">
+                      <span>ยอดจ่ายสุทธิหลังหักภาษี:</span>
+                      <span className="font-mono">฿{calculations.netPayable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              {whtRate > 0 && (
-                <>
-                  <div className="flex justify-between text-slate-700 pt-1">
-                    <span>หัก ณ ที่จ่าย WHT ({whtRate}%):</span>
-                    <span className="font-mono text-rose-700">- ฿{calculations.whtAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between text-sm font-black text-blue-900 bg-blue-50 p-1.5 rounded border border-blue-200">
-                    <span>ยอดจ่ายสุทธิหลังหักภาษี:</span>
-                    <span className="font-mono">฿{calculations.netPayable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                </>
-              )}
+              {/* Thai Baht Text */}
+              <div className="p-2 bg-slate-100 border border-slate-300 rounded-lg text-[11px] flex items-center justify-between">
+                <span className="font-bold text-slate-700 shrink-0">ตัวอักษร:</span>
+                <span className="font-serif font-bold text-slate-900 text-right ml-2">({whtRate > 0 ? calculations.bahtTextNet : calculations.bahtTextGrand})</span>
+              </div>
             </div>
-          </div>
-
-          {/* Thai Baht Text */}
-          <div className="p-3 bg-slate-100 border border-slate-300 rounded-lg text-xs flex items-center justify-between">
-            <span className="font-bold text-slate-700">จำนวนเงินตัวอักษร:</span>
-            <span className="font-serif font-bold text-slate-900">({whtRate > 0 ? calculations.bahtTextNet : calculations.bahtTextGrand})</span>
           </div>
         </div>,
         document.body
