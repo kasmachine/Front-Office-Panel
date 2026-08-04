@@ -801,26 +801,9 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
           </div>
 
           {/* Thai Baht Text */}
-          <div className="mb-8 p-3 bg-slate-100 border border-slate-300 rounded-lg text-xs flex items-center justify-between">
+          <div className="p-3 bg-slate-100 border border-slate-300 rounded-lg text-xs flex items-center justify-between">
             <span className="font-bold text-slate-700">จำนวนเงินตัวอักษร:</span>
             <span className="font-serif font-bold text-slate-900">({whtRate > 0 ? calculations.bahtTextNet : calculations.bahtTextGrand})</span>
-          </div>
-
-          {/* Signatures */}
-          <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-300 text-xs text-slate-800 text-center">
-            <div>
-              <div className="border-b border-dotted border-slate-400 h-10 mb-2 w-48 mx-auto"></div>
-              <div>(............................................................)</div>
-              <div className="font-bold mt-1">ผู้คำนวณ / เจ้าหน้าที่ผู้จัดทำ</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">วันที่ ........ / ........ / ................</div>
-            </div>
-
-            <div>
-              <div className="border-b border-dotted border-slate-400 h-10 mb-2 w-48 mx-auto"></div>
-              <div>(............................................................)</div>
-              <div className="font-bold mt-1">ผู้ตรวจสอบ / แผนกบัญชีและการเงิน</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">วันที่ ........ / ........ / ................</div>
-            </div>
           </div>
         </div>,
         document.body
