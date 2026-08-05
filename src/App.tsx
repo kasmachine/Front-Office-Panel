@@ -13,6 +13,7 @@ import { CategoryManagerModal } from './components/CategoryManagerModal';
 import { VatCalculatorModal } from './components/VatCalculatorModal';
 import { CashCountData, ReceiptSubstituteData, ReceiptSubstituteItem, MonthlyRevenueData, RevenueHistoryRecord } from './types';
 import { getInitialCashCountData, getInitialReceiptData } from './data/defaults';
+import { safeLocalStorage } from './utils/storage';
 import { exportToPdf, printDocument } from './utils/pdfExport';
 import { downloadJsonFile, parseJsonFile } from './utils/jsonExport';
 import {
@@ -51,7 +52,7 @@ export default function App() {
   const [cashCountData, setCashCountData] = useState<CashCountData>(() => {
     const today = new Date();
     const todayCashDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
-    const saved = localStorage.getItem('nan_seasons_current_cash');
+    const saved = safeLocalStorage.getItem('nan_seasons_current_cash');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -64,7 +65,7 @@ export default function App() {
   const [receiptData, setReceiptData] = useState<ReceiptSubstituteData>(() => {
     const today = new Date();
     const todayReceiptDate = today.toISOString().split('T')[0];
-    const saved = localStorage.getItem('nan_seasons_current_receipt');
+    const saved = safeLocalStorage.getItem('nan_seasons_current_receipt');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -84,7 +85,7 @@ export default function App() {
   // History storage states (Synced with Firebase Firestore & LocalStorage - Retains 7 Days)
   const [savedCashCounts, setSavedCashCounts] = useState<CashCountData[]>(() => {
     try {
-      const local = localStorage.getItem('nan_seasons_history_cash');
+      const local = safeLocalStorage.getItem('nan_seasons_history_cash');
       if (local) {
         const items: CashCountData[] = JSON.parse(local);
         return items.filter((c) => isWithin7Days(c.createdAt, c.date));
@@ -94,7 +95,7 @@ export default function App() {
   });
   const [savedReceipts, setSavedReceipts] = useState<ReceiptSubstituteData[]>(() => {
     try {
-      const local = localStorage.getItem('nan_seasons_history_receipt');
+      const local = safeLocalStorage.getItem('nan_seasons_history_receipt');
       if (local) {
         const items: ReceiptSubstituteData[] = JSON.parse(local);
         return items.filter((r) => isWithin7Days(r.createdAt, r.startDate));
@@ -105,7 +106,7 @@ export default function App() {
 
   const [savedRevenueHistory, setSavedRevenueHistory] = useState<RevenueHistoryRecord[]>(() => {
     try {
-      const local = localStorage.getItem('nan_seasons_revenue_history');
+      const local = safeLocalStorage.getItem('nan_seasons_revenue_history');
       if (local) {
         return JSON.parse(local);
       }
@@ -203,13 +204,13 @@ export default function App() {
   // Sync saved history to LocalStorage backup
   useEffect(() => {
     try {
-      localStorage.setItem('nan_seasons_history_cash', JSON.stringify(savedCashCounts));
+      safeLocalStorage.setItem('nan_seasons_history_cash', JSON.stringify(savedCashCounts));
     } catch (e) { /* ignore */ }
   }, [savedCashCounts]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('nan_seasons_history_receipt', JSON.stringify(savedReceipts));
+      safeLocalStorage.setItem('nan_seasons_history_receipt', JSON.stringify(savedReceipts));
     } catch (e) { /* ignore */ }
   }, [savedReceipts]);
 
@@ -248,7 +249,7 @@ export default function App() {
     const unsubStaff = subscribeStaffList((remoteStaff) => {
       if (remoteStaff) {
         try {
-          localStorage.setItem('nan_seasons_staff_list_v1', JSON.stringify(remoteStaff));
+          safeLocalStorage.setItem('nan_seasons_staff_list_v1', JSON.stringify(remoteStaff));
           window.dispatchEvent(new Event('storage'));
         } catch (e) { /* ignore */ }
       }
@@ -257,7 +258,7 @@ export default function App() {
     const unsubCats = subscribeCategories((remoteCats) => {
       if (remoteCats) {
         try {
-          localStorage.setItem('nan_seasons_expense_categories_v1', JSON.stringify(remoteCats));
+          safeLocalStorage.setItem('nan_seasons_expense_categories_v1', JSON.stringify(remoteCats));
           window.dispatchEvent(new Event('storage'));
         } catch (e) { /* ignore */ }
       }
@@ -269,7 +270,7 @@ export default function App() {
           if (revData && revData.year && revData.month) {
             const docKey = `revenue-${revData.year}-${String(revData.month).padStart(2, '0')}`;
             try {
-              localStorage.setItem(`nan_seasons_${docKey}`, JSON.stringify(revData));
+              safeLocalStorage.setItem(`nan_seasons_${docKey}`, JSON.stringify(revData));
             } catch (e) { /* ignore */ }
             const histItem = createRevenueHistoryRecord(revData);
             saveRevenueHistoryToFirebase(histItem);
@@ -283,10 +284,10 @@ export default function App() {
 
       // Always scan localStorage keys starting with nan_seasons_revenue- for any months stored locally
       try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
+        const keys = safeLocalStorage.getAllKeys();
+        for (const key of keys) {
           if (key && key.startsWith('nan_seasons_revenue-')) {
-            const raw = localStorage.getItem(key);
+            const raw = safeLocalStorage.getItem(key);
             if (raw) {
               try {
                 const revData: MonthlyRevenueData = JSON.parse(raw);
@@ -312,7 +313,7 @@ export default function App() {
 
       setSavedRevenueHistory(mergedHist);
       try {
-        localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(mergedHist));
+        safeLocalStorage.setItem('nan_seasons_revenue_history', JSON.stringify(mergedHist));
       } catch (e) { /* ignore */ }
     });
 
@@ -448,7 +449,7 @@ export default function App() {
 
   // Auto save draft to localStorage & Firebase real-time (100ms debounce)
   useEffect(() => {
-    localStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
+    safeLocalStorage.setItem('nan_seasons_current_cash', JSON.stringify(cashCountData));
 
     // CRITICAL: Do NOT push to Firebase if we haven't received initial remote state yet
     if (!isRemoteDraftInitializedCash.current) return;
@@ -483,7 +484,7 @@ export default function App() {
   }, [cashCountData]);
 
   useEffect(() => {
-    localStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
+    safeLocalStorage.setItem('nan_seasons_current_receipt', JSON.stringify(receiptData));
 
     // CRITICAL: Do NOT push to Firebase if we haven't received initial remote state yet
     if (!isRemoteDraftInitializedReceipt.current) return;
@@ -636,7 +637,7 @@ export default function App() {
 
   const handleLoadRevenueHistory = (revData: MonthlyRevenueData) => {
     const docId = `revenue-${revData.year}-${String(revData.month).padStart(2, '0')}`;
-    localStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(revData));
+    safeLocalStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(revData));
     saveMonthlyRevenueToFirebase(revData);
     setActiveTab('dailyRevenue');
     showToast(`ดึงข้อมูล Revenue เดือน ${revData.monthName || `${revData.month}/${revData.year}`} เรียบร้อยแล้ว`);

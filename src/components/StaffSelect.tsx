@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Check } from 'lucide-react';
 import { subscribeStaffList, saveStaffListToFirebase } from '../lib/firebase';
+import { safeLocalStorage } from '../utils/storage';
 
 export const INITIAL_STAFF_LIST = [
   'Aan',
@@ -18,7 +19,7 @@ const LOCAL_STORAGE_KEY = 'nan_seasons_staff_list_v1';
 
 export function getStoredStaffList(): string[] {
   try {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const saved = safeLocalStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -33,7 +34,7 @@ export function getStoredStaffList(): string[] {
 
 export function saveStaffList(list: string[]) {
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+    safeLocalStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
   } catch (e) {
     console.error('Failed to save staff list', e);
   }

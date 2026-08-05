@@ -23,6 +23,7 @@ import { FrontOfficeChecklistData, ChecklistTask } from '../types';
 import { getInitialFrontOfficeChecklistData } from '../data/defaults';
 import { saveChecklistToFirebase, subscribeChecklist } from '../lib/firebase';
 import { NanSeasonsLogo } from './NanSeasonsLogo';
+import { safeLocalStorage } from '../utils/storage';
 
 interface FrontOfficeChecklistProps {
   staffList?: string[];
@@ -38,7 +39,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
   // Checklist state
   const [checklist, setChecklist] = useState<FrontOfficeChecklistData>(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const savedLocal = localStorage.getItem(`nan_seasons_checklist_${todayStr}`);
+    const savedLocal = safeLocalStorage.getItem(`nan_seasons_checklist_${todayStr}`);
     if (savedLocal) {
       try {
         return JSON.parse(savedLocal);
@@ -60,7 +61,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
 
   // Load from LocalStorage or initialize when selectedDate changes
   useEffect(() => {
-    const saved = localStorage.getItem(`nan_seasons_checklist_${selectedDate}`);
+    const saved = safeLocalStorage.getItem(`nan_seasons_checklist_${selectedDate}`);
     if (saved) {
       try {
         setChecklist(JSON.parse(saved));
@@ -81,12 +82,12 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
       if (isUnmounted) return;
       if (remoteData) {
         setChecklist(remoteData);
-        localStorage.setItem(`nan_seasons_checklist_${selectedDate}`, JSON.stringify(remoteData));
+        safeLocalStorage.setItem(`nan_seasons_checklist_${selectedDate}`, JSON.stringify(remoteData));
       } else {
         // Doc doesn't exist yet in cloud, create initial data
         const initial = getInitialFrontOfficeChecklistData(selectedDate);
         setChecklist(initial);
-        localStorage.setItem(`nan_seasons_checklist_${selectedDate}`, JSON.stringify(initial));
+        safeLocalStorage.setItem(`nan_seasons_checklist_${selectedDate}`, JSON.stringify(initial));
         saveChecklistToFirebase(initial).catch(() => {});
       }
     });
@@ -100,7 +101,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
   // Save changes to state, localStorage, and Firebase
   const updateAndSaveChecklist = (newChecklist: FrontOfficeChecklistData) => {
     setChecklist(newChecklist);
-    localStorage.setItem(`nan_seasons_checklist_${selectedDate}`, JSON.stringify(newChecklist));
+    safeLocalStorage.setItem(`nan_seasons_checklist_${selectedDate}`, JSON.stringify(newChecklist));
     setSyncStatus('saving');
     saveChecklistToFirebase(newChecklist)
       .then(() => setSyncStatus('saved'))

@@ -38,6 +38,14 @@ import {
 import { getInitialFrontOfficeChecklistData, getInitialMonthlyRevenueData } from '../data/defaults';
 import { MONTH_EN, MONTH_TH } from '../data/defaults';
 import { Percent } from 'lucide-react';
+import { safeLocalStorage } from '../utils/storage';
+
+const formatMoney = (val: number, decimals = 2): string => {
+  return (val || 0).toLocaleString('en-US', {
+    minimumFractionDigits: decimals === 0 ? 0 : 2,
+    maximumFractionDigits: decimals,
+  });
+};
 
 interface DashboardProps {
   onNavigate: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
@@ -67,7 +75,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const docId = `revenue-${currentYear}-${String(currentMonth).padStart(2, '0')}`;
 
   const [revenueData, setRevenueData] = useState<MonthlyRevenueData>(() => {
-    const saved = localStorage.getItem(`nan_seasons_${docId}`);
+    const saved = safeLocalStorage.getItem(`nan_seasons_${docId}`);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -80,7 +88,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // 2. Load Today's Front Office Checklist Data
   const [checklistData, setChecklistData] = useState<FrontOfficeChecklistData>(() => {
-    const saved = localStorage.getItem(`nan_seasons_checklist_${currentDateStr}`);
+    const saved = safeLocalStorage.getItem(`nan_seasons_checklist_${currentDateStr}`);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -93,14 +101,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Re-read local storage on mount
   useEffect(() => {
-    const revSaved = localStorage.getItem(`nan_seasons_${docId}`);
+    const revSaved = safeLocalStorage.getItem(`nan_seasons_${docId}`);
     if (revSaved) {
       try {
         setRevenueData(JSON.parse(revSaved));
       } catch (e) {}
     }
 
-    const chkSaved = localStorage.getItem(`nan_seasons_checklist_${currentDateStr}`);
+    const chkSaved = safeLocalStorage.getItem(`nan_seasons_checklist_${currentDateStr}`);
     if (chkSaved) {
       try {
         setChecklistData(JSON.parse(chkSaved));
@@ -120,13 +128,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
 
     if (revenueData && revenueData.days) {
-      Object.values(revenueData.days).forEach((dayItem) => {
-        totals.rooms += Number(dayItem.rooms || 0);
-        totals.foodBeverage += Number(dayItem.foodBeverage || 0);
-        totals.shop += Number(dayItem.shop || 0);
-        totals.toursEtc += Number(dayItem.toursEtc || 0);
-        totals.massage += Number(dayItem.massage || 0);
-        totals.laundryOthers += Number(dayItem.laundryOthers || 0);
+      Object.values(revenueData.days).forEach((dayItem: any) => {
+        totals.rooms += Number(dayItem?.rooms || 0);
+        totals.foodBeverage += Number(dayItem?.foodBeverage || 0);
+        totals.shop += Number(dayItem?.shop || 0);
+        totals.toursEtc += Number(dayItem?.toursEtc || 0);
+        totals.massage += Number(dayItem?.massage || 0);
+        totals.laundryOthers += Number(dayItem?.laundryOthers || 0);
       });
     }
 
@@ -137,16 +145,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const { totals: categoryTotals, monthTotal } = calculateCategoryTotals();
 
   // Target Totals
-  const targetTotal = revenueData?.target
-    ? Object.values(revenueData.target).reduce((a, b) => Number(a || 0) + Number(b || 0), 0)
-    : 0;
+  const targetTotal = (revenueData?.target
+    ? Object.values(revenueData.target).reduce((a: number, b: any) => a + Number(b || 0), 0)
+    : 0) as number;
 
   const targetPercent = targetTotal > 0 ? Math.min(100, (monthTotal / targetTotal) * 100) : 0;
 
   // Last Year Total
-  const lastYearTotal = revenueData?.lastYear
-    ? Object.values(revenueData.lastYear).reduce((a, b) => Number(a || 0) + Number(b || 0), 0)
-    : 0;
+  const lastYearTotal = (revenueData?.lastYear
+    ? Object.values(revenueData.lastYear).reduce((a: number, b: any) => a + Number(b || 0), 0)
+    : 0) as number;
   const yoyPercent = lastYearTotal > 0 ? ((monthTotal - lastYearTotal) / lastYearTotal) * 100 : 0;
 
   // Calculations for Checklist
@@ -256,7 +264,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               ฿{monthTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="flex items-center justify-between mt-2 text-xs">
-              <span className="text-slate-500 font-medium">Target: ฿{targetTotal.toLocaleString('en-US')}</span>
+              <span className="text-slate-500 font-medium">Target: ฿{formatMoney(targetTotal, 0)}</span>
               <span className="font-bold text-indigo-600">{targetPercent.toFixed(1)}% Achieved</span>
             </div>
             {/* Progress Bar */}
@@ -432,7 +440,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div>
                 <div className="text-xs font-bold">Year-Over-Year Comparison (เทียบกับปีก่อน)</div>
                 <div className="text-[11px] text-slate-300">
-                  Last Year Same Month ({currentYear - 1}): ฿{lastYearTotal.toLocaleString('en-US')}
+                  Last Year Same Month ({currentYear - 1}): ฿{formatMoney(lastYearTotal, 0)}
                 </div>
               </div>
             </div>

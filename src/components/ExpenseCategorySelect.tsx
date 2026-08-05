@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Check, Settings2 } from 'lucide-react';
 import { subscribeCategories, saveCategoriesToFirebase } from '../lib/firebase';
+import { safeLocalStorage } from '../utils/storage';
 
 export const INITIAL_MINUS_CATEGORIES = [
   '-แสงรุ่งต้ม',
@@ -22,7 +23,7 @@ const LOCAL_STORAGE_KEY = 'nan_seasons_expense_categories_v1';
 
 export function getStoredCategories(): { minus: string[]; plus: string[] } {
   try {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const saved = safeLocalStorage.getItem(LOCAL_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && Array.isArray(parsed.minus) && Array.isArray(parsed.plus)) {
@@ -45,7 +46,7 @@ export function getStoredCategories(): { minus: string[]; plus: string[] } {
 
 export function saveCategories(categories: { minus: string[]; plus: string[] }) {
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(categories));
+    safeLocalStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(categories));
   } catch (e) {
     console.error('Failed to save expense categories', e);
   }

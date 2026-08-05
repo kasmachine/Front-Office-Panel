@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MonthlyRevenueData, RevenueCategories, RevenueHistoryRecord } from '../types';
 import { getInitialMonthlyRevenueData } from '../data/defaults';
+import { safeLocalStorage } from '../utils/storage';
 import {
   saveMonthlyRevenueToFirebase,
   subscribeMonthlyRevenue,
@@ -82,7 +83,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
   const docId = `revenue-${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
 
   const [data, setData] = useState<MonthlyRevenueData>(() => {
-    const saved = localStorage.getItem(`nan_seasons_${docId}`);
+    const saved = safeLocalStorage.getItem(`nan_seasons_${docId}`);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -102,10 +103,10 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
     const unsubscribe = subscribeMonthlyRevenue(docId, (remoteData) => {
       if (remoteData) {
         setData(remoteData);
-        localStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(remoteData));
+        safeLocalStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(remoteData));
       } else {
         // If doc doesn't exist yet, check localStorage or init
-        const saved = localStorage.getItem(`nan_seasons_${docId}`);
+        const saved = safeLocalStorage.getItem(`nan_seasons_${docId}`);
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
@@ -133,10 +134,10 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
     // 2. Save to local storage history array
     try {
-      const localHistRaw = localStorage.getItem('nan_seasons_revenue_history');
+      const localHistRaw = safeLocalStorage.getItem('nan_seasons_revenue_history');
       let localHist: RevenueHistoryRecord[] = localHistRaw ? JSON.parse(localHistRaw) : [];
       localHist = [historyRecord, ...localHist.filter(h => h.id !== historyRecord.id && !(h.year === historyRecord.year && h.month === historyRecord.month))];
-      localStorage.setItem('nan_seasons_revenue_history', JSON.stringify(localHist));
+      safeLocalStorage.setItem('nan_seasons_revenue_history', JSON.stringify(localHist));
     } catch (e) {
       console.error('Failed to update local revenue history', e);
     }
@@ -166,7 +167,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
 
       // 2. Try LocalStorage fallback
       if (!prevData) {
-        const saved = localStorage.getItem(`nan_seasons_${lastYearDocId}`);
+        const saved = safeLocalStorage.getItem(`nan_seasons_${lastYearDocId}`);
         if (saved) {
           try {
             prevData = JSON.parse(saved);
@@ -200,7 +201,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
         };
 
         setData(updatedData);
-        localStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(updatedData));
+        safeLocalStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(updatedData));
         saveMonthlyRevenueToFirebase(updatedData);
 
         const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0);
@@ -284,7 +285,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
     };
 
     setData(updatedData);
-    localStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(updatedData));
+    safeLocalStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(updatedData));
     saveMonthlyRevenueToFirebase(updatedData);
   };
 
@@ -305,7 +306,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
     };
 
     setData(updatedData);
-    localStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(updatedData));
+    safeLocalStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(updatedData));
     saveMonthlyRevenueToFirebase(updatedData);
   };
 
@@ -360,7 +361,7 @@ export const DailyRevenueSheet: React.FC<DailyRevenueSheetProps> = ({
     if (window.confirm(`Are you sure you want to clear all revenue data for ${MONTH_EN[selectedMonth - 1]} ${selectedYear}? (คุณแน่ใจหรือไม่ว่าต้องการล้างข้อมูลเดือน ${MONTH_TH[selectedMonth - 1]} ${selectedYear + 543} ทั้งหมด?)`)) {
       const fresh = getInitialMonthlyRevenueData(selectedYear, selectedMonth);
       setData(fresh);
-      localStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(fresh));
+      safeLocalStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(fresh));
       saveMonthlyRevenueToFirebase(fresh);
     }
   };
