@@ -3,8 +3,6 @@ import {
   BookOpen,
   Search,
   CheckCircle2,
-  FileText,
-  Bookmark,
   Printer,
   Sparkles,
   ChevronDown,
@@ -13,7 +11,6 @@ import {
   ShieldAlert,
   Clock,
   PhoneCall,
-  UserCheck,
   DollarSign,
   BarChart3,
   Home,
@@ -21,14 +18,26 @@ import {
   Copy,
   Check,
   HelpCircle,
-  Briefcase,
   KeyRound,
-  Droplets,
-  Zap,
+  Plus,
+  Edit3,
+  Trash2,
+  RotateCcw,
+  X,
+  PlusCircle,
+  Save,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface FrontOfficeManualProps {
   onNavigateTab?: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual') => void;
+}
+
+export interface SOPStep {
+  number: number;
+  title: string;
+  description: string;
+  warningNote?: string;
 }
 
 export interface SOPItem {
@@ -41,18 +50,22 @@ export interface SOPItem {
   importance: 'CRITICAL' | 'REQUIRED' | 'RECOMMENDED';
   estimatedTime: string;
   summary: string;
-  steps: {
-    number: number;
-    title: string;
-    description: string;
-    warningNote?: string;
-  }[];
+  steps: SOPStep[];
   importantNotes?: string[];
   relatedTab?: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
   relatedTabLabel?: string;
 }
 
-const SOP_DATA: SOPItem[] = [
+const CATEGORY_LABELS: Record<SOPItem['category'], string> = {
+  checkin: 'Check-In & Check-Out',
+  finance: 'Cash & Payments',
+  revenue: 'Daily Revenue',
+  housekeeping: 'Rooms & Housekeeping',
+  emergency: 'Emergency & Safety',
+  contacts: 'Contact Directory',
+};
+
+const DEFAULT_SOP_DATA: SOPItem[] = [
   {
     id: 'sop-checkin',
     code: 'SOP-FO-01',
@@ -67,7 +80,7 @@ const SOP_DATA: SOPItem[] = [
       {
         number: 1,
         title: 'การต้อนรับและยื่น Welcome Drink',
-        description: 'กล่าวทักทายลูกค้าด้วยรอยยิ้ม "สวัสดียามเช้า/บ่าย Nan Seasons Resort ยินดีต้อนรับครับ/ค่ะ" ยื่นWelcome Drink ผ้าเย็น และเชิญลูกค้านั่งพัก ณ บริเวณโถงต้อนรับ',
+        description: 'กล่าวทักทายลูกค้าด้วยรอยยิ้ม "สวัสดียามเช้า/บ่าย Nan Seasons Resort ยินดีต้อนรับครับ/ค่ะ" ยื่น Welcome Drink ผ้าเย็น และเชิญลูกค้านั่งพัก ณ บริเวณโถงต้อนรับ',
       },
       {
         number: 2,
@@ -206,7 +219,7 @@ const SOP_DATA: SOPItem[] = [
       {
         number: 2,
         title: 'กรอกยอดขายลงใน Daily Revenue Sheet',
-        description: 'เข้าเมนู "Daily Revenue" เลือกวันที่ปัจจุบัน และกรอกยอดเงินแยกตาม 6 หมวดหมู่หลัก:',
+        description: 'เข้าเมนู "Daily Revenue" เลือกวันที่ปัจจุบัน และกรอกยอดเงินแยกตาม 6 หมวดหมู่หลัก',
       },
       {
         number: 3,
@@ -231,7 +244,7 @@ const SOP_DATA: SOPItem[] = [
     titleTh: 'การประสานงานแม่บ้านและงานอาคาร (Housekeeping & Maintenance Coordination)',
     titleEn: 'Front Office & Housekeeping/Maintenance SOP',
     category: 'housekeeping',
-    categoryLabel: 'Housekeeping & Rooms',
+    categoryLabel: 'Rooms & Housekeeping',
     importance: 'REQUIRED',
     estimatedTime: 'ต่อเนื่องตลอดกะ',
     summary: 'การอัปเดตสถานะห้องพัก การแจ้งทำความสะอาดด่วน และการบันทึกงานซ่อมบำรุงอุปกรณ์ในรีสอร์ท',
@@ -301,7 +314,7 @@ const SOP_DATA: SOPItem[] = [
     titleTh: 'สมุดรายชื่อโทรศัพท์ติดต่อสำคัญ (Internal & Emergency Contact Directory)',
     titleEn: 'Important Contact Numbers & Escalation Path',
     category: 'contacts',
-    categoryLabel: 'Emergency Contacts',
+    categoryLabel: 'Contact Directory',
     importance: 'REQUIRED',
     estimatedTime: 'อ้างอิงรวดเร็ว',
     summary: 'เบอร์โทรศัพท์ติดต่อภายในบริหารจัดการ ช่าง แม่บ้าน ผู้จัดการ และหน่วยงานฉุกเฉินจังหวัดน่าน',
@@ -329,6 +342,19 @@ const SOP_DATA: SOPItem[] = [
 ];
 
 export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigateTab }) => {
+  const [sops, setSops] = useState<SOPItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('nan_seasons_sops');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error('Failed to load SOPs from localStorage:', e);
+    }
+    return DEFAULT_SOP_DATA;
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedSOPs, setExpandedSOPs] = useState<Record<string, boolean>>({
@@ -344,6 +370,37 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
     }
   });
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // Modal / Form state for Add / Edit
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSOP, setEditingSOP] = useState<SOPItem | null>(null);
+
+  // Form Fields
+  const [formCode, setFormCode] = useState('');
+  const [formTitleTh, setFormTitleTh] = useState('');
+  const [formTitleEn, setFormTitleEn] = useState('');
+  const [formCategory, setFormCategory] = useState<SOPItem['category']>('checkin');
+  const [formImportance, setFormImportance] = useState<SOPItem['importance']>('REQUIRED');
+  const [formEstimatedTime, setFormEstimatedTime] = useState('3-5 นาที');
+  const [formSummary, setFormSummary] = useState('');
+  const [formSteps, setFormSteps] = useState<{ title: string; description: string; warningNote: string }[]>([
+    { title: '', description: '', warningNote: '' },
+  ]);
+  const [formNotes, setFormNotes] = useState<string[]>(['']);
+  const [formRelatedTab, setFormRelatedTab] = useState<string>('');
+
+  // Delete Confirmation state
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Helper to persist SOPs
+  const saveSOPsToStorage = (updatedList: SOPItem[]) => {
+    setSops(updatedList);
+    try {
+      localStorage.setItem('nan_seasons_sops', JSON.stringify(updatedList));
+    } catch (e) {
+      console.error('Failed to save SOPs:', e);
+    }
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedSOPs((prev) => ({
@@ -370,8 +427,160 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
+  // Reset to default SOPs
+  const handleResetToDefault = () => {
+    if (window.confirm('คุณต้องการรีเซ็ตคู่มือ SOP เป็นค่าเริ่มต้นใช่หรือไม่? (การแก้ไขเพิ่มเติมที่คุณสร้างจะถูกลบ)')) {
+      saveSOPsToStorage(DEFAULT_SOP_DATA);
+    }
+  };
+
+  // Open Modal for Add New
+  const handleOpenAddNew = () => {
+    const nextNum = sops.length + 1;
+    const padNum = nextNum < 10 ? `0${nextNum}` : `${nextNum}`;
+    setEditingSOP(null);
+    setFormCode(`SOP-FO-${padNum}`);
+    setFormTitleTh('');
+    setFormTitleEn('');
+    setFormCategory('checkin');
+    setFormImportance('REQUIRED');
+    setFormEstimatedTime('3-5 นาที');
+    setFormSummary('');
+    setFormSteps([{ title: '', description: '', warningNote: '' }]);
+    setFormNotes(['']);
+    setFormRelatedTab('');
+    setIsModalOpen(true);
+  };
+
+  // Open Modal for Edit
+  const handleOpenEdit = (sop: SOPItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingSOP(sop);
+    setFormCode(sop.code);
+    setFormTitleTh(sop.titleTh);
+    setFormTitleEn(sop.titleEn);
+    setFormCategory(sop.category);
+    setFormImportance(sop.importance);
+    setFormEstimatedTime(sop.estimatedTime);
+    setFormSummary(sop.summary);
+    setFormSteps(
+      sop.steps.map((st) => ({
+        title: st.title,
+        description: st.description,
+        warningNote: st.warningNote || '',
+      }))
+    );
+    setFormNotes(sop.importantNotes && sop.importantNotes.length > 0 ? [...sop.importantNotes] : ['']);
+    setFormRelatedTab(sop.relatedTab || '');
+    setIsModalOpen(true);
+  };
+
+  // Delete SOP
+  const handleDeleteSOP = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingId(id);
+  };
+
+  const confirmDeleteSOP = () => {
+    if (!deletingId) return;
+    const updated = sops.filter((s) => s.id !== deletingId);
+    saveSOPsToStorage(updated);
+    setDeletingId(null);
+  };
+
+  // Submit Form
+  const handleSubmitForm = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formCode.trim() || !formTitleTh.trim()) {
+      alert('กรุณากรอกรหัสและชื่อขั้นตอน SOP ภาษาไทย');
+      return;
+    }
+
+    const cleanSteps: SOPStep[] = formSteps
+      .filter((st) => st.title.trim() || st.description.trim())
+      .map((st, index) => ({
+        number: index + 1,
+        title: st.title.trim() || `ขั้นตอนที่ ${index + 1}`,
+        description: st.description.trim(),
+        warningNote: st.warningNote.trim() || undefined,
+      }));
+
+    if (cleanSteps.length === 0) {
+      alert('กรุณาเพิ่มอย่างน้อย 1 ขั้นตอนการปฏิบัติงาน');
+      return;
+    }
+
+    const cleanNotes = formNotes.map((n) => n.trim()).filter((n) => n.length > 0);
+
+    let relatedTabLabel = undefined;
+    if (formRelatedTab === 'cashCount') relatedTabLabel = 'ไปที่หน้า ตารางนับเงินประจำกะ (Cash Count)';
+    else if (formRelatedTab === 'receiptSubstitute') relatedTabLabel = 'ไปที่หน้า ออกใบรับรองแทนใบเสร็จ';
+    else if (formRelatedTab === 'dailyRevenue') relatedTabLabel = 'ไปที่หน้า บันทึกยอดขาย (Daily Revenue)';
+    else if (formRelatedTab === 'frontOfficeChecklist') relatedTabLabel = 'ไปที่หน้า Checklist ประจำกะ';
+
+    const newOrUpdatedSOP: SOPItem = {
+      id: editingSOP ? editingSOP.id : `sop-custom-${Date.now()}`,
+      code: formCode.trim().toUpperCase(),
+      titleTh: formTitleTh.trim(),
+      titleEn: formTitleEn.trim() || formTitleTh.trim(),
+      category: formCategory,
+      categoryLabel: CATEGORY_LABELS[formCategory] || 'ทั่วไป',
+      importance: formImportance,
+      estimatedTime: formEstimatedTime.trim() || '3-5 นาที',
+      summary: formSummary.trim() || formTitleTh.trim(),
+      steps: cleanSteps,
+      importantNotes: cleanNotes.length > 0 ? cleanNotes : undefined,
+      relatedTab: (formRelatedTab as SOPItem['relatedTab']) || undefined,
+      relatedTabLabel,
+    };
+
+    let updatedList: SOPItem[];
+    if (editingSOP) {
+      updatedList = sops.map((s) => (s.id === editingSOP.id ? newOrUpdatedSOP : s));
+    } else {
+      updatedList = [...sops, newOrUpdatedSOP];
+    }
+
+    saveSOPsToStorage(updatedList);
+    setIsModalOpen(false);
+    setExpandedSOPs((prev) => ({ ...prev, [newOrUpdatedSOP.id]: true }));
+  };
+
+  // Step builder handlers
+  const handleAddStepInput = () => {
+    setFormSteps([...formSteps, { title: '', description: '', warningNote: '' }]);
+  };
+
+  const handleRemoveStepInput = (index: number) => {
+    if (formSteps.length <= 1) return;
+    setFormSteps(formSteps.filter((_, i) => i !== index));
+  };
+
+  const handleStepChange = (index: number, field: 'title' | 'description' | 'warningNote', value: string) => {
+    const updated = [...formSteps];
+    updated[index][field] = value;
+    setFormSteps(updated);
+  };
+
+  // Note builder handlers
+  const handleAddNoteInput = () => {
+    setFormNotes([...formNotes, '']);
+  };
+
+  const handleRemoveNoteInput = (index: number) => {
+    setFormNotes(formNotes.filter((_, i) => i !== index));
+  };
+
+  const handleNoteChange = (index: number, value: string) => {
+    const updated = [...formNotes];
+    updated[index] = value;
+    setFormNotes(updated);
+  };
+
+  // Filtered SOP List
   const filteredSOPs = useMemo(() => {
-    return SOP_DATA.filter((sop) => {
+    return sops.filter((sop) => {
       const matchesCategory = selectedCategory === 'all' || sop.category === selectedCategory;
       const query = searchQuery.toLowerCase().trim();
       const matchesQuery =
@@ -388,21 +597,21 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
 
       return matchesCategory && matchesQuery;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [sops, selectedCategory, searchQuery]);
 
   const categories = [
-    { id: 'all', label: 'ทั้งหมด (All SOPs)', icon: BookOpen, count: SOP_DATA.length },
-    { id: 'checkin', label: 'Check-In & Check-Out', icon: KeyRound, count: SOP_DATA.filter(s => s.category === 'checkin').length },
-    { id: 'finance', label: 'Cash & Payments', icon: DollarSign, count: SOP_DATA.filter(s => s.category === 'finance').length },
-    { id: 'revenue', label: 'Daily Revenue', icon: BarChart3, count: SOP_DATA.filter(s => s.category === 'revenue').length },
-    { id: 'housekeeping', label: 'Rooms & Housekeeping', icon: Home, count: SOP_DATA.filter(s => s.category === 'housekeeping').length },
-    { id: 'emergency', label: 'Emergency & Safety', icon: ShieldAlert, count: SOP_DATA.filter(s => s.category === 'emergency').length },
-    { id: 'contacts', label: 'Contact Directory', icon: PhoneCall, count: SOP_DATA.filter(s => s.category === 'contacts').length },
+    { id: 'all', label: 'ทั้งหมด (All SOPs)', icon: BookOpen, count: sops.length },
+    { id: 'checkin', label: 'Check-In & Check-Out', icon: KeyRound, count: sops.filter((s) => s.category === 'checkin').length },
+    { id: 'finance', label: 'Cash & Payments', icon: DollarSign, count: sops.filter((s) => s.category === 'finance').length },
+    { id: 'revenue', label: 'Daily Revenue', icon: BarChart3, count: sops.filter((s) => s.category === 'revenue').length },
+    { id: 'housekeeping', label: 'Rooms & Housekeeping', icon: Home, count: sops.filter((s) => s.category === 'housekeeping').length },
+    { id: 'emergency', label: 'Emergency & Safety', icon: ShieldAlert, count: sops.filter((s) => s.category === 'emergency').length },
+    { id: 'contacts', label: 'Contact Directory', icon: PhoneCall, count: sops.filter((s) => s.category === 'contacts').length },
   ];
 
-  const totalReadCount = Object.values(readSOPs).filter(Boolean).length;
-  const totalSOPCount = SOP_DATA.length;
-  const progressPercent = Math.round((totalReadCount / totalSOPCount) * 100);
+  const totalReadCount = Object.keys(readSOPs).filter((id) => readSOPs[id] && sops.some((s) => s.id === id)).length;
+  const totalSOPCount = sops.length;
+  const progressPercent = totalSOPCount > 0 ? Math.round((totalReadCount / totalSOPCount) * 100) : 0;
 
   return (
     <div className="space-y-6 pb-16 animate-in fade-in duration-300">
@@ -426,24 +635,35 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
             </p>
           </div>
 
-          {/* SOP Read Progress */}
-          <div className="bg-slate-800/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 flex flex-col gap-2 min-w-[220px]">
-            <div className="flex items-center justify-between text-xs font-semibold">
-              <span className="text-slate-300 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                สถานะอ่านคู่มือ
-              </span>
-              <span className="text-orange-400 font-bold">{progressPercent}%</span>
+          {/* SOP Read Progress & Actions */}
+          <div className="flex flex-col sm:flex-row md:flex-col items-stretch sm:items-center md:items-end gap-3">
+            <div className="bg-slate-800/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 flex flex-col gap-2 min-w-[220px]">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="text-slate-300 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  สถานะอ่านคู่มือ
+                </span>
+                <span className="text-orange-400 font-bold">{progressPercent}%</span>
+              </div>
+              <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-orange-500 to-amber-400 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <div className="text-[11px] text-slate-400 text-right">
+                อ่านแล้ว {totalReadCount} จาก {totalSOPCount} รายการ SOP
+              </div>
             </div>
-            <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-orange-500 to-amber-400 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <div className="text-[11px] text-slate-400 text-right">
-              อ่านแล้ว {totalReadCount} จาก {totalSOPCount} รายการ SOP
-            </div>
+
+            <button
+              type="button"
+              onClick={handleOpenAddNew}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>สร้างขั้นตอน SOP ใหม่ (Add New)</span>
+            </button>
           </div>
         </div>
       </div>
@@ -459,27 +679,50 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ค้นหาขั้นตอน SOP เช่น 'Check-in', 'เงินมัดจำ', 'ตม.38', 'ไฟดับ', 'SOP-FO-01'..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-800 placeholder:text-slate-400 transition-all"
+              className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-800 placeholder:text-slate-400 transition-all"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded-md"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 bg-slate-200 p-1 rounded-md"
+                title="ล้างคำค้นหา"
               >
-                ล้าง
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Quick Print Button */}
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all cursor-pointer shrink-0"
-          >
-            <Printer className="w-4 h-4 text-slate-600" />
-            <span>พิมพ์คู่มือ (A4)</span>
-          </button>
+          {/* Quick Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleOpenAddNew}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-orange-400" />
+              <span>เพิ่ม SOP</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all cursor-pointer shrink-0"
+              title="พิมพ์เอกสารหรือบันทึกเป็น PDF"
+            >
+              <Printer className="w-4 h-4 text-slate-600" />
+              <span className="hidden sm:inline">พิมพ์ (A4)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResetToDefault}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all cursor-pointer"
+              title="รีเซ็ต SOP เป็นค่าเริ่มต้น"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Category Pills */}
@@ -520,17 +763,29 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
             <HelpCircle className="w-12 h-12 text-slate-300 mx-auto" />
             <h3 className="text-base font-bold text-slate-700">ไม่พบขั้นตอนปฏิบัติงาน (SOP) ที่ค้นหา</h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              ลองค้นหาด้วยคำสำคัญอื่น หรือกดเลือกหมวดหมู่ "ทั้งหมด" เพื่อดูคู่มือฉบับเต็ม
+              ลองค้นหาด้วยคำสำคัญอื่น หรือกดสร้างขั้นตอน SOP ใหม่เพื่อเพิ่มเข้าสู่คู่มือ
             </p>
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-              }}
-              className="px-4 py-2 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xl transition-all inline-block cursor-pointer"
-            >
-              ดูขั้นตอน SOP ทั้งหมด
-            </button>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('all');
+                }}
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all inline-block cursor-pointer"
+              >
+                ดูขั้นตอน SOP ทั้งหมด
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenAddNew}
+                className="px-4 py-2 text-xs font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>เพิ่ม SOP ใหม่</span>
+              </button>
+            </div>
           </div>
         ) : (
           filteredSOPs.map((sop) => {
@@ -601,8 +856,8 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                     </div>
                   </div>
 
-                  {/* Actions & Expand Chevron */}
-                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                  {/* Actions (Copy / Edit / Delete / Expand) */}
+                  <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -619,7 +874,27 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                       )}
                     </button>
 
-                    <div className="p-1.5 text-slate-400 bg-slate-100 rounded-lg">
+                    {/* Edit Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenEdit(sop, e)}
+                      className="p-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border border-indigo-200/60 rounded-lg transition-colors cursor-pointer"
+                      title="แก้ไข SOP นี้"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+
+                    {/* Delete Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteSOP(sop.id, e)}
+                      className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-rose-200/60 rounded-lg transition-colors cursor-pointer"
+                      title="ลบ SOP นี้"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <div className="p-1.5 text-slate-400 bg-slate-100 rounded-lg ml-1">
                       {isExpanded ? <ChevronDown className="w-4 h-4 text-orange-500" /> : <ChevronRight className="w-4 h-4" />}
                     </div>
                   </div>
@@ -681,20 +956,44 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                       </div>
                     )}
 
-                    {/* Footer Quick Nav Link */}
-                    {sop.relatedTab && onNavigateTab && (
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-200/60">
-                        <span className="text-xs text-slate-500">เกี่ยวข้องกับระบบส่วนปฏิบัติงาน:</span>
+                    {/* Footer Quick Nav Link & Actions */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/60">
+                      {sop.relatedTab && onNavigateTab ? (
+                        <div className="flex items-center justify-between sm:justify-start gap-2">
+                          <span className="text-xs text-slate-500">เกี่ยวข้องกับระบบส่วนปฏิบัติงาน:</span>
+                          <button
+                            type="button"
+                            onClick={() => onNavigateTab(sop.relatedTab!)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all cursor-pointer"
+                          >
+                            <span>{sop.relatedTabLabel || 'ไปยังระบบที่เกี่ยวข้อง'}</span>
+                            <ExternalLink className="w-3.5 h-3.5 text-orange-500" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">หมวดหมู่: {sop.categoryLabel}</span>
+                      )}
+
+                      <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => onNavigateTab(sop.relatedTab!)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all cursor-pointer"
+                          onClick={(e) => handleOpenEdit(sop, e)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-all cursor-pointer"
                         >
-                          <span>{sop.relatedTabLabel || 'ไปยังระบบที่เกี่ยวข้อง'}</span>
-                          <ExternalLink className="w-3.5 h-3.5 text-orange-500" />
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>แก้ไข SOP</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteSOP(sop.id, e)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>ลบ</span>
                         </button>
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -702,6 +1001,316 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
           })
         )}
       </div>
+
+      {/* Add / Edit SOP Modal Dialog */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 my-8 animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-6 bg-slate-900 text-white rounded-t-3xl flex items-center justify-between sticky top-0 z-10 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-500/20 text-orange-400 rounded-xl">
+                  {editingSOP ? <Edit3 className="w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">
+                    {editingSOP ? 'แก้ไขขั้นตอนปฏิบัติงาน (Edit SOP)' : 'สร้างขั้นตอนปฏิบัติงานใหม่ (Add New SOP)'}
+                  </h3>
+                  <p className="text-xs text-slate-400">กรอกข้อมูลรายละเอียดขั้นตอนการทำงานเพื่ออัปเดตคู่มือ Front Office</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSubmitForm} className="p-6 space-y-6">
+              {/* Basic Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    รหัสขั้นตอน SOP <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formCode}
+                    onChange={(e) => setFormCode(e.target.value)}
+                    placeholder="เช่น SOP-FO-08"
+                    className="w-full px-3.5 py-2 text-xs font-mono font-bold bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    หมวดหมู่ SOP <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={formCategory}
+                    onChange={(e) => setFormCategory(e.target.value as SOPItem['category'])}
+                    className="w-full px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  >
+                    <option value="checkin">Check-In & Check-Out</option>
+                    <option value="finance">Cash & Payments</option>
+                    <option value="revenue">Daily Revenue</option>
+                    <option value="housekeeping">Rooms & Housekeeping</option>
+                    <option value="emergency">Emergency & Safety</option>
+                    <option value="contacts">Contact Directory</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    ชื่อหัวข้อ SOP (ภาษาไทย) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formTitleTh}
+                    onChange={(e) => setFormTitleTh(e.target.value)}
+                    placeholder="เช่น ขั้นตอนการต้อนรับและออกใบเสร็จรับเงิน"
+                    className="w-full px-3.5 py-2 text-xs sm:text-sm font-bold bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-slate-800"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">ชื่อหัวข้อภาษาอังกฤษ (Standard Title EN)</label>
+                  <input
+                    type="text"
+                    value={formTitleEn}
+                    onChange={(e) => setFormTitleEn(e.target.value)}
+                    placeholder="e.g. Standard Reception & Billing Procedure"
+                    className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">ระดับความสำคัญ (Importance Level)</label>
+                  <select
+                    value={formImportance}
+                    onChange={(e) => setFormImportance(e.target.value as SOPItem['importance'])}
+                    className="w-full px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  >
+                    <option value="CRITICAL">CRITICAL (สำคัญมากที่สุด/เร่งด่วน)</option>
+                    <option value="REQUIRED">REQUIRED (จำเป็นต้องปฏิบัติ)</option>
+                    <option value="RECOMMENDED">RECOMMENDED (ข้อเสนอแนะ)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">เวลาโดยประมาณในการปฏิบัติงาน</label>
+                  <input
+                    type="text"
+                    value={formEstimatedTime}
+                    onChange={(e) => setFormEstimatedTime(e.target.value)}
+                    placeholder="เช่น 3-5 นาที / ห้อง"
+                    className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">คำอธิบายสรุปภาพรวม (Summary)</label>
+                  <textarea
+                    rows={2}
+                    value={formSummary}
+                    onChange={(e) => setFormSummary(e.target.value)}
+                    placeholder="สรุปสั้นๆ ถึงวัตถุประสงค์ของขั้นตอน SOP นี้..."
+                    className="w-full p-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+              </div>
+
+              {/* Dynamic Steps Builder */}
+              <div className="space-y-3 pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <CheckSquare className="w-4 h-4 text-orange-500" />
+                    ลำดับขั้นตอนปฏิบัติงาน (Step-by-Step List) <span className="text-rose-500">*</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handleAddStepInput}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>เพิ่มขั้นตอน</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {formSteps.map((st, idx) => (
+                    <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 relative">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="w-6 h-6 rounded-full bg-slate-900 text-orange-400 text-xs font-black flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+
+                        {formSteps.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveStepInput(idx)}
+                            className="text-xs text-rose-500 hover:text-rose-700 p-1 hover:bg-rose-50 rounded-lg cursor-pointer"
+                            title="ลบขั้นตอนนี้"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          placeholder={`ชื่อขั้นตอนที่ ${idx + 1} (เช่น ตรวจสอบเอกสารลูกค้า)`}
+                          value={st.title}
+                          onChange={(e) => handleStepChange(idx, 'title', e.target.value)}
+                          className="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                        />
+
+                        <textarea
+                          rows={2}
+                          placeholder={`รายละเอียดวิธีการปฏิบัติสำหรับขั้นตอนที่ ${idx + 1}...`}
+                          value={st.description}
+                          onChange={(e) => handleStepChange(idx, 'description', e.target.value)}
+                          className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                        />
+
+                        <input
+                          type="text"
+                          placeholder="ข้อควรระวังพิเศษ (ถ้ามี)"
+                          value={st.warningNote}
+                          onChange={(e) => handleStepChange(idx, 'warningNote', e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-amber-50/60 border border-amber-200 rounded-xl text-amber-900 placeholder:text-amber-700/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic Notes Builder */}
+              <div className="space-y-3 pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    ข้อปฏิบัติเพิ่มเติมสำคัญ (Key Operating Rules)
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={handleAddNoteInput}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>เพิ่มข้อปฏิบัติ</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {formNotes.map((note, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder={`ข้อปฏิบัติสำคัญที่ ${idx + 1}...`}
+                        value={note}
+                        onChange={(e) => handleNoteChange(idx, e.target.value)}
+                        className="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveNoteInput(idx)}
+                        className="p-2 text-slate-400 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 rounded-xl cursor-pointer"
+                        title="ลบข้อปฏิบัตินี้"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Related Tab Link */}
+              <div className="pt-4 border-t border-slate-200">
+                <label className="block text-xs font-bold text-slate-700 mb-1">เชื่อมโยงไปยังระบบปฏิบัติงานในแอป (Optional Link)</label>
+                <select
+                  value={formRelatedTab}
+                  onChange={(e) => setFormRelatedTab(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                >
+                  <option value="">-- ไม่เชื่อมโยง --</option>
+                  <option value="cashCount">ตารางนับเงินประจำกะ (Cash Count)</option>
+                  <option value="receiptSubstitute">ออกใบรับรองแทนใบเสร็จ (Receipt Substitute)</option>
+                  <option value="dailyRevenue">บันทึกยอดขายประจำวัน (Daily Revenue)</option>
+                  <option value="frontOfficeChecklist">รายการเช็คกะประจำวัน (Front Office Checklist)</option>
+                </select>
+              </div>
+
+              {/* Modal Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  <Save className="w-4 h-4 text-orange-400" />
+                  <span>{editingSOP ? 'บันทึกการแก้ไข' : 'สร้าง SOP ใหม่'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingId && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="p-3 bg-rose-100 rounded-2xl">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-800">ยืนยันการลบขั้นตอน SOP</h3>
+                <p className="text-xs text-slate-500">คุณแน่ใจหรือว่าต้องการลบ SOP รายการนี้ออกจากคู่มือ?</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 font-mono">
+              {sops.find((s) => s.id === deletingId)?.code}: {sops.find((s) => s.id === deletingId)?.titleTh}
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingId(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl cursor-pointer"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteSOP}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl cursor-pointer"
+              >
+                ลบข้อมูล
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
