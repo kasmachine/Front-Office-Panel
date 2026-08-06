@@ -44,6 +44,7 @@ import {
   ImageIcon,
   FileSpreadsheet,
   FileCheck,
+  Link2,
 } from 'lucide-react';
 
 interface FrontOfficeManualProps {
@@ -418,6 +419,11 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
   const [formAttachments, setFormAttachments] = useState<SOPAttachment[]>([]);
   const [previewFile, setPreviewFile] = useState<SOPAttachment | null>(null);
 
+  // Link Attachment State for Google Drive / URL
+  const [showAddLinkInput, setShowAddLinkInput] = useState(false);
+  const [linkInputTitle, setLinkInputTitle] = useState('');
+  const [linkInputUrl, setLinkInputUrl] = useState('');
+
   // State and Handler for Printing SOP
   const [printingSOP, setPrintingSOP] = useState<SOPItem | null>(null);
 
@@ -431,7 +437,7 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
 
   // Helper formatting file size
   const formatFileSize = (bytes: number) => {
-    if (!bytes) return '0 B';
+    if (!bytes) return 'ลิงก์ภายนอก (Link)';
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -440,6 +446,7 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
   // Helper file icon
   const getFileIcon = (fileType: string) => {
     const t = (fileType || '').toLowerCase();
+    if (t.includes('link') || t.includes('url')) return <Link2 className="w-4 h-4 text-blue-600" />;
     if (t.includes('image')) return <ImageIcon className="w-4 h-4 text-emerald-500" />;
     if (t.includes('pdf')) return <FileText className="w-4 h-4 text-rose-500" />;
     if (t.includes('sheet') || t.includes('excel') || t.includes('csv')) return <FileSpreadsheet className="w-4 h-4 text-emerald-600" />;
@@ -505,7 +512,13 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
 
     // Non-image document size check (600KB max for Firestore document safety)
     if (file.size > 600 * 1024) {
-      alert(`ไฟล์เอกสาร "${file.name}" มีขนาด (${(file.size / 1024).toFixed(0)} KB) ใหญ่เกินข้อจำกัดฐานข้อมูล (สูงสุด 600 KB ต่อไฟล์เอกสาร)\n\nกรุณาย่อขนาด PDF หรือแบ่งไฟล์ก่อนแนบอีกครั้ง`);
+      alert(
+        `⚠️ ไฟล์เอกสาร "${file.name}" มีขนาด (${(file.size / 1024).toFixed(0)} KB) ใหญ่เกินข้อจำกัดระบบ (สูงสุด 600 KB ต่อไฟล์เอกสาร)\n\n` +
+        `💡 วิธีแก้ไขง่ายๆ ที่แนะนำ:\n` +
+        `1. 🔗 เพิ่มเป็น "ลิงก์ Google Drive / Cloud Link" (ปุ่มแทรกลิงก์เอกสารด้านข้าง) — สะดวกที่สุด ไม่จำกัดขนาดไฟล์\n` +
+        `2. 📄 บีบอัดไฟล์ PDF ผ่านเว็บไซต์ฟรี เช่น ilovepdf.com หรือ smallpdf.com ให้ย่อขนาดเหลือไม่เกิน 600 KB\n` +
+        `3. 🖼️ แปลงหน้า PDF เป็นไฟล์ภาพ (JPG/PNG) นำมาแนบ ระบบจะทำการย่อและบีบอัดภาพให้อัตโนมัติทันที`
+      );
       return null;
     }
 
@@ -547,6 +560,31 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
     e.target.value = '';
   };
 
+  // Handle adding external link (Google Drive, OneDrive, Cloud URL)
+  const handleAddLinkAttachment = () => {
+    if (!linkInputUrl.trim()) {
+      alert('กรุณากรอก URL ลิงก์เอกสาร เช่น https://drive.google.com/file/d/...');
+      return;
+    }
+    const title = linkInputTitle.trim() || 'เอกสาร Google Drive / Web Link';
+    let url = linkInputUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    const newAtt: SOPAttachment = {
+      id: `att-link-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: title,
+      size: 0,
+      type: 'link',
+      url,
+      uploadedAt: new Date().toISOString(),
+    };
+    setFormAttachments((prev) => [...prev, newAtt]);
+    setLinkInputTitle('');
+    setLinkInputUrl('');
+    setShowAddLinkInput(false);
+  };
+
   // Handle direct file upload to an existing SOP item
   const handleDirectFileUpload = async (sop: SOPItem, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -572,6 +610,32 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
     }
 
     e.target.value = '';
+  };
+
+  // Handle direct adding external link to an existing SOP item
+  const handleDirectAddLink = (sop: SOPItem) => {
+    const urlInput = window.prompt('กรอก URL ลิงก์เอกสาร Google Drive / OneDrive / Canva / Web:');
+    if (!urlInput || !urlInput.trim()) return;
+    const titleInput = window.prompt('กรอกชื่อเอกสาร (เช่น คู่มือ SOP PDF บน Google Drive):') || 'เอกสาร Google Drive / Web Link';
+    let url = urlInput.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    const newAtt: SOPAttachment = {
+      id: `att-link-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: titleInput.trim(),
+      size: 0,
+      type: 'link',
+      url,
+      uploadedAt: new Date().toISOString(),
+    };
+    const updatedSOP: SOPItem = {
+      ...sop,
+      attachments: [...(sop.attachments || []), newAtt],
+    };
+    const updatedList = sops.map((s) => (s.id === sop.id ? updatedSOP : s));
+    saveSOPsToStorage(updatedList);
+    saveSOPToFirebase(updatedSOP).catch(console.error);
   };
 
   // Remove attachment directly from SOP
@@ -1237,20 +1301,31 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                           เอกสารและไฟล์แนบประกอบคู่มือ ({sop.attachments?.length || 0})
                         </h4>
 
-                        <label
-                          htmlFor={`direct-file-upload-${sop.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200/80 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
-                        >
-                          <Plus className="w-3.5 h-3.5 text-orange-500" />
-                          <span>แนบไฟล์เพิ่ม (Add File)</span>
-                          <input
-                            type="file"
-                            id={`direct-file-upload-${sop.id}`}
-                            multiple
-                            onChange={(e) => handleDirectFileUpload(sop, e)}
-                            className="hidden"
-                          />
-                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDirectAddLink(sop)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+                          >
+                            <Link2 className="w-3.5 h-3.5 text-blue-500" />
+                            <span>แทรกลิงก์ Google Drive / Web</span>
+                          </button>
+
+                          <label
+                            htmlFor={`direct-file-upload-${sop.id}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200/80 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-orange-500" />
+                            <span>แนบไฟล์เพิ่ม (Add File)</span>
+                            <input
+                              type="file"
+                              id={`direct-file-upload-${sop.id}`}
+                              multiple
+                              onChange={(e) => handleDirectFileUpload(sop, e)}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
                       </div>
 
                       {(!sop.attachments || sop.attachments.length === 0) ? (
@@ -1634,21 +1709,84 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                     แนบไฟล์เอกสารเพิ่มเติม (Attached Documents / Files)
                   </label>
 
-                  <label
-                    htmlFor="sop-modal-file-upload"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-orange-500" />
-                    <span>เพิ่มไฟล์ (Add File)</span>
-                    <input
-                      type="file"
-                      id="sop-modal-file-upload"
-                      multiple
-                      onChange={handleModalFileUpload}
-                      className="hidden"
-                    />
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddLinkInput(!showAddLinkInput)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
+                    >
+                      <Link2 className="w-3.5 h-3.5 text-blue-500" />
+                      <span>แทรกลิงก์ Google Drive / Web</span>
+                    </button>
+
+                    <label
+                      htmlFor="sop-modal-file-upload"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-orange-500" />
+                      <span>เพิ่มไฟล์ (Add File)</span>
+                      <input
+                        type="file"
+                        id="sop-modal-file-upload"
+                        multiple
+                        onChange={handleModalFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                 </div>
+
+                {showAddLinkInput && (
+                  <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-2xl space-y-2.5 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                        <Link2 className="w-4 h-4 text-blue-600" />
+                        เพิ่มลิงก์เอกสารภายนอก (Google Drive / OneDrive / Canva / URL)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddLinkInput(false)}
+                        className="text-slate-400 hover:text-slate-600 p-1"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={linkInputTitle}
+                        onChange={(e) => setLinkInputTitle(e.target.value)}
+                        placeholder="ชื่อเอกสาร เช่น คู่มือ FO PDF (Google Drive)..."
+                        className="px-3 py-1.5 text-xs bg-white border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-slate-800"
+                      />
+                      <input
+                        type="url"
+                        value={linkInputUrl}
+                        onChange={(e) => setLinkInputUrl(e.target.value)}
+                        placeholder="วาง URL เช่น https://drive.google.com/..."
+                        className="px-3 py-1.5 text-xs bg-white border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-slate-800"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddLinkInput(false)}
+                        className="px-3 py-1 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 cursor-pointer"
+                      >
+                        ยกเลิก
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddLinkAttachment}
+                        className="px-3 py-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg cursor-pointer shadow-2xs"
+                      >
+                        เพิ่มลิงก์นี้
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {formAttachments.length === 0 ? (
                   <div className="text-center py-5 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-slate-400 text-xs space-y-1">
