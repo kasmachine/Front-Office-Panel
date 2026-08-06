@@ -6,6 +6,8 @@ import {
   FileText,
   BarChart3,
   CheckSquare,
+  Sparkles,
+  BookOpen,
   Settings,
   RefreshCw,
   CheckCircle2,
@@ -17,8 +19,8 @@ import {
 } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
-  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
+  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual';
+  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual') => void;
   onOpenSettings: () => void;
   onOpenHistory?: () => void;
   onOpenVatCalc?: () => void;
@@ -49,6 +51,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: LayoutDashboard,
     },
     {
+      id: 'whatsNew' as const,
+      label: 'What is news',
+      sublabel: 'ข่าวสาร & อัปเดตระบบ',
+      icon: Sparkles,
+    },
+    {
       id: 'cashCount' as const,
       label: 'Cash Count',
       sublabel: 'ตารางนับเงินประจำกะ',
@@ -71,6 +79,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Front Office Checklist',
       sublabel: 'แบบฟอร์มกะเช้า & กะบ่าย',
       icon: CheckSquare,
+    },
+    {
+      id: 'frontOfficeManual' as const,
+      label: 'Front Office Manual',
+      sublabel: 'คู่มือขั้นตอนการทำงาน (SOP)',
+      icon: BookOpen,
     },
   ];
 

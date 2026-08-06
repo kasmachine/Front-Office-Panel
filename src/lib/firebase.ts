@@ -18,7 +18,7 @@ import {
 setLogLevel('silent');
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories, FrontOfficeChecklistData } from '../types';
+import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories, FrontOfficeChecklistData, NewsItem } from '../types';
 
 // Construct effective Firebase config (supports Vercel env vars or fallback to firebase-applet-config.json)
 const effectiveFirebaseConfig = {
@@ -816,6 +816,58 @@ export async function fetchChecklistFromFirebase(dateDocId: string): Promise<Fro
   }
   return null;
 }
+
+/**
+ * News & Announcements Realtime Firestore Sync
+ */
+const NEWS_COLLECTION = 'nan_seasons_news';
+
+export async function saveNewsItemToFirebase(item: NewsItem): Promise<void> {
+  if (isQuotaExceeded || !item) return;
+  const path = `${NEWS_COLLECTION}/${item.id}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, NEWS_COLLECTION, item.id);
+    await setDoc(docRef, {
+      ...item,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteNewsItemFromFirebase(newsId: string): Promise<void> {
+  if (isQuotaExceeded || !newsId) return;
+  const path = `${NEWS_COLLECTION}/${newsId}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, NEWS_COLLECTION, newsId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
+export function subscribeNewsList(callback: (news: NewsItem[] | null) => void) {
+  initAuth().catch(() => {});
+  const q = query(collection(db, NEWS_COLLECTION), orderBy('createdAt', 'desc'));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: NewsItem[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push(docSnap.data() as NewsItem);
+      });
+      callback(items);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, NEWS_COLLECTION);
+      callback(null);
+    }
+  );
+}
+
 
 
 

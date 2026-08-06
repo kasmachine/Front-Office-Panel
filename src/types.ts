@@ -115,3 +115,19 @@ export interface FrontOfficeChecklistData {
   updatedAt?: string;
 }
 
+export interface NewsItem {
+  id: string;
+  title: string;
+  category: 'system' | 'hotel' | 'sop';
+  priority: 'normal' | 'important' | 'urgent';
+  content: string;
+  summary?: string;
+  author: string;
+  date: string; // YYYY-MM-DD
+  pinned?: boolean;
+  version?: string;
+  tags?: string[];
+  readBy?: string[];
+  createdAt: number;
+}
+

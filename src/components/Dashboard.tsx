@@ -48,7 +48,7 @@ const formatMoney = (val: number, decimals = 2): string => {
 };
 
 interface DashboardProps {
-  onNavigate: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
+  onNavigate: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual') => void;
   cashCountData: CashCountData;
   receiptData: ReceiptSubstituteData;
   savedCashCounts: CashCountData[];
@@ -198,52 +198,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-300">
-      {/* Executive Welcome & Live Status Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden border border-slate-800">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-12 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-300 text-xs font-bold tracking-wide uppercase">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Front Office Executive Control</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Executive Dashboard <span className="text-slate-300 text-lg font-normal block sm:inline">(ภาพรวมระบบ)</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Real-time summary of revenue targets, shift cash reconciliation, front office checklists, and expense documentation for Nan Seasons Resort.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-            <div className="bg-slate-800/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-slate-700/60 flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-orange-400 shrink-0" />
-              <div>
-                <div className="text-xs font-bold text-white">
-                  {MONTH_EN[currentMonth - 1]} {currentYear}
-                </div>
-                <div className="text-[10px] text-slate-400">
-                  {MONTH_TH[currentMonth - 1]} พ.ศ. {currentYear + 543}
-                </div>
-              </div>
-            </div>
-
-            {onManualSync && (
-              <button
-                type="button"
-                onClick={onManualSync}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-emerald-300 bg-emerald-950/80 hover:bg-emerald-900/90 border border-emerald-700/60 rounded-2xl transition-all shadow-lg shadow-emerald-950/30 cursor-pointer"
-              >
-                <RefreshCw className="w-4 h-4 text-emerald-400" />
-                <span>Sync Real-Time Data</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Top 4 Primary KPI Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Monthly Revenue & Target */}

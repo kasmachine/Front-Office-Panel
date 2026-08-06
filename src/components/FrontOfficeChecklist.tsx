@@ -416,51 +416,6 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
       <div className="no-print space-y-5">
         {/* Top Control Header Card */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-slate-100">
-            {/* Title */}
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-orange-500 text-white rounded-xl shadow-xs">
-                  <CheckSquare className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-800 tracking-tight flex items-center gap-2">
-                    Checklist Front Office
-                    <span className="text-xs font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                      ประจำวัน
-                    </span>
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    แบบฟอร์มบันทึกงานประจำกะเช้า & กะบ่าย (Front Office Daily Shift Checklist)
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-slate-800 text-white hover:bg-slate-700 rounded-xl transition-all shadow-xs"
-                title="พิมพ์เอกสาร A4 หรือ บันทึกเป็น PDF"
-              >
-                <Printer className="w-4 h-4 text-orange-400" />
-                <span>พิมพ์ / PDF (A4)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResetToDefault}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl transition-all"
-                title="รีเซ็ต Checklist วันนี้เป็นค่าเริ่มต้น"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                <span>รีเซ็ตค่าเริ่มต้น</span>
-              </button>
-            </div>
-          </div>
-
           {/* Date Picker & Shift Filter Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
             {/* Date Navigator */}
@@ -513,7 +468,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
             {/* Shift Filter & Search */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Search Box */}
-              <div className="relative flex-1 sm:w-48">
+              <div className="relative flex-1 sm:w-40">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -537,18 +492,18 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
                 <button
                   type="button"
                   onClick={() => setViewShift('all')}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
                     viewShift === 'all'
                       ? 'bg-slate-800 text-white shadow-xs'
                       : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  ทั้งหมด (Side-by-side)
+                  ทั้งหมด
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewShift('morning')}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
                     viewShift === 'morning'
                       ? 'bg-amber-500 text-white shadow-xs'
                       : 'text-amber-800 hover:bg-amber-50'
@@ -559,7 +514,7 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
                 <button
                   type="button"
                   onClick={() => setViewShift('afternoon')}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
                     viewShift === 'afternoon'
                       ? 'bg-indigo-600 text-white shadow-xs'
                       : 'text-indigo-800 hover:bg-indigo-50'
@@ -568,6 +523,27 @@ export const FrontOfficeChecklist: React.FC<FrontOfficeChecklistProps> = ({ staf
                   กะบ่าย ({afternoonDone}/{afternoonTotal})
                 </button>
               </div>
+
+              {/* Quick Action Buttons */}
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-slate-800 text-white hover:bg-slate-700 rounded-xl transition-all shadow-xs"
+                title="พิมพ์เอกสาร A4 หรือ บันทึกเป็น PDF"
+              >
+                <Printer className="w-3.5 h-3.5 text-orange-400" />
+                <span>พิมพ์</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetToDefault}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl transition-all"
+                title="รีเซ็ต Checklist วันนี้เป็นค่าเริ่มต้น"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                <span>รีเซ็ต</span>
+              </button>
             </div>
           </div>
 

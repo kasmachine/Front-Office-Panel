@@ -3,8 +3,8 @@ import { NanSeasonsLogo } from './NanSeasonsLogo';
 import { FileText, Calculator, CheckCircle2, Loader2, Settings, RefreshCw, BarChart3, Menu, Percent } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
-  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist') => void;
+  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual';
+  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual') => void;
   onOpenSettings?: () => void;
   onOpenVatCalc?: () => void;
   onManualSync?: () => void;
@@ -44,12 +44,16 @@ export const Header: React.FC<HeaderProps> = ({
               <span>
                 {activeTab === 'dashboard'
                   ? 'Dashboard (ภาพรวมระบบ & สรุปผลงาน)'
+                  : activeTab === 'whatsNew'
+                  ? "What's New (ข่าวสาร & อัปเดตระบบ)"
                   : activeTab === 'cashCount'
                   ? 'Cash Count (ตารางนับเงินประจำกะ)'
                   : activeTab === 'receiptSubstitute'
                   ? 'Receipt Substitute (ใบรับรองแทนใบเสร็จ)'
                   : activeTab === 'dailyRevenue'
                   ? 'Daily Revenue (ยอดขายประจำวัน)'
+                  : activeTab === 'frontOfficeManual'
+                  ? 'Front Office Manual (คู่มือปฏิบัติงานแผนกต้อนรับ)'
                   : 'Front Office Checklist (แบบฟอร์มกะเช้า & กะบ่าย)'}
               </span>
 
@@ -72,12 +76,16 @@ export const Header: React.FC<HeaderProps> = ({
             <p className="text-[11px] text-slate-400 hidden sm:block">
               {activeTab === 'dashboard'
                 ? 'ภาพรวมระบบยอดขายประจำเดือน, สถานะเงินสดประจำกะ, และความคืบหน้าการตรวจเช็คงาน (Executive Control Panel)'
+                : activeTab === 'whatsNew'
+                ? 'ศูนย์กระจายข่าวสาร อัปเดตระบบ ระเบียบปฏิบัติประจำกะ (SOP) และประกาศสำคัญโรงแรม Nan Seasons'
                 : activeTab === 'cashCount'
                 ? 'ตารางนับเงินสดเข้า-ออกประจำกะ (Shift Cash Reconciliation Sheet)'
                 : activeTab === 'receiptSubstitute'
                 ? 'ใบรับรองแทนใบเสร็จรับเงินพร้อมแนบสำเนาบัตรประชาชน'
                 : activeTab === 'dailyRevenue'
                 ? 'ยอดขายและเป้าหมายประจำวัน (Salesplan and Targets / Daily Revenue)'
+                : activeTab === 'frontOfficeManual'
+                ? 'คู่มือขั้นตอนการปฏิบัติงานมาตรฐาน (SOP), ระเบียบปฏิบัติประจำกะ และเบอร์ติดต่อฉุกเฉิน'
                 : 'แบบฟอร์มตรวจสอบรายการงานประจำกะเช้าและกะบ่าย (Front Office Shift Checklist)'}
             </p>
           </div>
