@@ -18,7 +18,7 @@ import {
 setLogLevel('silent');
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories, FrontOfficeChecklistData, NewsItem } from '../types';
+import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories, FrontOfficeChecklistData, NewsItem, SOPItem } from '../types';
 
 // Construct effective Firebase config (supports Vercel env vars or fallback to firebase-applet-config.json)
 const effectiveFirebaseConfig = {
@@ -864,6 +864,66 @@ export function subscribeNewsList(callback: (news: NewsItem[] | null) => void) {
     (err) => {
       handleFirestoreError(err, OperationType.LIST, NEWS_COLLECTION);
       callback(null);
+    }
+  );
+}
+
+/**
+ * Front Office Manual (SOPs) Realtime Firestore Sync
+ */
+const SOP_COLLECTION = 'front_office_sops';
+
+export async function saveSOPToFirebase(item: SOPItem): Promise<void> {
+  if (isQuotaExceeded || !item || !item.id) return;
+  const path = `${SOP_COLLECTION}/${item.id}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, SOP_COLLECTION, item.id);
+    await setDoc(docRef, {
+      ...item,
+      updatedAt: new Date().toISOString(),
+      createdAt: item.createdAt || Date.now(),
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteSOPFromFirebase(sopId: string): Promise<void> {
+  if (isQuotaExceeded || !sopId) return;
+  const path = `${SOP_COLLECTION}/${sopId}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, SOP_COLLECTION, sopId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
+export async function saveAllSOPsToFirebase(sops: SOPItem[]): Promise<void> {
+  if (isQuotaExceeded || !sops) return;
+  await initAuth();
+  for (const item of sops) {
+    await saveSOPToFirebase(item);
+  }
+}
+
+export function subscribeSOPs(callback: (sops: SOPItem[] | null, hasPendingWrites: boolean) => void) {
+  initAuth().catch(() => {});
+  const q = query(collection(db, SOP_COLLECTION), orderBy('code', 'asc'));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: SOPItem[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push(docSnap.data() as SOPItem);
+      });
+      callback(items, snapshot.metadata.hasPendingWrites);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, SOP_COLLECTION);
+      callback(null, false);
     }
   );
 }

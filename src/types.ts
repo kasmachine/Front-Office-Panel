@@ -131,3 +131,28 @@ export interface NewsItem {
   createdAt: number;
 }
 
+export interface SOPStep {
+  number: number;
+  title: string;
+  description: string;
+  warningNote?: string;
+}
+
+export interface SOPItem {
+  id: string;
+  code: string;
+  titleTh: string;
+  titleEn: string;
+  category: 'checkin' | 'finance' | 'revenue' | 'housekeeping' | 'emergency' | 'contacts';
+  categoryLabel: string;
+  importance: 'CRITICAL' | 'REQUIRED' | 'RECOMMENDED';
+  estimatedTime: string;
+  summary: string;
+  steps: SOPStep[];
+  importantNotes?: string[];
+  relatedTab?: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
+  relatedTabLabel?: string;
+  updatedAt?: string;
+  createdAt?: number;
+}
+

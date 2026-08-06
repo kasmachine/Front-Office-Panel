@@ -40,6 +40,29 @@
         "createdAt": { "type": "number" }
       },
       "required": ["startDate", "items"]
+    },
+    "front_office_sops": {
+      "title": "Front Office SOPs",
+      "description": "Front Office Standard Operating Procedure items for Front Office Manual",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "titleTh": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "category": { "type": "string" },
+        "categoryLabel": { "type": "string" },
+        "importance": { "type": "string" },
+        "estimatedTime": { "type": "string" },
+        "summary": { "type": "string" },
+        "steps": { "type": "array" },
+        "importantNotes": { "type": "array" },
+        "relatedTab": { "type": "string" },
+        "relatedTabLabel": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["code", "titleTh"]
     }
   }
 }

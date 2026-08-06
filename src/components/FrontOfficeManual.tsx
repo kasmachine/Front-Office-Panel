@@ -1,4 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  subscribeSOPs,
+  saveSOPToFirebase,
+  deleteSOPFromFirebase,
+  saveAllSOPsToFirebase,
+} from '../lib/firebase';
 import {
   BookOpen,
   Search,
@@ -389,6 +395,37 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
   const [formNotes, setFormNotes] = useState<string[]>(['']);
   const [formRelatedTab, setFormRelatedTab] = useState<string>('');
 
+  // Realtime Firestore Sync
+  const [isLiveSync, setIsLiveSync] = useState(false);
+  const [isPendingSync, setIsPendingSync] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const unsubscribe = subscribeSOPs((remoteSOPs, hasPendingWrites) => {
+      if (!isMounted) return;
+      setIsPendingSync(hasPendingWrites);
+
+      if (remoteSOPs && remoteSOPs.length > 0) {
+        setSops(remoteSOPs);
+        setIsLiveSync(true);
+        try {
+          localStorage.setItem('nan_seasons_sops', JSON.stringify(remoteSOPs));
+        } catch (e) {
+          console.error('Failed to save SOPs to localStorage:', e);
+        }
+      } else if (remoteSOPs && remoteSOPs.length === 0) {
+        // If Firestore collection is empty, seed DEFAULT_SOP_DATA so all clients get the default SOPs
+        saveAllSOPsToFirebase(DEFAULT_SOP_DATA).catch(console.error);
+        setIsLiveSync(true);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
   // Delete Confirmation state
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -431,6 +468,7 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
   const handleResetToDefault = () => {
     if (window.confirm('คุณต้องการรีเซ็ตคู่มือ SOP เป็นค่าเริ่มต้นใช่หรือไม่? (การแก้ไขเพิ่มเติมที่คุณสร้างจะถูกลบ)')) {
       saveSOPsToStorage(DEFAULT_SOP_DATA);
+      saveAllSOPsToFirebase(DEFAULT_SOP_DATA).catch(console.error);
     }
   };
 
@@ -483,8 +521,10 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
 
   const confirmDeleteSOP = () => {
     if (!deletingId) return;
-    const updated = sops.filter((s) => s.id !== deletingId);
+    const targetId = deletingId;
+    const updated = sops.filter((s) => s.id !== targetId);
     saveSOPsToStorage(updated);
+    deleteSOPFromFirebase(targetId).catch(console.error);
     setDeletingId(null);
   };
 
@@ -543,6 +583,7 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
     }
 
     saveSOPsToStorage(updatedList);
+    saveSOPToFirebase(newOrUpdatedSOP).catch(console.error);
     setIsModalOpen(false);
     setExpandedSOPs((prev) => ({ ...prev, [newOrUpdatedSOP.id]: true }));
   };
@@ -622,9 +663,15 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-300 text-xs font-bold tracking-wide uppercase">
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Nan Seasons Resort Operational SOP</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-500/30 text-orange-300 text-xs font-bold tracking-wide uppercase">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Nan Seasons Resort Operational SOP</span>
+              </div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
+                <span className={`w-2 h-2 rounded-full ${isLiveSync ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                <span>{isPendingSync ? 'กำลังบันทึก...' : isLiveSync ? 'เชื่อมต่อเรียลไทม์ (Live Sync)' : 'พร้อมใช้งาน'}</span>
+              </div>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-3">
               Front Office Manual
