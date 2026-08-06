@@ -138,6 +138,15 @@ export interface SOPStep {
   warningNote?: string;
 }
 
+export interface SOPAttachment {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  uploadedAt: string;
+}
+
 export interface SOPItem {
   id: string;
   code: string;
@@ -152,6 +161,7 @@ export interface SOPItem {
   importantNotes?: string[];
   relatedTab?: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
   relatedTabLabel?: string;
+  attachments?: SOPAttachment[];
   updatedAt?: string;
   createdAt?: number;
 }

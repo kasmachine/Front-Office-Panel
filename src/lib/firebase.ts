@@ -88,6 +88,14 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     }
     return;
   }
+  if (
+    errStr.includes('offline') ||
+    errStr.includes('unavailable') ||
+    errStr.includes('client is offline')
+  ) {
+    console.warn(`[Firebase] Client is offline or unreachable for ${operationType} on ${path}.`);
+    return;
+  }
   const errInfo: FirestoreErrorInfo = {
     error: errStr,
     authInfo: {
@@ -913,18 +921,29 @@ export async function saveAllSOPsToFirebase(sops: SOPItem[]): Promise<void> {
 
 export async function seedInitialSOPsIfNeeded(defaultSops: SOPItem[]): Promise<void> {
   if (isQuotaExceeded || !defaultSops) return;
+  const path = `${SOP_COLLECTION}/_metadata`;
   try {
     await initAuth();
     const metaRef = doc(db, SOP_COLLECTION, '_metadata');
-    const metaSnap = await getDoc(metaRef);
-    if (!metaSnap.exists()) {
+    let metaSnap;
+    try {
+      metaSnap = await getDoc(metaRef);
+    } catch (docErr: unknown) {
+      const msg = docErr instanceof Error ? docErr.message : String(docErr);
+      if (msg.includes('offline') || msg.includes('unavailable') || msg.includes('client is offline')) {
+        console.warn('[Firebase] Client is offline, skipping SOP seeding for now.');
+        return;
+      }
+      throw docErr;
+    }
+    if (!metaSnap || !metaSnap.exists()) {
       await setDoc(metaRef, { initialized: true, seededAt: new Date().toISOString() });
       for (const item of defaultSops) {
         await saveSOPToFirebase(item);
       }
     }
-  } catch (err) {
-    console.error('Failed to seed initial SOPs:', err);
+  } catch (err: unknown) {
+    handleFirestoreError(err, OperationType.WRITE, path);
   }
 }
 

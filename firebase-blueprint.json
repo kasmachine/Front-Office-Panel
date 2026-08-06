@@ -59,6 +59,7 @@
         "importantNotes": { "type": "array" },
         "relatedTab": { "type": "string" },
         "relatedTabLabel": { "type": "string" },
+        "attachments": { "type": "array" },
         "updatedAt": { "type": "string" },
         "createdAt": { "type": "number" }
       },

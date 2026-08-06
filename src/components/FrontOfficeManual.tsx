@@ -34,6 +34,15 @@ import {
   PlusCircle,
   Save,
   AlertTriangle,
+  Paperclip,
+  Upload,
+  FileText,
+  File,
+  Download,
+  Eye,
+  ImageIcon,
+  FileSpreadsheet,
+  FileCheck,
 } from 'lucide-react';
 
 interface FrontOfficeManualProps {
@@ -45,6 +54,15 @@ export interface SOPStep {
   title: string;
   description: string;
   warningNote?: string;
+}
+
+export interface SOPAttachment {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  uploadedAt: string;
 }
 
 export interface SOPItem {
@@ -61,6 +79,7 @@ export interface SOPItem {
   importantNotes?: string[];
   relatedTab?: 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist';
   relatedTabLabel?: string;
+  attachments?: SOPAttachment[];
 }
 
 const CATEGORY_LABELS: Record<SOPItem['category'], string> = {
@@ -395,6 +414,129 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
   ]);
   const [formNotes, setFormNotes] = useState<string[]>(['']);
   const [formRelatedTab, setFormRelatedTab] = useState<string>('');
+  const [formAttachments, setFormAttachments] = useState<SOPAttachment[]>([]);
+  const [previewFile, setPreviewFile] = useState<SOPAttachment | null>(null);
+
+  // State and Handler for Printing SOP
+  const [printingSOP, setPrintingSOP] = useState<SOPItem | null>(null);
+
+  const handlePrintSOP = (sop: SOPItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setPrintingSOP(sop);
+    setTimeout(() => {
+      window.print();
+    }, 250);
+  };
+
+  // Helper formatting file size
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // Helper file icon
+  const getFileIcon = (fileType: string) => {
+    const t = (fileType || '').toLowerCase();
+    if (t.includes('image')) return <ImageIcon className="w-4 h-4 text-emerald-500" />;
+    if (t.includes('pdf')) return <FileText className="w-4 h-4 text-rose-500" />;
+    if (t.includes('sheet') || t.includes('excel') || t.includes('csv')) return <FileSpreadsheet className="w-4 h-4 text-emerald-600" />;
+    if (t.includes('word') || t.includes('document')) return <FileText className="w-4 h-4 text-blue-500" />;
+    return <File className="w-4 h-4 text-slate-500" />;
+  };
+
+  // Handle upload in form modal
+  const handleModalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file: File = files[i];
+      if (file.size > 8 * 1024 * 1024) {
+        alert(`ไฟล์ "${file.name}" มีขนาดใหญ่เกิน 8MB กรุณาเลือกไฟล์ที่ไม่เกิน 8MB`);
+        continue;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const url = evt.target?.result as string;
+        if (!url) return;
+        const newAtt: SOPAttachment = {
+          id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          name: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream',
+          url,
+          uploadedAt: new Date().toISOString(),
+        };
+        setFormAttachments((prev) => [...prev, newAtt]);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    e.target.value = '';
+  };
+
+  // Handle direct file upload to an existing SOP item
+  const handleDirectFileUpload = (sop: SOPItem, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newItems: SOPAttachment[] = [];
+    let pendingCount = files.length;
+
+    for (let i = 0; i < files.length; i++) {
+      const file: File = files[i];
+      if (file.size > 8 * 1024 * 1024) {
+        alert(`ไฟล์ "${file.name}" มีขนาดใหญ่เกิน 8MB กรุณาเลือกไฟล์ที่ไม่เกิน 8MB`);
+        pendingCount--;
+        continue;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const url = evt.target?.result as string;
+        if (url) {
+          newItems.push({
+            id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            name: file.name,
+            size: file.size,
+            type: file.type || 'application/octet-stream',
+            url,
+            uploadedAt: new Date().toISOString(),
+          });
+        }
+        pendingCount--;
+        if (pendingCount <= 0 && newItems.length > 0) {
+          const updatedSOP: SOPItem = {
+            ...sop,
+            attachments: [...(sop.attachments || []), ...newItems],
+          };
+          const updatedList = sops.map((s) => (s.id === sop.id ? updatedSOP : s));
+          saveSOPsToStorage(updatedList);
+          saveSOPToFirebase(updatedSOP).catch(console.error);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    e.target.value = '';
+  };
+
+  // Remove attachment directly from SOP
+  const handleRemoveDirectAttachment = (sop: SOPItem, attId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm('ยืนยันลบไฟล์แนบนี้ใช่หรือไม่?')) return;
+    const updatedAttachments = (sop.attachments || []).filter((a) => a.id !== attId);
+    const updatedSOP: SOPItem = {
+      ...sop,
+      attachments: updatedAttachments.length > 0 ? updatedAttachments : undefined,
+    };
+    const updatedList = sops.map((s) => (s.id === sop.id ? updatedSOP : s));
+    saveSOPsToStorage(updatedList);
+    saveSOPToFirebase(updatedSOP).catch(console.error);
+  };
 
   // Realtime Firestore Sync
   const [isLiveSync, setIsLiveSync] = useState(false);
@@ -409,7 +551,7 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
       if (remoteSOPs !== null) {
         if (!isInitialized && remoteSOPs.length === 0) {
           // Collection is completely uninitialized in Firestore -> seed initial defaults once
-          seedInitialSOPsIfNeeded(DEFAULT_SOP_DATA).catch(console.error);
+          seedInitialSOPsIfNeeded(DEFAULT_SOP_DATA).catch(() => {});
         } else {
           // Normal sync: update state with remoteSOPs (even if empty after user deleted items)
           setSops(remoteSOPs);
@@ -490,6 +632,7 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
     setFormSteps([{ title: '', description: '', warningNote: '' }]);
     setFormNotes(['']);
     setFormRelatedTab('');
+    setFormAttachments([]);
     setIsModalOpen(true);
   };
 
@@ -513,6 +656,7 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
     );
     setFormNotes(sop.importantNotes && sop.importantNotes.length > 0 ? [...sop.importantNotes] : ['']);
     setFormRelatedTab(sop.relatedTab || '');
+    setFormAttachments(sop.attachments ? [...sop.attachments] : []);
     setIsModalOpen(true);
   };
 
@@ -549,14 +693,20 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
         warningNote: st.warningNote.trim() || undefined,
       }));
 
-    if (cleanSteps.length === 0) {
-      alert('กรุณาเพิ่มอย่างน้อย 1 ขั้นตอนการปฏิบัติงาน');
-      return;
-    }
+    const finalSteps: SOPStep[] = cleanSteps.length > 0
+      ? cleanSteps
+      : (editingSOP?.steps || [
+          {
+            number: 1,
+            title: formTitleTh.trim(),
+            description: formSummary.trim() || formTitleTh.trim(),
+          },
+        ]);
 
     const cleanNotes = formNotes.map((n) => n.trim()).filter((n) => n.length > 0);
+    const finalNotes = cleanNotes.length > 0 ? cleanNotes : editingSOP?.importantNotes;
 
-    let relatedTabLabel = undefined;
+    let relatedTabLabel = editingSOP?.relatedTabLabel;
     if (formRelatedTab === 'cashCount') relatedTabLabel = 'ไปที่หน้า ตารางนับเงินประจำกะ (Cash Count)';
     else if (formRelatedTab === 'receiptSubstitute') relatedTabLabel = 'ไปที่หน้า ออกใบรับรองแทนใบเสร็จ';
     else if (formRelatedTab === 'dailyRevenue') relatedTabLabel = 'ไปที่หน้า บันทึกยอดขาย (Daily Revenue)';
@@ -572,10 +722,11 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
       importance: formImportance,
       estimatedTime: formEstimatedTime.trim() || '3-5 นาที',
       summary: formSummary.trim() || formTitleTh.trim(),
-      steps: cleanSteps,
-      importantNotes: cleanNotes.length > 0 ? cleanNotes : undefined,
-      relatedTab: (formRelatedTab as SOPItem['relatedTab']) || undefined,
+      steps: finalSteps,
+      importantNotes: finalNotes,
+      relatedTab: (formRelatedTab as SOPItem['relatedTab']) || editingSOP?.relatedTab,
       relatedTabLabel,
+      attachments: formAttachments.length > 0 ? formAttachments : undefined,
     };
 
     let updatedList: SOPItem[];
@@ -888,6 +1039,12 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                         <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
                           {sop.categoryLabel}
                         </span>
+                        {sop.attachments && sop.attachments.length > 0 && (
+                          <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1 border border-slate-200">
+                            <Paperclip className="w-3 h-3 text-orange-500" />
+                            <span>{sop.attachments.length} ไฟล์แนบ</span>
+                          </span>
+                        )}
                         <span className="text-[11px] text-slate-400 flex items-center gap-1 ml-auto sm:ml-0">
                           <Clock className="w-3 h-3 text-slate-400" />
                           {sop.estimatedTime}
@@ -906,7 +1063,7 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                     </div>
                   </div>
 
-                  {/* Actions (Copy / Edit / Delete / Expand) */}
+                  {/* Actions (Copy / Print / Edit / Delete / Expand) */}
                   <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
                     <button
                       type="button"
@@ -922,6 +1079,16 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                       ) : (
                         <Copy className="w-4 h-4" />
                       )}
+                    </button>
+
+                    {/* Print Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => handlePrintSOP(sop, e)}
+                      className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200/80 rounded-lg transition-colors cursor-pointer"
+                      title="พิมพ์คู่มือ SOP นี้"
+                    >
+                      <Printer className="w-4 h-4" />
                     </button>
 
                     {/* Edit Button */}
@@ -1006,6 +1173,89 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                       </div>
                     )}
 
+                    {/* Attachments Section */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                          <Paperclip className="w-4 h-4 text-orange-500" />
+                          เอกสารและไฟล์แนบประกอบคู่มือ ({sop.attachments?.length || 0})
+                        </h4>
+
+                        <label
+                          htmlFor={`direct-file-upload-${sop.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200/80 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95 shrink-0"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-orange-500" />
+                          <span>แนบไฟล์เพิ่ม (Add File)</span>
+                          <input
+                            type="file"
+                            id={`direct-file-upload-${sop.id}`}
+                            multiple
+                            onChange={(e) => handleDirectFileUpload(sop, e)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+
+                      {(!sop.attachments || sop.attachments.length === 0) ? (
+                        <div className="text-center py-4 bg-slate-50/50 border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+                          ยังไม่มีเอกสารแนบในขั้นตอนปฏิบัติงานนี้ — สามารถกด <strong className="text-slate-600">"แนบไฟล์เพิ่ม (Add File)"</strong> เพื่ออัปเดตไฟล์ PDF, รูปภาพ หรือคู่มือเพิ่มเติมได้ทันที
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {sop.attachments.map((att) => (
+                            <div
+                              key={att.id}
+                              className="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-xl transition-all group"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div className="p-2 bg-white rounded-lg border border-slate-200 shrink-0 shadow-2xs">
+                                  {getFileIcon(att.type)}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold text-slate-800 truncate" title={att.name}>
+                                    {att.name}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400">
+                                    {formatFileSize(att.size)}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 ml-2 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewFile(att)}
+                                  className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-all cursor-pointer"
+                                  title="ดูตัวอย่าง / เปิดไฟล์"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+
+                                <a
+                                  href={att.url}
+                                  download={att.name}
+                                  className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition-all cursor-pointer"
+                                  title="ดาวน์โหลดไฟล์"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </a>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleRemoveDirectAttachment(sop, att.id, e)}
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                  title="ลบไฟล์แนบ"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Footer Quick Nav Link & Actions */}
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/60">
                       {sop.relatedTab && onNavigateTab ? (
@@ -1027,8 +1277,17 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
+                          onClick={(e) => handlePrintSOP(sop, e)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300/80 rounded-xl transition-all cursor-pointer shadow-2xs"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-slate-600" />
+                          <span>พิมพ์ SOP</span>
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={(e) => handleOpenEdit(sop, e)}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-all cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl transition-all cursor-pointer shadow-2xs"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                           <span>แก้ไข SOP</span>
@@ -1176,129 +1435,75 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                 </div>
               </div>
 
-              {/* Dynamic Steps Builder */}
+              {/* Dynamic Attachments Builder in Modal */}
               <div className="space-y-3 pt-4 border-t border-slate-200">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                    <CheckSquare className="w-4 h-4 text-orange-500" />
-                    ลำดับขั้นตอนปฏิบัติงาน (Step-by-Step List) <span className="text-rose-500">*</span>
+                    <Paperclip className="w-4 h-4 text-orange-500" />
+                    แนบไฟล์เอกสารเพิ่มเติม (Attached Documents / Files)
                   </label>
 
-                  <button
-                    type="button"
-                    onClick={handleAddStepInput}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all cursor-pointer"
+                  <label
+                    htmlFor="sop-modal-file-upload"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>เพิ่มขั้นตอน</span>
-                  </button>
+                    <Plus className="w-3.5 h-3.5 text-orange-500" />
+                    <span>เพิ่มไฟล์ (Add File)</span>
+                    <input
+                      type="file"
+                      id="sop-modal-file-upload"
+                      multiple
+                      onChange={handleModalFileUpload}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
 
-                <div className="space-y-3">
-                  {formSteps.map((st, idx) => (
-                    <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 relative">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="w-6 h-6 rounded-full bg-slate-900 text-orange-400 text-xs font-black flex items-center justify-center">
-                          {idx + 1}
-                        </span>
+                {formAttachments.length === 0 ? (
+                  <div className="text-center py-5 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-slate-400 text-xs space-y-1">
+                    <Upload className="w-6 h-6 text-slate-300 mx-auto" />
+                    <p className="font-semibold text-slate-600">แนบไฟล์คู่มือ, เอกสาร PDF, ภาพถ่ายขั้นตอน หรือเอกสารอ้างอิง</p>
+                    <p className="text-[11px] text-slate-400">รองรับไฟล์ภาพ, PDF, Word, Excel (ขนาดไม่เกิน 8MB ต่อไฟล์)</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {formAttachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div className="p-1.5 bg-white rounded-lg border border-slate-200 shrink-0">
+                            {getFileIcon(att.type)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-800 truncate">{att.name}</p>
+                            <p className="text-[10px] text-slate-400">{formatFileSize(att.size)}</p>
+                          </div>
+                        </div>
 
-                        {formSteps.length > 1 && (
+                        <div className="flex items-center gap-1 ml-2 shrink-0">
                           <button
                             type="button"
-                            onClick={() => handleRemoveStepInput(idx)}
-                            className="text-xs text-rose-500 hover:text-rose-700 p-1 hover:bg-rose-50 rounded-lg cursor-pointer"
-                            title="ลบขั้นตอนนี้"
+                            onClick={() => setPreviewFile(att)}
+                            className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-white rounded-lg transition-all cursor-pointer"
+                            title="ดูไฟล์"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
-                        )}
+                          <button
+                            type="button"
+                            onClick={() => setFormAttachments((prev) => prev.filter((a) => a.id !== att.id))}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
+                            title="ลบไฟล์"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          placeholder={`ชื่อขั้นตอนที่ ${idx + 1} (เช่น ตรวจสอบเอกสารลูกค้า)`}
-                          value={st.title}
-                          onChange={(e) => handleStepChange(idx, 'title', e.target.value)}
-                          className="w-full px-3 py-2 text-xs font-bold bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                        />
-
-                        <textarea
-                          rows={2}
-                          placeholder={`รายละเอียดวิธีการปฏิบัติสำหรับขั้นตอนที่ ${idx + 1}...`}
-                          value={st.description}
-                          onChange={(e) => handleStepChange(idx, 'description', e.target.value)}
-                          className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                        />
-
-                        <input
-                          type="text"
-                          placeholder="ข้อควรระวังพิเศษ (ถ้ามี)"
-                          value={st.warningNote}
-                          onChange={(e) => handleStepChange(idx, 'warningNote', e.target.value)}
-                          className="w-full px-3 py-1.5 text-xs bg-amber-50/60 border border-amber-200 rounded-xl text-amber-900 placeholder:text-amber-700/50 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Dynamic Notes Builder */}
-              <div className="space-y-3 pt-4 border-t border-slate-200">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    ข้อปฏิบัติเพิ่มเติมสำคัญ (Key Operating Rules)
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={handleAddNoteInput}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>เพิ่มข้อปฏิบัติ</span>
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {formNotes.map((note, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder={`ข้อปฏิบัติสำคัญที่ ${idx + 1}...`}
-                        value={note}
-                        onChange={(e) => handleNoteChange(idx, e.target.value)}
-                        className="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveNoteInput(idx)}
-                        className="p-2 text-slate-400 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 rounded-xl cursor-pointer"
-                        title="ลบข้อปฏิบัตินี้"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Related Tab Link */}
-              <div className="pt-4 border-t border-slate-200">
-                <label className="block text-xs font-bold text-slate-700 mb-1">เชื่อมโยงไปยังระบบปฏิบัติงานในแอป (Optional Link)</label>
-                <select
-                  value={formRelatedTab}
-                  onChange={(e) => setFormRelatedTab(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                >
-                  <option value="">-- ไม่เชื่อมโยง --</option>
-                  <option value="cashCount">ตารางนับเงินประจำกะ (Cash Count)</option>
-                  <option value="receiptSubstitute">ออกใบรับรองแทนใบเสร็จ (Receipt Substitute)</option>
-                  <option value="dailyRevenue">บันทึกยอดขายประจำวัน (Daily Revenue)</option>
-                  <option value="frontOfficeChecklist">รายการเช็คกะประจำวัน (Front Office Checklist)</option>
-                </select>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Modal Buttons */}
@@ -1357,6 +1562,234 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
               >
                 ลบข้อมูล
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* File Preview Modal */}
+      {previewFile && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 bg-orange-50 text-orange-600 rounded-xl border border-orange-200 shrink-0">
+                  {getFileIcon(previewFile.type)}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-slate-800 truncate">{previewFile.name}</h3>
+                  <p className="text-[11px] text-slate-500">{formatFileSize(previewFile.size)}</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPreviewFile(null)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto bg-slate-100 rounded-2xl p-2 flex items-center justify-center min-h-[250px] max-h-[60vh]">
+              {previewFile.type.startsWith('image/') ? (
+                <img src={previewFile.url} alt={previewFile.name} className="max-w-full max-h-[55vh] object-contain rounded-xl shadow-xs" />
+              ) : previewFile.type.includes('pdf') ? (
+                <iframe src={previewFile.url} title={previewFile.name} className="w-full h-[55vh] rounded-xl border border-slate-200" />
+              ) : (
+                <div className="text-center p-6 space-y-3">
+                  <FileText className="w-12 h-12 text-slate-400 mx-auto" />
+                  <p className="text-xs text-slate-600 font-medium">
+                    ไฟล์ประเภทนี้อาจไม่สามารถแสดงตัวอย่างแบบโต้ตอบได้โดยตรง
+                  </p>
+                  <a
+                    href={previewFile.url}
+                    download={previewFile.name}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white font-bold text-xs rounded-xl hover:bg-slate-800 transition-all cursor-pointer"
+                  >
+                    <Download className="w-4 h-4 text-orange-400" />
+                    <span>ดาวน์โหลดไฟล์ ({previewFile.name})</span>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+              <a
+                href={previewFile.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-3 py-2 rounded-xl transition-all"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>เปิดในหน้าต่างใหม่</span>
+              </a>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={previewFile.url}
+                  download={previewFile.name}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-all"
+                >
+                  <Download className="w-4 h-4 text-orange-400" />
+                  <span>ดาวน์โหลด</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewFile(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl cursor-pointer"
+                >
+                  ปิด
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden Print Document Template */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #printable-sop-area, #printable-sop-area * {
+            visibility: visible !important;
+          }
+          #printable-sop-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            padding: 24px !important;
+            font-family: sans-serif !important;
+          }
+        }
+      `}</style>
+
+      {printingSOP && (
+        <div id="printable-sop-area" className="hidden print:block">
+          {/* Header */}
+          <div className="border-b-2 border-slate-900 pb-4 mb-6">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-xl font-black text-slate-900">คู่มือขั้นตอนการปฏิบัติงานแผนกต้อนรับส่วนหน้า (Front Office SOP)</h1>
+                <p className="text-xs font-bold text-slate-600 mt-1">STANDARD OPERATING PROCEDURE MANUAL</p>
+              </div>
+              <div className="text-right">
+                <span className="inline-block bg-slate-900 text-white font-mono text-xs font-bold px-3 py-1 rounded">
+                  {printingSOP.code}
+                </span>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Info Grid */}
+          <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-300 mb-6 text-xs">
+            <div>
+              <p className="text-slate-500 font-bold uppercase text-[10px]">หัวข้อขั้นตอนปฏิบัติงาน / Title (TH):</p>
+              <p className="text-sm font-black text-slate-900">{printingSOP.titleTh}</p>
+              {printingSOP.titleEn && <p className="text-xs text-slate-600 font-semibold">{printingSOP.titleEn}</p>}
+            </div>
+            <div>
+              <p className="text-slate-500 font-bold uppercase text-[10px]">หมวดหมู่ / Category:</p>
+              <p className="font-bold text-slate-800">{printingSOP.categoryLabel}</p>
+            </div>
+            <div>
+              <p className="text-slate-500 font-bold uppercase text-[10px]">ระดับความสำคัญ / Priority:</p>
+              <p className="font-bold text-slate-800">{printingSOP.importance}</p>
+            </div>
+            <div>
+              <p className="text-slate-500 font-bold uppercase text-[10px]">เวลาโดยประมาณ / Est. Duration:</p>
+              <p className="font-bold text-slate-800">{printingSOP.estimatedTime}</p>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="mb-6">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-300 pb-1">
+              วัตถุประสงค์และภาพรวม (Summary)
+            </h3>
+            <p className="text-xs text-slate-800 leading-relaxed bg-white p-3 border border-slate-200 rounded">
+              {printingSOP.summary}
+            </p>
+          </div>
+
+          {/* Steps */}
+          <div className="mb-6">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 border-b border-slate-300 pb-1">
+              ลำดับขั้นตอนปฏิบัติงาน (Step-by-Step Procedure)
+            </h3>
+            <div className="space-y-3">
+              {printingSOP.steps.map((st, idx) => (
+                <div key={idx} className="border border-slate-300 rounded-lg p-3 text-xs bg-white">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold bg-slate-900 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]">
+                      {st.number || idx + 1}
+                    </span>
+                    <span className="font-bold text-slate-900 text-sm">{st.title}</span>
+                  </div>
+                  <p className="text-slate-700 pl-7 whitespace-pre-wrap leading-relaxed">{st.description}</p>
+                  {st.warningNote && (
+                    <div className="mt-2 ml-7 p-2 bg-amber-50 border border-amber-300 rounded text-amber-900 text-[11px] font-medium">
+                      <strong>ข้อควรระวัง:</strong> {st.warningNote}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Important Notes */}
+          {printingSOP.importantNotes && printingSOP.importantNotes.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-300 pb-1">
+                ข้อปฏิบัติเพิ่มเติมสำคัญ (Key Operating Rules)
+              </h3>
+              <ul className="list-disc list-inside space-y-1 text-xs text-slate-800 pl-2">
+                {printingSOP.importantNotes.map((note, idx) => (
+                  <li key={idx}>{note}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Attachments */}
+          {printingSOP.attachments && printingSOP.attachments.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 border-b border-slate-300 pb-1">
+                รายการเอกสารและไฟล์แนบ ({printingSOP.attachments.length})
+              </h3>
+              <ul className="list-disc list-inside space-y-1 text-xs text-slate-700 pl-2">
+                {printingSOP.attachments.map((att) => (
+                  <li key={att.id}>
+                    {att.name} ({formatFileSize(att.size)})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Approval Signatures Footer */}
+          <div className="mt-12 pt-6 border-t border-slate-400 grid grid-cols-3 gap-4 text-center text-xs text-slate-700">
+            <div>
+              <div className="h-12 border-b border-slate-400 mb-2"></div>
+              <p className="font-bold">ผู้บันทึก / พนักงาน</p>
+              <p className="text-[10px] text-slate-500">ลายมือชื่อและวันที่</p>
+            </div>
+            <div>
+              <div className="h-12 border-b border-slate-400 mb-2"></div>
+              <p className="font-bold">หัวหน้าแผนก (Front Office Supervisor)</p>
+              <p className="text-[10px] text-slate-500">ลายมือชื่อและวันที่</p>
+            </div>
+            <div>
+              <div className="h-12 border-b border-slate-400 mb-2"></div>
+              <p className="font-bold">ผู้จัดการทั่วไป (General Manager)</p>
+              <p className="text-[10px] text-slate-500">ลายมือชื่อและวันที่</p>
             </div>
           </div>
         </div>
