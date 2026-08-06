@@ -26,6 +26,7 @@ import {
   Check,
   HelpCircle,
   KeyRound,
+  ListOrdered,
   Plus,
   Edit3,
   Trash2,
@@ -686,12 +687,17 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
 
     const cleanSteps: SOPStep[] = formSteps
       .filter((st) => st.title.trim() || st.description.trim())
-      .map((st, index) => ({
-        number: index + 1,
-        title: st.title.trim() || `ขั้นตอนที่ ${index + 1}`,
-        description: st.description.trim(),
-        warningNote: st.warningNote.trim() || undefined,
-      }));
+      .map((st, index) => {
+        const stepObj: SOPStep = {
+          number: index + 1,
+          title: st.title.trim() || `ขั้นตอนที่ ${index + 1}`,
+          description: st.description.trim(),
+        };
+        if (st.warningNote.trim()) {
+          stepObj.warningNote = st.warningNote.trim();
+        }
+        return stepObj;
+      });
 
     const finalSteps: SOPStep[] = cleanSteps.length > 0
       ? cleanSteps
@@ -711,6 +717,7 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
     else if (formRelatedTab === 'receiptSubstitute') relatedTabLabel = 'ไปที่หน้า ออกใบรับรองแทนใบเสร็จ';
     else if (formRelatedTab === 'dailyRevenue') relatedTabLabel = 'ไปที่หน้า บันทึกยอดขาย (Daily Revenue)';
     else if (formRelatedTab === 'frontOfficeChecklist') relatedTabLabel = 'ไปที่หน้า Checklist ประจำกะ';
+    else if (!formRelatedTab) relatedTabLabel = undefined;
 
     const newOrUpdatedSOP: SOPItem = {
       id: editingSOP ? editingSOP.id : `sop-custom-${Date.now()}`,
@@ -723,10 +730,10 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
       estimatedTime: formEstimatedTime.trim() || '3-5 นาที',
       summary: formSummary.trim() || formTitleTh.trim(),
       steps: finalSteps,
-      importantNotes: finalNotes,
-      relatedTab: (formRelatedTab as SOPItem['relatedTab']) || editingSOP?.relatedTab,
-      relatedTabLabel,
-      attachments: formAttachments.length > 0 ? formAttachments : undefined,
+      ...(finalNotes && finalNotes.length > 0 ? { importantNotes: finalNotes } : {}),
+      ...(formRelatedTab ? { relatedTab: formRelatedTab as SOPItem['relatedTab'] } : {}),
+      ...(relatedTabLabel ? { relatedTabLabel } : {}),
+      ...(formAttachments.length > 0 ? { attachments: formAttachments } : {}),
     };
 
     let updatedList: SOPItem[];
@@ -1432,6 +1439,141 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                     placeholder="สรุปสั้นๆ ถึงวัตถุประสงค์ของขั้นตอน SOP นี้..."
                     className="w-full p-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">เชื่อมโยงไปยังเมนูทำงานในระบบ (Related System Tab)</label>
+                  <select
+                    value={formRelatedTab}
+                    onChange={(e) => setFormRelatedTab(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  >
+                    <option value="">-- ไม่ระบุการเชื่อมโยง (None) --</option>
+                    <option value="cashCount">ตารางนับเงินประจำกะ (Cash Count)</option>
+                    <option value="receiptSubstitute">ออกใบรับรองแทนใบเสร็จ (Receipt Substitute)</option>
+                    <option value="dailyRevenue">บันทึกยอดขายประจำวัน (Daily Revenue)</option>
+                    <option value="frontOfficeChecklist">Checklist การทำงานประจำกะ (FO Checklist)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Dynamic Steps Builder */}
+              <div className="space-y-4 pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <ListOrdered className="w-4 h-4 text-orange-500" />
+                      ลำดับขั้นตอนการปฏิบัติงาน (Step-by-Step Procedure)
+                    </h4>
+                    <p className="text-[11px] text-slate-400">ระบุขั้นตอนย่อยที่พนักงานต้องปฏิบัติตามลำดับ</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddStepInput}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-orange-500" />
+                    <span>เพิ่มขั้นตอนย่อย (Add Step)</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {formSteps.map((step, index) => (
+                    <div key={index} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 relative group">
+                      <div className="flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-900 text-white font-mono text-[11px] font-bold">
+                          ขั้นตอนที่ {index + 1}
+                        </span>
+
+                        {formSteps.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveStepInput(index)}
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="ลบขั้นตอนย่อยนี้"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={step.title}
+                          onChange={(e) => handleStepChange(index, 'title', e.target.value)}
+                          placeholder="ชื่อขั้นตอนย่อย เช่น 1. ตรวจสอบบัตรประชาชน และ Voucher..."
+                          className="w-full px-3 py-1.5 text-xs font-bold bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                        />
+
+                        <textarea
+                          rows={2}
+                          value={step.description}
+                          onChange={(e) => handleStepChange(index, 'description', e.target.value)}
+                          placeholder="รายละเอียดสิ่งที่ต้องปฏิบัติเพิ่มเติม..."
+                          className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                        />
+
+                        <div className="flex items-center gap-2 bg-amber-50/80 p-2 rounded-xl border border-amber-200/80">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <input
+                            type="text"
+                            value={step.warningNote}
+                            onChange={(e) => handleStepChange(index, 'warningNote', e.target.value)}
+                            placeholder="ข้อควรระวังพิเศษสำหรับขั้นตอนนี้ (ถ้ามี)..."
+                            className="w-full px-2 py-1 text-xs bg-transparent border-0 focus:outline-none font-medium text-amber-900 placeholder:text-amber-700/50"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic Key Operating Rules Builder */}
+              <div className="space-y-3 pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <ShieldAlert className="w-4 h-4 text-orange-500" />
+                      ข้อควรระวัง / ข้อปฏิบัติเพิ่มเติมสำคัญ (Key Operating Rules)
+                    </h4>
+                    <p className="text-[11px] text-slate-400">กฎเหล็ก ข้อห้าม หรือหมายเหตุระเบียบการทำงาน</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleAddNoteInput}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-orange-500" />
+                    <span>เพิ่มข้อปฏิบัติ (Add Rule)</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {formNotes.map((note, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={note}
+                        onChange={(e) => handleNoteChange(index, e.target.value)}
+                        placeholder="เช่น ห้ามรับเงินสดโดยไม่ออกใบเสร็จรับเงินอย่างเป็นทางการเด็ดขาด..."
+                        className="flex-1 px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-800"
+                      />
+                      {formNotes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveNoteInput(index)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                          title="ลบข้อปฏิบัตินี้"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 

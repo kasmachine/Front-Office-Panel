@@ -887,11 +887,12 @@ export async function saveSOPToFirebase(item: SOPItem): Promise<void> {
   try {
     await initAuth();
     const docRef = doc(db, SOP_COLLECTION, item.id);
-    await setDoc(docRef, {
+    const cleaned = JSON.parse(JSON.stringify({
       ...item,
       updatedAt: new Date().toISOString(),
       createdAt: item.createdAt || Date.now(),
-    });
+    }));
+    await setDoc(docRef, cleaned);
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
   }
