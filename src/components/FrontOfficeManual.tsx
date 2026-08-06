@@ -1529,56 +1529,6 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
                     className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">ระดับความสำคัญ (Importance Level)</label>
-                  <select
-                    value={formImportance}
-                    onChange={(e) => setFormImportance(e.target.value as SOPItem['importance'])}
-                    className="w-full px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                  >
-                    <option value="CRITICAL">CRITICAL (สำคัญมากที่สุด/เร่งด่วน)</option>
-                    <option value="REQUIRED">REQUIRED (จำเป็นต้องปฏิบัติ)</option>
-                    <option value="RECOMMENDED">RECOMMENDED (ข้อเสนอแนะ)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">เวลาโดยประมาณในการปฏิบัติงาน</label>
-                  <input
-                    type="text"
-                    value={formEstimatedTime}
-                    onChange={(e) => setFormEstimatedTime(e.target.value)}
-                    placeholder="เช่น 3-5 นาที / ห้อง"
-                    className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">คำอธิบายสรุปภาพรวม (Summary)</label>
-                  <textarea
-                    rows={2}
-                    value={formSummary}
-                    onChange={(e) => setFormSummary(e.target.value)}
-                    placeholder="สรุปสั้นๆ ถึงวัตถุประสงค์ของขั้นตอน SOP นี้..."
-                    className="w-full p-3 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">เชื่อมโยงไปยังเมนูทำงานในระบบ (Related System Tab)</label>
-                  <select
-                    value={formRelatedTab}
-                    onChange={(e) => setFormRelatedTab(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs font-semibold bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                  >
-                    <option value="">-- ไม่ระบุการเชื่อมโยง (None) --</option>
-                    <option value="cashCount">ตารางนับเงินประจำกะ (Cash Count)</option>
-                    <option value="receiptSubstitute">ออกใบรับรองแทนใบเสร็จ (Receipt Substitute)</option>
-                    <option value="dailyRevenue">บันทึกยอดขายประจำวัน (Daily Revenue)</option>
-                    <option value="frontOfficeChecklist">Checklist การทำงานประจำกะ (FO Checklist)</option>
-                  </select>
-                </div>
               </div>
 
               {/* Dynamic Steps Builder */}
