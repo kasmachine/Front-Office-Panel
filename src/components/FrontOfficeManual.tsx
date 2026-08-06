@@ -447,79 +447,128 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
     return <File className="w-4 h-4 text-slate-500" />;
   };
 
-  // Handle upload in form modal
-  const handleModalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Compress images & validate attachment files for Firestore / LocalStorage limits
+  const processAndCompressFile = async (file: File): Promise<SOPAttachment | null> => {
+    // If image, compress via Canvas to max width/height 1200px and JPEG quality 0.75
+    if (file.type.startsWith('image/')) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 1200;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+              const approxSize = Math.round((dataUrl.length * 3) / 4);
+              resolve({
+                id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                name: file.name.replace(/\.[^/.]+$/, '') + '.jpg',
+                size: approxSize,
+                type: 'image/jpeg',
+                url: dataUrl,
+                uploadedAt: new Date().toISOString(),
+              });
+              return;
+            }
+            resolve({
+              id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+              name: file.name,
+              size: file.size,
+              type: file.type || 'image/jpeg',
+              url: e.target?.result as string,
+              uploadedAt: new Date().toISOString(),
+            });
+          };
+          img.onerror = () => resolve(null);
+          img.src = e.target?.result as string;
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      });
+    }
 
-    for (let i = 0; i < files.length; i++) {
-      const file: File = files[i];
-      if (file.size > 8 * 1024 * 1024) {
-        alert(`ไฟล์ "${file.name}" มีขนาดใหญ่เกิน 8MB กรุณาเลือกไฟล์ที่ไม่เกิน 8MB`);
-        continue;
-      }
+    // Non-image document size check (600KB max for Firestore document safety)
+    if (file.size > 600 * 1024) {
+      alert(`ไฟล์เอกสาร "${file.name}" มีขนาด (${(file.size / 1024).toFixed(0)} KB) ใหญ่เกินข้อจำกัดฐานข้อมูล (สูงสุด 600 KB ต่อไฟล์เอกสาร)\n\nกรุณาย่อขนาด PDF หรือแบ่งไฟล์ก่อนแนบอีกครั้ง`);
+      return null;
+    }
 
+    return new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onload = (evt) => {
-        const url = evt.target?.result as string;
-        if (!url) return;
-        const newAtt: SOPAttachment = {
+      reader.onload = (e) => {
+        const url = e.target?.result as string;
+        if (!url) {
+          resolve(null);
+          return;
+        }
+        resolve({
           id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           name: file.name,
           size: file.size,
           type: file.type || 'application/octet-stream',
           url,
           uploadedAt: new Date().toISOString(),
-        };
-        setFormAttachments((prev) => [...prev, newAtt]);
+        });
       };
+      reader.onerror = () => resolve(null);
       reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle upload in form modal
+  const handleModalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      const file: File = files[i];
+      const att = await processAndCompressFile(file);
+      if (att) {
+        setFormAttachments((prev) => [...prev, att]);
+      }
     }
 
     e.target.value = '';
   };
 
   // Handle direct file upload to an existing SOP item
-  const handleDirectFileUpload = (sop: SOPItem, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDirectFileUpload = async (sop: SOPItem, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const newItems: SOPAttachment[] = [];
-    let pendingCount = files.length;
-
     for (let i = 0; i < files.length; i++) {
       const file: File = files[i];
-      if (file.size > 8 * 1024 * 1024) {
-        alert(`ไฟล์ "${file.name}" มีขนาดใหญ่เกิน 8MB กรุณาเลือกไฟล์ที่ไม่เกิน 8MB`);
-        pendingCount--;
-        continue;
+      const att = await processAndCompressFile(file);
+      if (att) {
+        newItems.push(att);
       }
+    }
 
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const url = evt.target?.result as string;
-        if (url) {
-          newItems.push({
-            id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            name: file.name,
-            size: file.size,
-            type: file.type || 'application/octet-stream',
-            url,
-            uploadedAt: new Date().toISOString(),
-          });
-        }
-        pendingCount--;
-        if (pendingCount <= 0 && newItems.length > 0) {
-          const updatedSOP: SOPItem = {
-            ...sop,
-            attachments: [...(sop.attachments || []), ...newItems],
-          };
-          const updatedList = sops.map((s) => (s.id === sop.id ? updatedSOP : s));
-          saveSOPsToStorage(updatedList);
-          saveSOPToFirebase(updatedSOP).catch(console.error);
-        }
+    if (newItems.length > 0) {
+      const updatedSOP: SOPItem = {
+        ...sop,
+        attachments: [...(sop.attachments || []), ...newItems],
       };
-      reader.readAsDataURL(file);
+      const updatedList = sops.map((s) => (s.id === sop.id ? updatedSOP : s));
+      saveSOPsToStorage(updatedList);
+      saveSOPToFirebase(updatedSOP).catch(console.error);
     }
 
     e.target.value = '';
@@ -545,16 +594,16 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
 
   useEffect(() => {
     let isMounted = true;
-    const unsubscribe = subscribeSOPs((remoteSOPs, hasPendingWrites, isInitialized) => {
+    const unsubscribe = subscribeSOPs((remoteSOPs, hasPendingWrites) => {
       if (!isMounted) return;
       setIsPendingSync(hasPendingWrites);
 
       if (remoteSOPs !== null) {
-        if (!isInitialized && remoteSOPs.length === 0) {
-          // Collection is completely uninitialized in Firestore -> seed initial defaults once
-          seedInitialSOPsIfNeeded(DEFAULT_SOP_DATA).catch(() => {});
+        if (remoteSOPs.length === 0) {
+          // Firestore is empty -> seed initial default SOPs
+          seedInitialSOPsIfNeeded(DEFAULT_SOP_DATA).catch(console.error);
         } else {
-          // Normal sync: update state with remoteSOPs (even if empty after user deleted items)
+          // Normal sync: update state with remoteSOPs
           setSops(remoteSOPs);
           try {
             localStorage.setItem('nan_seasons_sops', JSON.stringify(remoteSOPs));

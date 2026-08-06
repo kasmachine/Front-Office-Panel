@@ -921,27 +921,14 @@ export async function saveAllSOPsToFirebase(sops: SOPItem[]): Promise<void> {
 }
 
 export async function seedInitialSOPsIfNeeded(defaultSops: SOPItem[]): Promise<void> {
-  if (isQuotaExceeded || !defaultSops) return;
+  if (isQuotaExceeded || !defaultSops || defaultSops.length === 0) return;
   const path = `${SOP_COLLECTION}/_metadata`;
   try {
     await initAuth();
     const metaRef = doc(db, SOP_COLLECTION, '_metadata');
-    let metaSnap;
-    try {
-      metaSnap = await getDoc(metaRef);
-    } catch (docErr: unknown) {
-      const msg = docErr instanceof Error ? docErr.message : String(docErr);
-      if (msg.includes('offline') || msg.includes('unavailable') || msg.includes('client is offline')) {
-        console.warn('[Firebase] Client is offline, skipping SOP seeding for now.');
-        return;
-      }
-      throw docErr;
-    }
-    if (!metaSnap || !metaSnap.exists()) {
-      await setDoc(metaRef, { initialized: true, seededAt: new Date().toISOString() });
-      for (const item of defaultSops) {
-        await saveSOPToFirebase(item);
-      }
+    await setDoc(metaRef, { initialized: true, seededAt: new Date().toISOString() });
+    for (const item of defaultSops) {
+      await saveSOPToFirebase(item);
     }
   } catch (err: unknown) {
     handleFirestoreError(err, OperationType.WRITE, path);
