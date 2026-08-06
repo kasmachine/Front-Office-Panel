@@ -4,6 +4,7 @@ import {
   saveSOPToFirebase,
   deleteSOPFromFirebase,
   saveAllSOPsToFirebase,
+  seedInitialSOPsIfNeeded,
 } from '../lib/firebase';
 import {
   BookOpen,
@@ -401,21 +402,23 @@ export const FrontOfficeManual: React.FC<FrontOfficeManualProps> = ({ onNavigate
 
   useEffect(() => {
     let isMounted = true;
-    const unsubscribe = subscribeSOPs((remoteSOPs, hasPendingWrites) => {
+    const unsubscribe = subscribeSOPs((remoteSOPs, hasPendingWrites, isInitialized) => {
       if (!isMounted) return;
       setIsPendingSync(hasPendingWrites);
 
-      if (remoteSOPs && remoteSOPs.length > 0) {
-        setSops(remoteSOPs);
-        setIsLiveSync(true);
-        try {
-          localStorage.setItem('nan_seasons_sops', JSON.stringify(remoteSOPs));
-        } catch (e) {
-          console.error('Failed to save SOPs to localStorage:', e);
+      if (remoteSOPs !== null) {
+        if (!isInitialized && remoteSOPs.length === 0) {
+          // Collection is completely uninitialized in Firestore -> seed initial defaults once
+          seedInitialSOPsIfNeeded(DEFAULT_SOP_DATA).catch(console.error);
+        } else {
+          // Normal sync: update state with remoteSOPs (even if empty after user deleted items)
+          setSops(remoteSOPs);
+          try {
+            localStorage.setItem('nan_seasons_sops', JSON.stringify(remoteSOPs));
+          } catch (e) {
+            console.error('Failed to save SOPs to localStorage:', e);
+          }
         }
-      } else if (remoteSOPs && remoteSOPs.length === 0) {
-        // If Firestore collection is empty, seed DEFAULT_SOP_DATA so all clients get the default SOPs
-        saveAllSOPsToFirebase(DEFAULT_SOP_DATA).catch(console.error);
         setIsLiveSync(true);
       }
     });

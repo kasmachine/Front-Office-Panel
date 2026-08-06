@@ -904,26 +904,52 @@ export async function deleteSOPFromFirebase(sopId: string): Promise<void> {
 export async function saveAllSOPsToFirebase(sops: SOPItem[]): Promise<void> {
   if (isQuotaExceeded || !sops) return;
   await initAuth();
+  const metaRef = doc(db, SOP_COLLECTION, '_metadata');
+  await setDoc(metaRef, { initialized: true, updatedAllAt: new Date().toISOString() });
   for (const item of sops) {
     await saveSOPToFirebase(item);
   }
 }
 
-export function subscribeSOPs(callback: (sops: SOPItem[] | null, hasPendingWrites: boolean) => void) {
+export async function seedInitialSOPsIfNeeded(defaultSops: SOPItem[]): Promise<void> {
+  if (isQuotaExceeded || !defaultSops) return;
+  try {
+    await initAuth();
+    const metaRef = doc(db, SOP_COLLECTION, '_metadata');
+    const metaSnap = await getDoc(metaRef);
+    if (!metaSnap.exists()) {
+      await setDoc(metaRef, { initialized: true, seededAt: new Date().toISOString() });
+      for (const item of defaultSops) {
+        await saveSOPToFirebase(item);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to seed initial SOPs:', err);
+  }
+}
+
+export function subscribeSOPs(callback: (sops: SOPItem[] | null, hasPendingWrites: boolean, isInitialized: boolean) => void) {
   initAuth().catch(() => {});
-  const q = query(collection(db, SOP_COLLECTION), orderBy('code', 'asc'));
+  const q = query(collection(db, SOP_COLLECTION));
   return onSnapshot(
     q,
     (snapshot) => {
       const items: SOPItem[] = [];
+      let isInitialized = false;
       snapshot.forEach((docSnap) => {
-        items.push(docSnap.data() as SOPItem);
+        if (docSnap.id === '_metadata') {
+          isInitialized = true;
+        } else {
+          items.push(docSnap.data() as SOPItem);
+        }
       });
-      callback(items, snapshot.metadata.hasPendingWrites);
+      // Sort items by code ascending
+      items.sort((a, b) => (a.code || '').localeCompare(b.code || ''));
+      callback(items, snapshot.metadata.hasPendingWrites, isInitialized);
     },
     (err) => {
       handleFirestoreError(err, OperationType.LIST, SOP_COLLECTION);
-      callback(null, false);
+      callback(null, false, false);
     }
   );
 }
