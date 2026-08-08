@@ -1,4 +1,5 @@
 import { CashCountData, ReceiptSubstituteData, ReceiptSubstituteItem } from '../types';
+import { safeLocalStorage } from './storage';
 
 export function getTodayFormatted(): string {
   const now = new Date();
@@ -176,7 +177,10 @@ export function syncMinusExpensesToReceipt(
   const dateKey = targetDate.replace(/\//g, '-');
   const targetDocId = `receipt-${dateKey}`;
 
-  if (!itemsChanged && !datesChanged && currentReceiptData.id === targetDocId) {
+  const storedIdCard = typeof window !== 'undefined' ? safeLocalStorage.getItem('nan_seasons_id_card_image') : null;
+  const preservedIdCard = currentReceiptData.idCardImage || storedIdCard || null;
+
+  if (!itemsChanged && !datesChanged && currentReceiptData.id === targetDocId && currentReceiptData.idCardImage === preservedIdCard) {
     return currentReceiptData;
   }
 
@@ -186,6 +190,7 @@ export function syncMinusExpensesToReceipt(
     startDate: targetDate,
     endDate: targetDate,
     items: mergedItems,
+    idCardImage: preservedIdCard,
   };
 }
 

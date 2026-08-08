@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ReceiptSubstituteData, ReceiptSubstituteItem, CashCountData } from '../types';
 import { ArabicToBahtText } from '../utils/bahttext';
 import { extractMinusExpenses, getTodayFormatted, formatDateToDisplay, isNonReceiptExpense } from '../utils/syncUtils';
+import { safeLocalStorage } from '../utils/storage';
 import { getStoredCategories } from './ExpenseCategorySelect';
 import { getStoredStaffList } from './StaffSelect';
 import { Plus, Trash2, Upload, Image as ImageIcon, ShieldCheck, Calendar, PenTool, CheckCircle2, Percent } from 'lucide-react';
@@ -42,10 +43,23 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeSigModal, setActiveSigModal] = useState<'requester' | 'approver' | null>(null);
 
+  // Auto-restore ID Card image from localStorage if not present in current state, or save it when present
+  useEffect(() => {
+    if (!data.idCardImage) {
+      const stored = safeLocalStorage.getItem('nan_seasons_id_card_image');
+      if (stored) {
+        onChange({ ...data, idCardImage: stored });
+      }
+    } else {
+      safeLocalStorage.setItem('nan_seasons_id_card_image', data.idCardImage);
+    }
+  }, [data.idCardImage]);
+
   const handleDateChange = (newDateVal: string) => {
     if (!newDateVal) return;
     const formatted = formatDateToDisplay(newDateVal);
     const newDocId = `receipt-${newDateVal.replace(/\//g, '-')}`;
+    const preservedIdCard = data.idCardImage || safeLocalStorage.getItem('nan_seasons_id_card_image');
 
     // 1. Search in savedReceipts (history & Firebase) for an existing record matching formatted date or newDateVal
     const existingSaved = savedReceipts.find((r) => {
@@ -63,7 +77,10 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
     });
 
     if (existingSaved) {
-      onChange(existingSaved);
+      onChange({
+        ...existingSaved,
+        idCardImage: existingSaved.idCardImage || preservedIdCard || null,
+      });
       return;
     }
 
@@ -120,6 +137,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
       startDate: formatted,
       endDate: formatted,
       items: newItems,
+      idCardImage: preservedIdCard || null,
     });
   };
 
@@ -165,7 +183,11 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
     if (file) {
       const reader = new FileReader();
       reader.onload = (uploadEvent) => {
-        onChange({ ...data, idCardImage: uploadEvent.target?.result as string });
+        const imgUrl = uploadEvent.target?.result as string;
+        if (imgUrl) {
+          safeLocalStorage.setItem('nan_seasons_id_card_image', imgUrl);
+          onChange({ ...data, idCardImage: imgUrl });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -524,7 +546,7 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
             {/* ID Card Display Box with Watermark */}
             <div className="relative border-2 border-slate-300 border-dashed rounded-lg p-2 bg-slate-50 flex flex-col items-center justify-center flex-1 min-h-[160px] overflow-hidden">
               {data.idCardImage ? (
-                <div className="relative w-full h-auto rounded border border-slate-300 overflow-hidden shadow-2xs">
+                <div className="relative w-full h-auto rounded border border-slate-300 overflow-hidden shadow-2xs group">
                   <img
                     src={data.idCardImage}
                     alt="Thai ID Card Copy"
@@ -536,6 +558,20 @@ export const ReceiptSubstituteSheet: React.FC<ReceiptSubstituteSheetProps> = ({
                       {data.watermarkText}
                     </div>
                   </div>
+                  {/* Explicit delete button for ID card image if user specifically wants to remove it */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('คุณต้องการลบรูปบัตรประชาชนออกใช่หรือไม่?')) {
+                        safeLocalStorage.removeItem('nan_seasons_id_card_image');
+                        onChange({ ...data, idCardImage: null });
+                      }
+                    }}
+                    className="no-print absolute top-1 right-1 bg-rose-500 hover:bg-rose-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-xs text-xs z-10"
+                    title="ลบรูปบัตรประชาชน"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               ) : (
                 /* Default Styled Mock Thai ID Card Placeholder */

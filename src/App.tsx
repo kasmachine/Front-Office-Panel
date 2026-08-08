@@ -693,11 +693,16 @@ export default function App() {
   };
 
   const handleResetReceipt = () => {
-    if (window.confirm('คุณต้องการล้างข้อมูลใบรับรองแทนใบเสร็จนี้ใช่หรือไม่?')) {
+    if (window.confirm('คุณต้องการล้างข้อมูลใบรับรองแทนใบเสร็จนี้ใช่หรือไม่? (ข้อมูลรูปบัตรประชาชนจะไม่ถูกลบ)')) {
+      const preservedIdCard = receiptData.idCardImage || safeLocalStorage.getItem('nan_seasons_id_card_image');
       const fresh = getInitialReceiptData();
-      setReceiptData(fresh);
-      saveActiveDraftToFirebase('receiptSubstitute', fresh);
-      showToast('ล้างข้อมูลใบรับรองแทนใบเสร็จเรียบร้อย');
+      const updated = {
+        ...fresh,
+        idCardImage: preservedIdCard || fresh.idCardImage,
+      };
+      setReceiptData(updated);
+      saveActiveDraftToFirebase('receiptSubstitute', updated);
+      showToast('ล้างข้อมูลใบรับรองแทนใบเสร็จเรียบร้อย (คงรูปบัตรประชาชนไว้)');
     }
   };
 

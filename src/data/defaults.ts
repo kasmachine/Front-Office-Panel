@@ -1,4 +1,5 @@
 import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, DailyRevenueItem } from '../types';
+import { safeLocalStorage } from '../utils/storage';
 
 export const MONTH_TH = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -64,6 +65,7 @@ export function getInitialCashCountData(): CashCountData {
 export function getInitialReceiptData(): ReceiptSubstituteData {
   const today = new Date();
   const dateStr = today.toISOString().split('T')[0];
+  const storedIdCard = safeLocalStorage.getItem('nan_seasons_id_card_image');
 
   return {
     id: `receipt-${Date.now()}`,
@@ -80,7 +82,7 @@ export function getInitialReceiptData(): ReceiptSubstituteData {
     requesterPosition: '',
     approverName: 'นายเกษม มนตรี',
     approverPosition: 'เจ้าของกิจการ',
-    idCardImage: null,
+    idCardImage: storedIdCard || null,
     watermarkText: 'ใช้สำหรับใบรับรองแทนใบเสร็จรับเงิน น่าน ซีซั่นส์ บูติก รีสอร์ท เท่านี้',
     createdAt: Date.now(),
   };
