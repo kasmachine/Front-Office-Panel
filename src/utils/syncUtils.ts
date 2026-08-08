@@ -179,6 +179,9 @@ export function syncMinusExpensesToReceipt(
 
   const storedIdCard = typeof window !== 'undefined' ? safeLocalStorage.getItem('nan_seasons_id_card_image') : null;
   const preservedIdCard = currentReceiptData.idCardImage || storedIdCard || null;
+  if (typeof window !== 'undefined' && preservedIdCard) {
+    safeLocalStorage.setItem('nan_seasons_id_card_image', preservedIdCard);
+  }
 
   if (!itemsChanged && !datesChanged && currentReceiptData.id === targetDocId && currentReceiptData.idCardImage === preservedIdCard) {
     return currentReceiptData;

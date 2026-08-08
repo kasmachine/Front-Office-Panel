@@ -69,6 +69,7 @@ export default function App() {
     const today = new Date();
     const todayReceiptDate = today.toISOString().split('T')[0];
     const saved = safeLocalStorage.getItem('nan_seasons_current_receipt');
+    const storedIdCard = safeLocalStorage.getItem('nan_seasons_id_card_image');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -77,6 +78,7 @@ export default function App() {
           requesterName: parsed.requesterName || 'นางสาว ขวัญทิชา ตั้งเสรีกล',
           approverName: (!parsed.approverName || parsed.approverName === 'นาย กษม โพธิ์ประเสริฐ') ? 'นายเกษม มนตรี' : parsed.approverName,
           approverPosition: parsed.approverPosition || 'เจ้าของกิจการ',
+          idCardImage: parsed.idCardImage || storedIdCard || null,
           startDate: todayReceiptDate,
           endDate: todayReceiptDate,
         };
@@ -359,10 +361,17 @@ export default function App() {
 
     const { lastModifiedAt, ...cleanData } = remoteData;
     const initialDefaults = getInitialReceiptData();
+    const storedIdCard = safeLocalStorage.getItem('nan_seasons_id_card_image');
+    const effectiveIdCard = cleanData.idCardImage || storedIdCard || initialDefaults.idCardImage || null;
+
     const updated: ReceiptSubstituteData = {
       ...initialDefaults,
       ...(cleanData as ReceiptSubstituteData),
+      idCardImage: effectiveIdCard,
     };
+    if (effectiveIdCard) {
+      safeLocalStorage.setItem('nan_seasons_id_card_image', effectiveIdCard);
+    }
     const serializedRemote = canonicalStringify(updated);
 
     lastRemoteReceiptSerializedRef.current = serializedRemote;
@@ -777,7 +786,11 @@ export default function App() {
         }
         setSavedReceipts((prev) => [currentReceiptRecord, ...prev.filter((r) => r.id !== currentReceiptRecord.id)]);
 
-        const freshReceipt = getInitialReceiptData();
+        const preservedIdCard = receiptData.idCardImage || safeLocalStorage.getItem('nan_seasons_id_card_image');
+        const freshReceipt = {
+          ...getInitialReceiptData(),
+          idCardImage: preservedIdCard || null,
+        };
         setReceiptData(freshReceipt);
         saveActiveDraftToFirebase('receiptSubstitute', freshReceipt);
         showToast('บันทึกฉบับเดิมลงประวัติ 7 วันเรียบร้อยแล้ว และพร้อมสำหรับฉบับใหม่');
