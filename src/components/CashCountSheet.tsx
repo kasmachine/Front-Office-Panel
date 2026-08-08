@@ -32,6 +32,7 @@ function fromIsoDate(isoStr: string): string {
 import { StaffSelect } from './StaffSelect';
 import { ExpenseCategorySelect, getStoredCategories } from './ExpenseCategorySelect';
 import { saveCashCountToFirebase } from '../lib/firebase';
+import { getPreviousDayLateBalance } from '../utils/syncUtils';
 import { Users } from 'lucide-react';
 
 interface CashCountSheetProps {
@@ -52,6 +53,32 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
   onOpenManageCategories,
 }) => {
   const [activeSigModal, setActiveSigModal] = useState<'staffIn' | 'staffOut' | null>(null);
+
+  // Auto-populate Previous balance from yesterday's Late shift if current Previous balance is 0
+  useEffect(() => {
+    if (
+      (!data.beerPrevBalance || data.beerPrevBalance === 0) &&
+      savedCashCounts &&
+      savedCashCounts.length > 0 &&
+      data.date
+    ) {
+      const autoPrev = getPreviousDayLateBalance(data.date, savedCashCounts);
+      if (autoPrev > 0) {
+        onChange({ ...data, beerPrevBalance: autoPrev });
+      }
+    }
+  }, [data.date, savedCashCounts]);
+
+  const handlePullPrevDayLateBalance = () => {
+    const fetchedBalance = getPreviousDayLateBalance(data.date, savedCashCounts || []);
+    if (fetchedBalance > 0) {
+      onChange({ ...data, beerPrevBalance: fetchedBalance });
+      const formatted = `THB ${fetchedBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      alert(`ดึงยอด Previous Balance จากกะบ่ายวันก่อนหน้า (${formatted}) เรียบร้อยแล้ว`);
+    } else {
+      alert('ไม่พบประวัติการบันทึกยอดเงินของกะบ่ายในวันก่อนหน้า');
+    }
+  };
 
   const isMinusItem = (itemStr: string): boolean => {
     if (!itemStr) return false;
@@ -168,26 +195,23 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
     // Determine previous balance carried forward from current shift close / Late shift
     let inheritedPrevBalance = 0;
 
-    if (totalCashOut > 0) {
-      inheritedPrevBalance = totalCashOut;
-    } else if (totalCashIn > 0) {
-      inheritedPrevBalance = totalCashIn;
-    } else if (savedCashCounts && savedCashCounts.length > 0) {
-      const lateRecord = savedCashCounts.find((c) => c.shift === 'Late') || savedCashCounts[0];
-      if (lateRecord) {
-        const lateOut = lateRecord.denominations.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0);
-        const lateIn = lateRecord.denominations.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0);
-        inheritedPrevBalance = lateOut > 0 ? lateOut : (lateIn > 0 ? lateIn : (lateRecord.beerPrevBalance || 0));
-      } else {
-        inheritedPrevBalance = data.beerPrevBalance || 0;
-      }
-    } else {
-      inheritedPrevBalance = data.beerPrevBalance || 0;
-    }
-
     let nextShift = 'Early';
     if (data.shift === 'Early') nextShift = 'Late';
     else nextShift = 'Early';
+
+    if (nextShift === 'Early') {
+      // Switching to Early shift -> pull previous day's Late shift balance
+      inheritedPrevBalance = getPreviousDayLateBalance(data.date, savedCashCounts) || (totalCashOut > 0 ? totalCashOut : totalCashIn);
+    } else {
+      // Switching to Late shift on same day -> pull Early shift total
+      if (totalCashOut > 0) {
+        inheritedPrevBalance = totalCashOut;
+      } else if (totalCashIn > 0) {
+        inheritedPrevBalance = totalCashIn;
+      } else {
+        inheritedPrevBalance = data.beerPrevBalance || 0;
+      }
+    }
 
     const formattedAmount = `THB ${inheritedPrevBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -261,16 +285,15 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
 
     let inheritedPrevBalance = data.beerPrevBalance || 0;
 
-    if (totalCashOut > 0) {
-      inheritedPrevBalance = totalCashOut;
-    } else if (totalCashIn > 0) {
-      inheritedPrevBalance = totalCashIn;
-    } else if (savedCashCounts && savedCashCounts.length > 0) {
-      const lateRecord = savedCashCounts.find((c) => c.shift === 'Late') || savedCashCounts[0];
-      if (lateRecord) {
-        const lateOut = lateRecord.denominations.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0);
-        const lateIn = lateRecord.denominations.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0);
-        inheritedPrevBalance = lateOut > 0 ? lateOut : (lateIn > 0 ? lateIn : (lateRecord.beerPrevBalance || 0));
+    if (newShift === 'Early') {
+      inheritedPrevBalance = getPreviousDayLateBalance(data.date, savedCashCounts) || (totalCashOut > 0 ? totalCashOut : totalCashIn);
+    } else {
+      if (totalCashOut > 0) {
+        inheritedPrevBalance = totalCashOut;
+      } else if (totalCashIn > 0) {
+        inheritedPrevBalance = totalCashIn;
+      } else {
+        inheritedPrevBalance = getPreviousDayLateBalance(data.date, savedCashCounts) || (data.beerPrevBalance || 0);
       }
     }
 
@@ -332,18 +355,21 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
       return;
     }
 
-    // 3. Reset sheet for the new date cleanly
+    // 3. Reset sheet for the new date cleanly and auto-fetch previous day's late shift balance
     const resetDenoms = data.denominations.map((d) => ({
       ...d,
       countIn: 0,
       countOut: 0,
     }));
 
+    const prevBalanceForNewDate = getPreviousDayLateBalance(formattedDate, savedCashCounts || []);
+
     onChange({
       ...data,
       id: `cash-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       createdAt: Date.now(),
       date: formattedDate,
+      beerPrevBalance: prevBalanceForNewDate,
       denominations: resetDenoms,
       staffIn: '',
       staffOut: '',
@@ -614,7 +640,16 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
                     </div>
                   </td>
                   <td className="border-b border-slate-800 px-3 py-2 print:px-2 print:py-1 text-xs md:text-sm print:text-xs font-mono font-bold">
-                    <div className="flex items-center justify-end gap-1 no-print">
+                    <div className="flex items-center justify-end gap-1.5 no-print">
+                      <button
+                        type="button"
+                        onClick={handlePullPrevDayLateBalance}
+                        title="ดึงยอด Previous Balance จากกะบ่ายของวันก่อนหน้านี้อัตโนมัติ"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] md:text-xs font-bold text-blue-950 bg-white/90 hover:bg-white border border-blue-600/50 hover:border-blue-700 rounded shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+                      >
+                        <RotateCcw className="w-3 h-3 text-blue-700" />
+                        <span>ดึงยอดกะบ่ายวันก่อน</span>
+                      </button>
                       <input
                         type="number"
                         value={data.beerPrevBalance || ''}

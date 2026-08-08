@@ -43,7 +43,7 @@ import {
   resetQuotaExceeded,
   canonicalStringify,
 } from './lib/firebase';
-import { syncMinusExpensesToReceipt, isWithin7Days, formatDateToDisplay, getTodayFormatted } from './utils/syncUtils';
+import { syncMinusExpensesToReceipt, isWithin7Days, formatDateToDisplay, getTodayFormatted, getPreviousDayLateBalance } from './utils/syncUtils';
 import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
 
 export default function App() {
@@ -707,8 +707,15 @@ export default function App() {
 
       const totalOut = cashCountData.denominations.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0);
       const totalIn = cashCountData.denominations.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0);
-      let inheritedPrevBalance = totalOut > 0 ? totalOut : (totalIn > 0 ? totalIn : (cashCountData.beerPrevBalance || 0));
       const nextShift = cashCountData.shift === 'Early' ? 'Late' : 'Early';
+
+      let inheritedPrevBalance = 0;
+      if (nextShift === 'Early') {
+        inheritedPrevBalance = getPreviousDayLateBalance(todayCashDate, savedCashCounts) || (totalOut > 0 ? totalOut : (totalIn > 0 ? totalIn : (cashCountData.beerPrevBalance || 0)));
+      } else {
+        inheritedPrevBalance = totalOut > 0 ? totalOut : (totalIn > 0 ? totalIn : (cashCountData.beerPrevBalance || 0));
+      }
+
       const formattedAmount = `THB ${inheritedPrevBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
       if (
