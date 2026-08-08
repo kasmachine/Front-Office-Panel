@@ -54,16 +54,11 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
 }) => {
   const [activeSigModal, setActiveSigModal] = useState<'staffIn' | 'staffOut' | null>(null);
 
-  // Auto-populate Previous balance from yesterday's Late shift (or same day Early shift) if currently 0
+  // Auto-populate Previous balance from yesterday's Late shift (or same day Early shift)
   useEffect(() => {
-    if (
-      (!data.beerPrevBalance || data.beerPrevBalance === 0) &&
-      savedCashCounts &&
-      savedCashCounts.length > 0 &&
-      data.date
-    ) {
+    if (savedCashCounts && savedCashCounts.length > 0 && data.date) {
       const autoPrev = getAutoPreviousBalance(data.date, data.shift, savedCashCounts);
-      if (autoPrev > 0) {
+      if (autoPrev > 0 && autoPrev !== data.beerPrevBalance) {
         onChange({ ...data, beerPrevBalance: autoPrev });
       }
     }

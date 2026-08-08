@@ -190,7 +190,8 @@ export function syncMinusExpensesToReceipt(
 }
 
 /**
- * Normalize any date string (DD/MM/YYYY, YYYY-MM-DD, or DD/MM/YY) to ISO YYYY-MM-DD
+ * Normalize any date string (DD/MM/YYYY, YYYY-MM-DD, or DD/MM/YY) to ISO YYYY-MM-DD.
+ * Converts Thai Buddhist Era years (>2400) to AD years.
  */
 export function normalizeDateToIso(dateStr: string): string {
   if (!dateStr) return '';
@@ -200,9 +201,20 @@ export function normalizeDateToIso(dateStr: string): string {
   if (parts.length === 3) {
     let day = parts[0].padStart(2, '0');
     let month = parts[1].padStart(2, '0');
-    let year = parts[2];
+    let year = parts[2].trim();
     if (year.length === 2) year = '20' + year;
-    return `${year}-${month}-${day}`;
+    let numYear = parseInt(year, 10);
+    if (!isNaN(numYear) && numYear > 2400) {
+      numYear -= 543;
+    }
+    return `${numYear}-${month}-${day}`;
+  }
+  const d = new Date(trimmed);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }
   return '';
 }
