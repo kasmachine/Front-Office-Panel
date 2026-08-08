@@ -189,6 +189,148 @@ export function syncMinusExpensesToReceipt(
   };
 }
 
+/**
+ * Normalize any date string (DD/MM/YYYY, YYYY-MM-DD, or DD/MM/YY) to ISO YYYY-MM-DD
+ */
+export function normalizeDateToIso(dateStr: string): string {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const parts = trimmed.split('/');
+  if (parts.length === 3) {
+    let day = parts[0].padStart(2, '0');
+    let month = parts[1].padStart(2, '0');
+    let year = parts[2];
+    if (year.length === 2) year = '20' + year;
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+}
+
+/**
+ * Gets the Closing Cash Drawer Balance from the Late shift ('Late' or 'กะบ่าย') of the previous day.
+ * If exact previous day's Late shift is not found, falls back to the most recent Late shift prior to currentDateStr.
+ */
+export function getPreviousDayLateBalance(currentDateStr: string, savedCashCounts: CashCountData[]): number {
+  if (!savedCashCounts || savedCashCounts.length === 0) return 0;
+
+  const currentIso = normalizeDateToIso(currentDateStr);
+
+  // Calculate target previous day ISO string
+  let prevDayIso = '';
+  if (currentIso) {
+    const curDate = new Date(currentIso + 'T00:00:00');
+    if (!isNaN(curDate.getTime())) {
+      curDate.setDate(curDate.getDate() - 1);
+      const yyyy = curDate.getFullYear();
+      const mm = String(curDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(curDate.getDate()).padStart(2, '0');
+      prevDayIso = `${yyyy}-${mm}-${dd}`;
+    }
+  }
+
+  // Helper to get closing balance of a cash count record
+  const getRecordClosingBalance = (rec: CashCountData): number => {
+    const totalOut = rec.denominations?.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0) || 0;
+    const totalIn = rec.denominations?.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0) || 0;
+    if (totalOut > 0) return totalOut;
+    if (totalIn > 0) return totalIn;
+    return rec.beerPrevBalance || 0;
+  };
+
+  // 1. Check for 'Late' / 'กะบ่าย' shift on exact previous day
+  if (prevDayIso) {
+    const exactPrevDayLate = savedCashCounts.find((c) => {
+      const isLate = c.shift === 'Late' || c.shift === 'กะบ่าย';
+      const cIso = normalizeDateToIso(c.date);
+      return isLate && cIso === prevDayIso;
+    });
+
+    if (exactPrevDayLate) {
+      return getRecordClosingBalance(exactPrevDayLate);
+    }
+  }
+
+  // 2. Check for most recent 'Late' / 'กะบ่าย' shift record prior to current date
+  const lateRecordsBeforeCurrent = savedCashCounts.filter((c) => {
+    const isLate = c.shift === 'Late' || c.shift === 'กะบ่าย';
+    if (!isLate) return false;
+    if (!currentIso) return true;
+    const cIso = normalizeDateToIso(c.date);
+    return cIso < currentIso;
+  });
+
+  if (lateRecordsBeforeCurrent.length > 0) {
+    const sorted = [...lateRecordsBeforeCurrent].sort((a, b) => {
+      const aIso = normalizeDateToIso(a.date);
+      const bIso = normalizeDateToIso(b.date);
+      if (aIso !== bIso) return bIso.localeCompare(aIso);
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+    return getRecordClosingBalance(sorted[0]);
+  }
+
+  // 3. Fallback: Any 'Late' / 'กะบ่าย' shift in saved history
+  const anyLate = savedCashCounts.find((c) => c.shift === 'Late' || c.shift === 'กะบ่าย');
+  if (anyLate) {
+    return getRecordClosingBalance(anyLate);
+  }
+
+  // 4. Fallback: Most recent record prior to current date regardless of shift
+  if (currentIso) {
+    const previousRecords = savedCashCounts.filter((c) => normalizeDateToIso(c.date) < currentIso);
+    if (previousRecords.length > 0) {
+      const sortedPrev = [...previousRecords].sort((a, b) => {
+        const aIso = normalizeDateToIso(a.date);
+        const bIso = normalizeDateToIso(b.date);
+        if (aIso !== bIso) return bIso.localeCompare(aIso);
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+      return getRecordClosingBalance(sortedPrev[0]);
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Automatically determines the expected previous balance based on date, shift, and historical records.
+ * - For 'Late' (กะบ่าย) shift: looks for 'Early' (กะเช้า) shift record on the same date first.
+ *   If found and closing balance > 0, returns that. Otherwise falls back to previous day's Late shift balance.
+ * - For 'Early' (กะเช้า) shift: returns previous day's Late shift balance.
+ */
+export function getAutoPreviousBalance(currentDateStr: string, currentShift: string, savedCashCounts: CashCountData[]): number {
+  if (!savedCashCounts || savedCashCounts.length === 0) return 0;
+
+  const isLate = currentShift === 'Late' || currentShift === 'กะบ่าย';
+  const currentIso = normalizeDateToIso(currentDateStr);
+
+  const getRecordClosingBalance = (rec: CashCountData): number => {
+    const totalOut = rec.denominations?.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0) || 0;
+    const totalIn = rec.denominations?.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0) || 0;
+    if (totalOut > 0) return totalOut;
+    if (totalIn > 0) return totalIn;
+    return rec.beerPrevBalance || 0;
+  };
+
+  if (isLate && currentIso) {
+    // Look for Early shift on exact same date
+    const sameDayEarly = savedCashCounts.find((c) => {
+      const isEarly = c.shift === 'Early' || c.shift === 'กะเช้า';
+      const cIso = normalizeDateToIso(c.date);
+      return isEarly && cIso === currentIso;
+    });
+
+    if (sameDayEarly) {
+      const bal = getRecordClosingBalance(sameDayEarly);
+      if (bal > 0) return bal;
+    }
+  }
+
+  // Fallback to previous day's late shift balance
+  return getPreviousDayLateBalance(currentDateStr, savedCashCounts);
+}
+
 
 
 

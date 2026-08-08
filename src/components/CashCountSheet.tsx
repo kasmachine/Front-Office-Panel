@@ -32,6 +32,7 @@ function fromIsoDate(isoStr: string): string {
 import { StaffSelect } from './StaffSelect';
 import { ExpenseCategorySelect, getStoredCategories } from './ExpenseCategorySelect';
 import { saveCashCountToFirebase } from '../lib/firebase';
+import { getAutoPreviousBalance } from '../utils/syncUtils';
 import { Users } from 'lucide-react';
 
 interface CashCountSheetProps {
@@ -52,6 +53,21 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
   onOpenManageCategories,
 }) => {
   const [activeSigModal, setActiveSigModal] = useState<'staffIn' | 'staffOut' | null>(null);
+
+  // Auto-populate Previous balance from yesterday's Late shift (or same day Early shift) if currently 0
+  useEffect(() => {
+    if (
+      (!data.beerPrevBalance || data.beerPrevBalance === 0) &&
+      savedCashCounts &&
+      savedCashCounts.length > 0 &&
+      data.date
+    ) {
+      const autoPrev = getAutoPreviousBalance(data.date, data.shift, savedCashCounts);
+      if (autoPrev > 0) {
+        onChange({ ...data, beerPrevBalance: autoPrev });
+      }
+    }
+  }, [data.date, data.shift, savedCashCounts]);
 
 
   const isMinusItem = (itemStr: string): boolean => {
@@ -166,36 +182,23 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
   };
 
   const handleClearForNewShift = () => {
-    // Determine previous balance carried forward from current shift close / Late shift
-    let inheritedPrevBalance = 0;
-
-    if (totalCashOut > 0) {
-      inheritedPrevBalance = totalCashOut;
-    } else if (totalCashIn > 0) {
-      inheritedPrevBalance = totalCashIn;
-    } else if (savedCashCounts && savedCashCounts.length > 0) {
-      const lateRecord = savedCashCounts.find((c) => c.shift === 'Late') || savedCashCounts[0];
-      if (lateRecord) {
-        const lateOut = lateRecord.denominations.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0);
-        const lateIn = lateRecord.denominations.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0);
-        inheritedPrevBalance = lateOut > 0 ? lateOut : (lateIn > 0 ? lateIn : (lateRecord.beerPrevBalance || 0));
-      } else {
-        inheritedPrevBalance = data.beerPrevBalance || 0;
-      }
-    } else {
-      inheritedPrevBalance = data.beerPrevBalance || 0;
-    }
-
     let nextShift = 'Early';
     if (data.shift === 'Early') nextShift = 'Late';
     else nextShift = 'Early';
+
+    let inheritedPrevBalance = 0;
+    if (nextShift === 'Early') {
+      inheritedPrevBalance = getAutoPreviousBalance(data.date, 'Early', savedCashCounts) || (totalCashOut > 0 ? totalCashOut : totalCashIn);
+    } else {
+      inheritedPrevBalance = totalCashOut > 0 ? totalCashOut : (totalCashIn > 0 ? totalCashIn : getAutoPreviousBalance(data.date, 'Late', savedCashCounts));
+    }
 
     const formattedAmount = `THB ${inheritedPrevBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     if (
       window.confirm(
         `คุณต้องการล้างข้อมูลเพื่อรับกะใหม่ใช่หรือไม่?\n\n` +
-        `• ยอด Previous balance ยกมาจากกะบ่าย/กะก่อนหน้า: ${formattedAmount}\n` +
+        `• ยอด Previous balance ยกมาจากกะก่อนหน้า: ${formattedAmount}\n` +
         `• ปรับกะใหม่เป็น: ${nextShift}\n\n` +
         `(จำนวนนับเงิน รายการรับ-จ่าย และชื่อพนักงานจะถูกล้างเพื่อเริ่มนับกะใหม่)`
       )
@@ -260,19 +263,9 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
       return;
     }
 
-    let inheritedPrevBalance = data.beerPrevBalance || 0;
-
-    if (totalCashOut > 0) {
-      inheritedPrevBalance = totalCashOut;
-    } else if (totalCashIn > 0) {
-      inheritedPrevBalance = totalCashIn;
-    } else if (savedCashCounts && savedCashCounts.length > 0) {
-      const lateRecord = savedCashCounts.find((c) => c.shift === 'Late') || savedCashCounts[0];
-      if (lateRecord) {
-        const lateOut = lateRecord.denominations.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0);
-        const lateIn = lateRecord.denominations.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0);
-        inheritedPrevBalance = lateOut > 0 ? lateOut : (lateIn > 0 ? lateIn : (lateRecord.beerPrevBalance || 0));
-      }
+    let inheritedPrevBalance = getAutoPreviousBalance(data.date, newShift, savedCashCounts);
+    if (!inheritedPrevBalance) {
+      inheritedPrevBalance = totalCashOut > 0 ? totalCashOut : (totalCashIn > 0 ? totalCashIn : (data.beerPrevBalance || 0));
     }
 
     const resetDenoms = data.denominations.map((d) => ({
@@ -340,11 +333,14 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
       countOut: 0,
     }));
 
+    const prevBalanceForNewDate = getAutoPreviousBalance(formattedDate, data.shift, savedCashCounts || []);
+
     onChange({
       ...data,
       id: `cash-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       createdAt: Date.now(),
       date: formattedDate,
+      beerPrevBalance: prevBalanceForNewDate,
       denominations: resetDenoms,
       staffIn: '',
       staffOut: '',
