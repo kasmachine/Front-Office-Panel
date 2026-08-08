@@ -293,5 +293,43 @@ export function getPreviousDayLateBalance(currentDateStr: string, savedCashCount
   return 0;
 }
 
+/**
+ * Automatically determines the expected previous balance based on date, shift, and historical records.
+ * - For 'Late' (กะบ่าย) shift: looks for 'Early' (กะเช้า) shift record on the same date first.
+ *   If found and closing balance > 0, returns that. Otherwise falls back to previous day's Late shift balance.
+ * - For 'Early' (กะเช้า) shift: returns previous day's Late shift balance.
+ */
+export function getAutoPreviousBalance(currentDateStr: string, currentShift: string, savedCashCounts: CashCountData[]): number {
+  if (!savedCashCounts || savedCashCounts.length === 0) return 0;
+
+  const isLate = currentShift === 'Late' || currentShift === 'กะบ่าย';
+  const currentIso = normalizeDateToIso(currentDateStr);
+
+  const getRecordClosingBalance = (rec: CashCountData): number => {
+    const totalOut = rec.denominations?.reduce((acc, d) => acc + d.value * (d.countOut || 0), 0) || 0;
+    const totalIn = rec.denominations?.reduce((acc, d) => acc + d.value * (d.countIn || 0), 0) || 0;
+    if (totalOut > 0) return totalOut;
+    if (totalIn > 0) return totalIn;
+    return rec.beerPrevBalance || 0;
+  };
+
+  if (isLate && currentIso) {
+    // Look for Early shift on exact same date
+    const sameDayEarly = savedCashCounts.find((c) => {
+      const isEarly = c.shift === 'Early' || c.shift === 'กะเช้า';
+      const cIso = normalizeDateToIso(c.date);
+      return isEarly && cIso === currentIso;
+    });
+
+    if (sameDayEarly) {
+      const bal = getRecordClosingBalance(sameDayEarly);
+      if (bal > 0) return bal;
+    }
+  }
+
+  // Fallback to previous day's late shift balance
+  return getPreviousDayLateBalance(currentDateStr, savedCashCounts);
+}
+
 
 
