@@ -240,14 +240,15 @@ export function getPreviousDayLateBalance(currentDateStr: string, savedCashCount
 
   // 1. Check for 'Late' / 'กะบ่าย' shift on exact previous day
   if (prevDayIso) {
-    const exactPrevDayLate = savedCashCounts.find((c) => {
+    const prevDayLateRecords = savedCashCounts.filter((c) => {
       const isLate = c.shift === 'Late' || c.shift === 'กะบ่าย';
       const cIso = normalizeDateToIso(c.date);
       return isLate && cIso === prevDayIso;
     });
 
-    if (exactPrevDayLate) {
-      return getRecordClosingBalance(exactPrevDayLate);
+    if (prevDayLateRecords.length > 0) {
+      const sorted = [...prevDayLateRecords].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return getRecordClosingBalance(sorted[0]);
     }
   }
 
@@ -271,9 +272,10 @@ export function getPreviousDayLateBalance(currentDateStr: string, savedCashCount
   }
 
   // 3. Fallback: Any 'Late' / 'กะบ่าย' shift in saved history
-  const anyLate = savedCashCounts.find((c) => c.shift === 'Late' || c.shift === 'กะบ่าย');
-  if (anyLate) {
-    return getRecordClosingBalance(anyLate);
+  const anyLateRecords = savedCashCounts.filter((c) => c.shift === 'Late' || c.shift === 'กะบ่าย');
+  if (anyLateRecords.length > 0) {
+    const sorted = [...anyLateRecords].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return getRecordClosingBalance(sorted[0]);
   }
 
   // 4. Fallback: Most recent record prior to current date regardless of shift
@@ -314,15 +316,16 @@ export function getAutoPreviousBalance(currentDateStr: string, currentShift: str
   };
 
   if (isLate && currentIso) {
-    // Look for Early shift on exact same date
-    const sameDayEarly = savedCashCounts.find((c) => {
+    // Look for Early shift (กะเช้า) on exact same date
+    const sameDayEarlyRecords = savedCashCounts.filter((c) => {
       const isEarly = c.shift === 'Early' || c.shift === 'กะเช้า';
       const cIso = normalizeDateToIso(c.date);
       return isEarly && cIso === currentIso;
     });
 
-    if (sameDayEarly) {
-      const bal = getRecordClosingBalance(sameDayEarly);
+    if (sameDayEarlyRecords.length > 0) {
+      const sorted = [...sameDayEarlyRecords].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      const bal = getRecordClosingBalance(sorted[0]);
       if (bal > 0) return bal;
     }
   }
