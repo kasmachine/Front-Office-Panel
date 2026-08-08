@@ -358,8 +358,9 @@ export const CashCountSheet: React.FC<CashCountSheetProps> = ({
 
   const handleSetTodayDate = () => {
     const today = new Date();
-    const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
-    onChange({ ...data, date: dateStr });
+    const dateStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+    const autoBal = getAutoPreviousBalance(dateStr, data.shift, savedCashCounts || []);
+    onChange({ ...data, date: dateStr, beerPrevBalance: autoBal > 0 ? autoBal : data.beerPrevBalance });
   };
 
   return (
