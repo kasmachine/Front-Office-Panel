@@ -166,3 +166,39 @@ export interface SOPItem {
   createdAt?: number;
 }
 
+export interface MeetingActionItem {
+  id: string;
+  task: string;
+  assignee: string;
+  dueDate: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  remark?: string;
+}
+
+export interface MeetingAgendaItem {
+  id: string;
+  agendaNumber: number;
+  title: string;
+  content: string;
+}
+
+export interface MeetingMinuteData {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  category: 'weekly' | 'monthly' | 'departmental' | 'emergency' | 'general';
+  chairPerson: string;
+  minuteTaker: string;
+  attendees: string[];
+  absentees?: string[];
+  agendas: MeetingAgendaItem[];
+  actionItems: MeetingActionItem[];
+  generalNotes?: string;
+  status: 'draft' | 'published' | 'completed';
+  createdAt: number;
+  updatedAt?: number;
+}
+

@@ -7,6 +7,7 @@ import { ReceiptSubstituteSheet } from './components/ReceiptSubstituteSheet';
 import { DailyRevenueSheet } from './components/DailyRevenueSheet';
 import { FrontOfficeChecklist } from './components/FrontOfficeChecklist';
 import { FrontOfficeManual } from './components/FrontOfficeManual';
+import { MeetingMinutes } from './components/MeetingMinutes';
 import { WhatsNew } from './components/WhatsNew';
 import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -48,7 +49,7 @@ import { syncMinusExpensesToReceipt, isWithin7Days, formatDateToDisplay, getToda
 import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes'>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Active form states
@@ -970,6 +971,10 @@ export default function App() {
         ) : activeTab === 'frontOfficeManual' ? (
           <FrontOfficeManual
             onNavigateTab={(tab) => setActiveTab(tab)}
+          />
+        ) : activeTab === 'meetingMinutes' ? (
+          <MeetingMinutes
+            currentUser="นางสาว ขวัญทิชา ตั้งเสรีกล"
           />
         ) : (
           <FrontOfficeChecklist />

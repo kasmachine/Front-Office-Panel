@@ -16,11 +16,12 @@ import {
   History,
   Building2,
   Percent,
+  ClipboardList,
 } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual';
-  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual') => void;
+  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes';
+  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes') => void;
   onOpenSettings: () => void;
   onOpenHistory?: () => void;
   onOpenVatCalc?: () => void;
@@ -85,6 +86,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Front Office Manual',
       sublabel: 'คู่มือขั้นตอนการทำงาน (SOP)',
       icon: BookOpen,
+    },
+    {
+      id: 'meetingMinutes' as const,
+      label: 'Meeting minutes',
+      sublabel: 'รายงานการประชุม & มติที่ประชุม',
+      icon: ClipboardList,
     },
   ];
 

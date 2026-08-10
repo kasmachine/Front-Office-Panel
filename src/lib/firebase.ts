@@ -18,7 +18,7 @@ import {
 setLogLevel('silent');
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories, FrontOfficeChecklistData, NewsItem, SOPItem } from '../types';
+import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories, FrontOfficeChecklistData, NewsItem, SOPItem, MeetingMinuteData } from '../types';
 
 // Construct effective Firebase config (supports Vercel env vars or fallback to firebase-applet-config.json)
 const effectiveFirebaseConfig = {
@@ -957,6 +957,59 @@ export function subscribeSOPs(callback: (sops: SOPItem[] | null, hasPendingWrite
     (err) => {
       handleFirestoreError(err, OperationType.LIST, SOP_COLLECTION);
       callback(null, false, false);
+    }
+  );
+}
+
+/**
+ * Meeting Minutes Realtime Firestore Sync
+ */
+const MEETING_MINUTES_COLLECTION = 'nan_seasons_meeting_minutes';
+
+export async function saveMeetingMinuteToFirebase(item: MeetingMinuteData): Promise<void> {
+  if (isQuotaExceeded || !item || !item.id) return;
+  const path = `${MEETING_MINUTES_COLLECTION}/${item.id}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, MEETING_MINUTES_COLLECTION, item.id);
+    const cleaned = JSON.parse(JSON.stringify({
+      ...item,
+      updatedAt: Date.now(),
+      createdAt: item.createdAt || Date.now(),
+    }));
+    await setDoc(docRef, cleaned);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteMeetingMinuteFromFirebase(meetingId: string): Promise<void> {
+  if (isQuotaExceeded || !meetingId) return;
+  const path = `${MEETING_MINUTES_COLLECTION}/${meetingId}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, MEETING_MINUTES_COLLECTION, meetingId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
+export function subscribeMeetingMinutes(callback: (items: MeetingMinuteData[] | null) => void) {
+  initAuth().catch(() => {});
+  const q = query(collection(db, MEETING_MINUTES_COLLECTION), orderBy('date', 'desc'));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: MeetingMinuteData[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push(docSnap.data() as MeetingMinuteData);
+      });
+      callback(items);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, MEETING_MINUTES_COLLECTION);
+      callback(null);
     }
   );
 }

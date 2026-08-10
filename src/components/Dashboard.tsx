@@ -26,7 +26,8 @@ import {
   ShoppingBag,
   Utensils,
   Sparkle,
-  History
+  History,
+  ClipboardList,
 } from 'lucide-react';
 import {
   CashCountData,
@@ -48,7 +49,7 @@ const formatMoney = (val: number, decimals = 2): string => {
 };
 
 interface DashboardProps {
-  onNavigate: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual') => void;
+  onNavigate: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes') => void;
   cashCountData: CashCountData;
   receiptData: ReceiptSubstituteData;
   savedCashCounts: CashCountData[];
@@ -587,6 +588,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="text-xs text-slate-500 mt-0.5">แบบฟอร์มกะเช้า & กะบ่าย</div>
             </div>
             <div className="mt-3 flex items-center text-xs font-bold text-emerald-600 gap-1">
+              <span>Open Module</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('meetingMinutes')}
+            className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-indigo-500 hover:shadow-md transition-all text-left group cursor-pointer"
+          >
+            <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 w-fit group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+              <ClipboardList className="w-6 h-6" />
+            </div>
+            <div className="mt-3">
+              <div className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                Meeting Minutes
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5">รายงานการประชุม & มติที่ประชุม</div>
+            </div>
+            <div className="mt-3 flex items-center text-xs font-bold text-indigo-600 gap-1">
               <span>Open Module</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </div>
