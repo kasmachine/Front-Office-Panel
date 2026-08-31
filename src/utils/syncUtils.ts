@@ -1,5 +1,6 @@
 import { CashCountData, ReceiptSubstituteData, ReceiptSubstituteItem } from '../types';
 import { safeLocalStorage } from './storage';
+import { getStoredExcludedCategories } from '../components/ExpenseCategorySelect';
 
 export function getTodayFormatted(): string {
   const now = new Date();
@@ -45,10 +46,13 @@ export function isWithin7Days(createdAt?: number, dateStr?: string): boolean {
   return true;
 }
 
-export function isNonReceiptExpense(itemStr: string): boolean {
+export function isNonReceiptExpense(itemStr: string, customExcluded?: string[]): boolean {
   if (!itemStr) return false;
-  const lower = itemStr.trim().toLowerCase();
-  // Exclude Kas paid out / Kas transfers and Part Time wages from receipt substitute
+  const trimmed = itemStr.trim();
+  const lower = trimmed.toLowerCase();
+  const clean = trimmed.replace(/^[-+\s]+/, '').toLowerCase();
+
+  // Exclude Kas paid out / Kas transfers, Part Time wages, and Advance purchase (เบิกเงินซื้อของ / เบิกเงิน) from receipt substitute/expenses
   if (
     lower.includes('kas paid') ||
     lower.includes('kas_paid') ||
@@ -63,6 +67,38 @@ export function isNonReceiptExpense(itemStr: string): boolean {
   ) {
     return true;
   }
+  if (
+    lower.includes('เบิกเงินซื้อของ') ||
+    lower.includes('เบิกเงิน') ||
+    lower.includes('เบิกจ่าย') ||
+    lower.includes('ยืมเงิน') ||
+    lower.includes('advance')
+  ) {
+    return true;
+  }
+
+  // Check custom or stored excluded categories
+  try {
+    const excludedList = customExcluded || getStoredExcludedCategories();
+    if (Array.isArray(excludedList)) {
+      const isMatch = excludedList.some((ex) => {
+        if (!ex) return false;
+        const exTrim = ex.trim().toLowerCase();
+        const exClean = exTrim.replace(/^[-+\s]+/, '');
+        return (
+          exTrim === lower ||
+          exClean === clean ||
+          lower.startsWith(exTrim) ||
+          clean.startsWith(exClean) ||
+          (exClean.length > 2 && (clean.includes(exClean) || lower.includes(exTrim)))
+        );
+      });
+      if (isMatch) return true;
+    }
+  } catch (e) {
+    // fallback
+  }
+
   return false;
 }
 

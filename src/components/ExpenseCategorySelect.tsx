@@ -12,6 +12,8 @@ export const INITIAL_MINUS_CATEGORIES = [
   '-น้ำมันเครื่องตัดหญ้า',
   '-อุปกรณ์ช่าง/งานสวน',
   '-Kas paid out',
+  '-Part Time',
+  '-เบิกเงินซื้อของ',
 ];
 
 export const INITIAL_PLUS_CATEGORIES = [
@@ -19,19 +21,58 @@ export const INITIAL_PLUS_CATEGORIES = [
   '+Kas paid in',
 ];
 
-const LOCAL_STORAGE_KEY = 'nan_seasons_expense_categories_v1';
+export const INITIAL_EXCLUDED_EXPENSES = [
+  '-Kas paid out',
+  '-Part Time',
+  '-เบิกเงินซื้อของ',
+  'Kas paid out',
+  'Part Time',
+  'เบิกเงินซื้อของ',
+  'เบิกเงิน',
+];
 
-export function getStoredCategories(): { minus: string[]; plus: string[] } {
+const LOCAL_STORAGE_KEY = 'nan_seasons_expense_categories_v1';
+const LOCAL_STORAGE_EXCLUDED_KEY = 'nan_seasons_excluded_expense_categories_v1';
+
+export function getStoredExcludedCategories(): string[] {
+  try {
+    const saved = safeLocalStorage.getItem(LOCAL_STORAGE_EXCLUDED_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return Array.from(new Set([...INITIAL_EXCLUDED_EXPENSES, ...parsed.map(String)]));
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load excluded categories from storage', e);
+  }
+  return [...INITIAL_EXCLUDED_EXPENSES];
+}
+
+export function saveExcludedCategories(excluded: string[]) {
+  try {
+    safeLocalStorage.setItem(LOCAL_STORAGE_EXCLUDED_KEY, JSON.stringify(excluded));
+  } catch (e) {
+    console.error('Failed to save excluded categories', e);
+  }
+}
+
+export function getStoredCategories(): { minus: string[]; plus: string[]; excluded?: string[] } {
   try {
     const saved = safeLocalStorage.getItem(LOCAL_STORAGE_KEY);
+    const excludedList = getStoredExcludedCategories();
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && Array.isArray(parsed.minus) && Array.isArray(parsed.plus)) {
         const minusArr = Array.from(new Set([...INITIAL_MINUS_CATEGORIES, ...parsed.minus.map(String)]));
         const plusArr = Array.from(new Set([...INITIAL_PLUS_CATEGORIES, ...parsed.plus.map(String)]));
+        const excludedArr = Array.isArray(parsed.excluded)
+          ? Array.from(new Set([...excludedList, ...parsed.excluded.map(String)]))
+          : excludedList;
         return {
           minus: minusArr.sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
           plus: plusArr.sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
+          excluded: excludedArr,
         };
       }
     }
@@ -41,12 +82,16 @@ export function getStoredCategories(): { minus: string[]; plus: string[] } {
   return {
     minus: [...INITIAL_MINUS_CATEGORIES].sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
     plus: [...INITIAL_PLUS_CATEGORIES].sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
+    excluded: [...INITIAL_EXCLUDED_EXPENSES],
   };
 }
 
-export function saveCategories(categories: { minus: string[]; plus: string[] }) {
+export function saveCategories(categories: { minus: string[]; plus: string[]; excluded?: string[] }) {
   try {
     safeLocalStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(categories));
+    if (categories.excluded && Array.isArray(categories.excluded)) {
+      saveExcludedCategories(categories.excluded);
+    }
   } catch (e) {
     console.error('Failed to save expense categories', e);
   }

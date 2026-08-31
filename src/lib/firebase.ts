@@ -510,14 +510,25 @@ const DEFAULT_CATEGORIES = {
     '-น้ำมันเครื่องตัดหญ้า',
     '-อุปกรณ์ช่าง/งานสวน',
     '-Kas paid out',
+    '-Part Time',
+    '-เบิกเงินซื้อของ',
   ],
   plus: [
     '+Guest paid in',
     '+Kas paid in',
   ],
+  excluded: [
+    '-Kas paid out',
+    '-Part Time',
+    '-เบิกเงินซื้อของ',
+    'Kas paid out',
+    'Part Time',
+    'เบิกเงินซื้อของ',
+    'เบิกเงิน',
+  ],
 };
 
-export async function saveCategoriesToFirebase(categories: { minus: string[]; plus: string[] }): Promise<void> {
+export async function saveCategoriesToFirebase(categories: { minus: string[]; plus: string[]; excluded?: string[] }): Promise<void> {
   if (isQuotaExceeded) return;
   const serialized = JSON.stringify(categories);
   if (lastSavedCategories === serialized) return;
@@ -533,7 +544,7 @@ export async function saveCategoriesToFirebase(categories: { minus: string[]; pl
   }
 }
 
-export function subscribeCategories(callback: (categories: { minus: string[]; plus: string[] }) => void) {
+export function subscribeCategories(callback: (categories: { minus: string[]; plus: string[]; excluded?: string[] }) => void) {
   const docRef = doc(db, CONFIG_COLLECTION, CATEGORIES_DOC);
   return onSnapshot(
     docRef,
@@ -541,7 +552,11 @@ export function subscribeCategories(callback: (categories: { minus: string[]; pl
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (Array.isArray(data.minus) && Array.isArray(data.plus) && (data.minus.length > 0 || data.plus.length > 0)) {
-          callback({ minus: data.minus, plus: data.plus });
+          callback({
+            minus: data.minus,
+            plus: data.plus,
+            excluded: Array.isArray(data.excluded) ? data.excluded : DEFAULT_CATEGORIES.excluded,
+          });
         } else {
           saveCategoriesToFirebase(DEFAULT_CATEGORIES);
           callback(DEFAULT_CATEGORIES);

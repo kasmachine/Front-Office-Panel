@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Tag, Plus, Edit2, Trash2, Check, X, FolderTree } from 'lucide-react';
+import { Tag, Plus, Edit2, Trash2, Check, X, FolderTree, ShieldAlert, CheckCircle2, Ban } from 'lucide-react';
 import {
   getStoredCategories,
   saveCategories,
+  getStoredExcludedCategories,
+  saveExcludedCategories,
   INITIAL_MINUS_CATEGORIES,
   INITIAL_PLUS_CATEGORIES,
+  INITIAL_EXCLUDED_EXPENSES,
 } from './ExpenseCategorySelect';
+import { isNonReceiptExpense } from '../utils/syncUtils';
 import { saveCategoriesToFirebase, subscribeCategories } from '../lib/firebase';
 
 interface CategoryManagerModalProps {
@@ -19,23 +23,32 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   onClose,
   onCategoriesUpdated,
 }) => {
-  const [categories, setCategories] = useState<{ minus: string[]; plus: string[] }>(getStoredCategories);
+  const [categories, setCategories] = useState<{ minus: string[]; plus: string[]; excluded?: string[] }>(getStoredCategories);
+  const [excludedList, setExcludedList] = useState<string[]>(getStoredExcludedCategories);
   const [activeTab, setActiveTab] = useState<'minus' | 'plus'>('minus');
   const [newTopicInput, setNewTopicInput] = useState('');
+  const [isNewExcluded, setIsNewExcluded] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null); // e.g. "minus-0"
   const [editingValue, setEditingValue] = useState('');
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setCategories(getStoredCategories());
+      const stored = getStoredCategories();
+      setCategories(stored);
+      setExcludedList(getStoredExcludedCategories());
       setEditingKey(null);
       setNewTopicInput('');
+      setIsNewExcluded(false);
 
       const unsub = subscribeCategories((remoteCats) => {
         if (remoteCats && (remoteCats.minus.length > 0 || remoteCats.plus.length > 0)) {
           setCategories(remoteCats);
           saveCategories(remoteCats);
+          if (remoteCats.excluded && Array.isArray(remoteCats.excluded)) {
+            setExcludedList(remoteCats.excluded);
+            saveExcludedCategories(remoteCats.excluded);
+          }
           window.dispatchEvent(new Event('storage'));
           if (onCategoriesUpdated) onCategoriesUpdated();
         }
@@ -51,12 +64,47 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     setTimeout(() => setToast(null), 2500);
   };
 
-  const notifyUpdate = (updated: { minus: string[]; plus: string[] }) => {
+  const notifyUpdate = (updated: { minus: string[]; plus: string[]; excluded?: string[] }) => {
     saveCategories(updated);
     saveCategoriesToFirebase(updated);
     setCategories(updated);
+    if (updated.excluded) {
+      setExcludedList(updated.excluded);
+      saveExcludedCategories(updated.excluded);
+    }
     window.dispatchEvent(new Event('storage'));
     if (onCategoriesUpdated) onCategoriesUpdated();
+  };
+
+  const isItemExcluded = (item: string) => {
+    return isNonReceiptExpense(item, excludedList);
+  };
+
+  const toggleExcludeTopic = (item: string) => {
+    const currentExcluded = [...excludedList];
+    const itemClean = item.trim();
+    const itemNoPrefix = itemClean.replace(/^[-+\s]+/, '');
+
+    const isCurrentlyExcluded = isItemExcluded(itemClean);
+    let updatedExcluded: string[] = [];
+
+    if (isCurrentlyExcluded) {
+      // Remove from excluded list
+      updatedExcluded = currentExcluded.filter(
+        (ex) =>
+          ex.trim().toLowerCase() !== itemClean.toLowerCase() &&
+          ex.trim().toLowerCase() !== itemNoPrefix.toLowerCase()
+      );
+      showToast(`เปลี่ยนเป็น "นับใน expenses": ${itemClean}`);
+    } else {
+      // Add to excluded list
+      updatedExcluded = Array.from(new Set([...currentExcluded, itemClean, itemNoPrefix]));
+      showToast(`ทำเครื่องหมาย "ไม่นับใน expenses": ${itemClean}`);
+    }
+
+    setExcludedList(updatedExcluded);
+    const updated = { ...categories, excluded: updatedExcluded };
+    notifyUpdate(updated);
   };
 
   const handleAddTopic = () => {
@@ -75,7 +123,18 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       const updatedMinus = [...categories.minus, formatted].sort((a, b) =>
         a.localeCompare(b, 'th', { sensitivity: 'base' })
       );
-      const updated = { ...categories, minus: updatedMinus };
+
+      let currentEx = [...excludedList];
+      if (
+        isNewExcluded ||
+        formatted.includes('เบิกเงิน') ||
+        formatted.includes('kas paid') ||
+        formatted.includes('part time')
+      ) {
+        currentEx = Array.from(new Set([...currentEx, formatted, formatted.replace(/^[-+\s]+/, '')]));
+      }
+
+      const updated = { ...categories, minus: updatedMinus, excluded: currentEx };
       notifyUpdate(updated);
     } else {
       if (!formatted.startsWith('+')) formatted = '+' + formatted;
@@ -86,11 +145,12 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       const updatedPlus = [...categories.plus, formatted].sort((a, b) =>
         a.localeCompare(b, 'th', { sensitivity: 'base' })
       );
-      const updated = { ...categories, plus: updatedPlus };
+      const updated = { ...categories, plus: updatedPlus, excluded: excludedList };
       notifyUpdate(updated);
     }
 
     setNewTopicInput('');
+    setIsNewExcluded(false);
     showToast(`เพิ่มหัวข้อ "${formatted}" เรียบร้อยแล้ว`);
   };
 
@@ -115,7 +175,12 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     list[index] = formatted;
     list.sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' }));
 
-    const updated = { ...categories, [type]: list };
+    let currentEx = [...excludedList];
+    if (currentEx.includes(oldValue)) {
+      currentEx = currentEx.map((x) => (x === oldValue ? formatted : x));
+    }
+
+    const updated = { ...categories, [type]: list, excluded: currentEx };
     notifyUpdate(updated);
     setEditingKey(null);
     showToast(`แก้ไขหัวข้อ "${oldValue}" เป็น "${formatted}" แล้ว`);
@@ -125,7 +190,8 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     const target = categories[type][index];
     if (window.confirm(`คุณต้องการลบหัวข้อ "${target}" ออกจากรายการใช่หรือไม่?`)) {
       const list = categories[type].filter((_, i) => i !== index);
-      const updated = { ...categories, [type]: list };
+      const updatedEx = excludedList.filter((x) => x !== target && x !== target.replace(/^[-+\s]+/, ''));
+      const updated = { ...categories, [type]: list, excluded: updatedEx };
       notifyUpdate(updated);
       showToast(`ลบหัวข้อ "${target}" เรียบร้อยแล้ว`);
     }
@@ -136,6 +202,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       const defaultCategories = {
         minus: [...INITIAL_MINUS_CATEGORIES].sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
         plus: [...INITIAL_PLUS_CATEGORIES].sort((a, b) => a.localeCompare(b, 'th', { sensitivity: 'base' })),
+        excluded: [...INITIAL_EXCLUDED_EXPENSES],
       };
       notifyUpdate(defaultCategories);
       showToast('รีเซ็ตหัวข้อเป็นค่าเริ่มต้นเรียบร้อยแล้ว');
@@ -146,7 +213,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 animate-fadeIn no-print">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col">
         {/* Modal Header */}
         <div className="bg-slate-900 text-white px-5 py-4 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-2.5">
@@ -155,7 +222,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white">จัดการหัวข้อรายการ (Manage Topics)</h2>
-              <p className="text-xs text-slate-400">แก้ไข ลบ หรือเพิ่มตัวเลือกในเมนูดรอปดาวน์</p>
+              <p className="text-xs text-slate-400">แก้ไข ลบ หรือทำเครื่องหมายไม่นับรวมในรายการ expenses</p>
             </div>
           </div>
           <button
@@ -175,6 +242,18 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               <span>{toast}</span>
             </div>
           )}
+
+          {/* Explanation Banner */}
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+            <Ban className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">หมายเหตุ:</span> หัวข้อที่ทำเครื่องหมาย{' '}
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200">
+                🚫 ไม่นับใน expenses
+              </span>{' '}
+              (เช่น เบิกเงินซื้อของ, Kas paid out, Part Time) จะไม่ถูกดึงไปรวมในใบรับรองแทนใบเสร็จ / รายการ expenses
+            </div>
+          </div>
 
           {/* Category Tabs */}
           <div className="flex border-b border-slate-200 dark:border-slate-800">
@@ -209,7 +288,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
           </div>
 
           {/* Add New Topic Box */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
               เพิ่มหัวข้อใหม่ในกลุ่ม {activeTab === 'minus' ? '🔻 รายการหัก (-)' : '🟢 รายรับ (+)'}:
             </label>
@@ -217,10 +296,16 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               <input
                 type="text"
                 value={newTopicInput}
-                onChange={(e) => setNewTopicInput(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setNewTopicInput(val);
+                  if (activeTab === 'minus' && (val.includes('เบิกเงิน') || val.includes('kas paid') || val.includes('part time'))) {
+                    setIsNewExcluded(true);
+                  }
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
-                placeholder={activeTab === 'minus' ? 'เช่น -ค่าของสด, -ค่าน้ำมัน...' : 'เช่น +ค่าห้องพัก, +เงินสดมัดจำ...'}
-                className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
+                placeholder={activeTab === 'minus' ? 'เช่น -เบิกเงินซื้อของ, -ค่าของสด, -ค่าน้ำมัน...' : 'เช่น +ค่าห้องพัก, +เงินสดมัดจำ...'}
+                className="flex-1 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
               />
               <button
                 type="button"
@@ -230,6 +315,19 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 <Plus className="w-4 h-4" /> เพิ่มหัวข้อ
               </button>
             </div>
+            {activeTab === 'minus' && (
+              <label className="flex items-center gap-2 mt-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isNewExcluded}
+                  onChange={(e) => setIsNewExcluded(e.target.checked)}
+                  className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 w-4 h-4"
+                />
+                <span className="font-semibold text-amber-700 dark:text-amber-400">
+                  🚫 ทำเครื่องหมาย: ไม่นับรวมในรายการ expenses (เช่น เบิกเงินซื้อของ)
+                </span>
+              </label>
+            )}
           </div>
 
           {/* Topic List */}
@@ -254,6 +352,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 currentList.map((item, index) => {
                   const itemKey = `${activeTab}-${index}`;
                   const isEditing = editingKey === itemKey;
+                  const isExcluded = activeTab === 'minus' && isItemExcluded(item);
 
                   return (
                     <div
@@ -292,16 +391,42 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                         </div>
                       ) : (
                         <>
-                          <span
-                            className={`text-xs font-bold px-2 py-0.5 rounded ${
-                              activeTab === 'minus'
-                                ? 'text-red-700 bg-red-100/60 dark:text-red-300 dark:bg-red-950/40'
-                                : 'text-emerald-700 bg-emerald-100/60 dark:text-emerald-300 dark:bg-emerald-950/40'
-                            }`}
-                          >
-                            {item}
-                          </span>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2 flex-wrap flex-1">
+                            <span
+                              className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                activeTab === 'minus'
+                                  ? 'text-red-700 bg-red-100/60 dark:text-red-300 dark:bg-red-950/40'
+                                  : 'text-emerald-700 bg-emerald-100/60 dark:text-emerald-300 dark:bg-emerald-950/40'
+                              }`}
+                            >
+                              {item}
+                            </span>
+                            {activeTab === 'minus' && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExcludeTopic(item)}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 transition-all cursor-pointer ${
+                                  isExcluded
+                                    ? 'bg-amber-100 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 shadow-xs'
+                                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-amber-300 hover:text-amber-700'
+                                }`}
+                                title="คลิกเพื่อสลับ: ไม่นับรวมในรายการ expenses / นับรวมในรายการ expenses"
+                              >
+                                {isExcluded ? (
+                                  <>
+                                    <Ban className="w-3 h-3 text-amber-600" />
+                                    <span>🚫 ไม่นับใน expenses</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="w-3 h-3 text-slate-400" />
+                                    <span>นับใน expenses</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
                             <button
                               type="button"
                               onClick={() => handleStartEdit(activeTab, index, item)}
