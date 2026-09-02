@@ -18,7 +18,7 @@ import {
 setLogLevel('silent');
 import { getAuth, signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories, FrontOfficeChecklistData, NewsItem, SOPItem, MeetingMinuteData } from '../types';
+import { CashCountData, ReceiptSubstituteData, MonthlyRevenueData, RevenueHistoryRecord, RevenueCategories, FrontOfficeChecklistData, NewsItem, SOPItem, MeetingMinuteData, InvoiceData } from '../types';
 
 // Construct effective Firebase config (supports Vercel env vars or fallback to firebase-applet-config.json)
 const effectiveFirebaseConfig = {
@@ -1028,6 +1028,64 @@ export function subscribeMeetingMinutes(callback: (items: MeetingMinuteData[] | 
     }
   );
 }
+
+/**
+ * Invoices Realtime Firestore Sync (Lemongrass Restaurant manage by Nan Seasons Boutique Resort)
+ */
+const INVOICES_COLLECTION = 'lemongrass_invoices';
+
+export async function saveInvoiceToFirebase(item: InvoiceData): Promise<string> {
+  const docId = item.id || `inv-${Date.now()}`;
+  if (isQuotaExceeded) return docId;
+  const path = `${INVOICES_COLLECTION}/${docId}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, INVOICES_COLLECTION, docId);
+    const cleaned = JSON.parse(JSON.stringify({
+      ...item,
+      id: docId,
+      updatedAt: Date.now(),
+      createdAt: item.createdAt || Date.now(),
+    }));
+    await setDoc(docRef, cleaned, { merge: true });
+    return docId;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+    return docId;
+  }
+}
+
+export async function deleteInvoiceFromFirebase(invoiceId: string): Promise<void> {
+  if (isQuotaExceeded || !invoiceId) return;
+  const path = `${INVOICES_COLLECTION}/${invoiceId}`;
+  try {
+    await initAuth();
+    const docRef = doc(db, INVOICES_COLLECTION, invoiceId);
+    await deleteDoc(docRef);
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
+export function subscribeInvoices(callback: (items: InvoiceData[]) => void) {
+  initAuth().catch(() => {});
+  const q = query(collection(db, INVOICES_COLLECTION), orderBy('createdAt', 'desc'));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const items: InvoiceData[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push(docSnap.data() as InvoiceData);
+      });
+      callback(items);
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.LIST, INVOICES_COLLECTION);
+      callback([]);
+    }
+  );
+}
+
 
 
 

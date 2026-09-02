@@ -15,7 +15,13 @@ import {
   Info,
   DollarSign,
   ArrowRightLeft,
-  CheckCircle2
+  CheckCircle2,
+  ClipboardList,
+  ClipboardPaste,
+  FileSpreadsheet,
+  Layers,
+  ArrowDownToLine,
+  ListPlus
 } from 'lucide-react';
 import { ArabicToBahtText } from '../utils/bahttext';
 import { ReceiptSubstituteData, ReceiptSubstituteItem } from '../types';
@@ -27,6 +33,190 @@ export interface VatItemRow {
   quantity: number | '';
   note?: string;
 }
+
+// Smart Parser for multi-line pasted text (Excel, Google Sheets, LINE chat, plain numbers, CSV, etc.)
+export const parseBatchPasteText = (rawText: string, startIndex: number = 1): VatItemRow[] => {
+  if (!rawText || !rawText.trim()) return [];
+
+  const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const parsedRows: VatItemRow[] = [];
+
+  const parseNum = (str: string): number | null => {
+    if (!str) return null;
+    const clean = str.replace(/[,฿$THBบาท\s]/gi, '').replace(/\.-$/, '');
+    const val = parseFloat(clean);
+    return isNaN(val) ? null : val;
+  };
+
+  const isHeaderLine = (line: string, index: number): boolean => {
+    if (index > 0) return false;
+    const lower = line.toLowerCase();
+    const headerKeywords = ['รายการ', 'ชื่อรายการ', 'รายละเอียด', 'description', 'item', 'ราคา', 'price', 'amount', 'จำนวน', 'qty', 'quantity', 'ยอดรวม', 'total', 'ลำดับ', 'no', 'date', 'วันที่'];
+    const hasKeyword = headerKeywords.some((k) => lower.includes(k));
+    const hasOnlyWords = !/\d/.test(line.replace(/no\.?|qty/gi, ''));
+    return hasKeyword && hasOnlyWords;
+  };
+
+  lines.forEach((line, idx) => {
+    if (isHeaderLine(line, idx)) return;
+
+    // Pattern 1: Tab separated (Excel / Google Sheets Copy-Paste)
+    if (line.includes('\t')) {
+      const parts = line.split('\t').map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        let desc = '';
+        let amt: number = 0;
+        let qty: number = 1;
+
+        if (parts.length === 2) {
+          const num0 = parseNum(parts[0]);
+          const num1 = parseNum(parts[1]);
+          if (num0 !== null && num1 === null) {
+            amt = num0;
+            desc = parts[1];
+          } else if (num1 !== null) {
+            desc = parts[0];
+            amt = num1;
+          } else {
+            desc = `${parts[0]} ${parts[1]}`;
+            amt = 0;
+          }
+        } else if (parts.length === 3) {
+          const num0 = parseNum(parts[0]);
+          const num1 = parseNum(parts[1]);
+          const num2 = parseNum(parts[2]);
+
+          if (num1 !== null && num2 !== null) {
+            desc = parts[0];
+            amt = num1;
+            qty = num2 > 0 ? num2 : 1;
+          } else if (num0 !== null && num2 !== null) {
+            desc = parts[1];
+            amt = num2;
+          } else if (num2 !== null) {
+            desc = `${parts[0]} ${parts[1]}`;
+            amt = num2;
+          } else {
+            desc = parts.join(' ');
+          }
+        } else {
+          const numLast = parseNum(parts[parts.length - 1]);
+          const numSecLast = parseNum(parts[parts.length - 2]);
+
+          if (numLast !== null && numSecLast !== null) {
+            desc = parts.slice(0, parts.length - 2).filter((p) => !/^\d+$/.test(p)).join(' ') || parts.slice(0, parts.length - 2).join(' ');
+            amt = numSecLast;
+            qty = numLast > 0 ? numLast : 1;
+          } else if (numLast !== null) {
+            desc = parts.slice(0, parts.length - 1).filter((p) => !/^\d+$/.test(p)).join(' ') || parts.slice(0, parts.length - 1).join(' ');
+            amt = numLast;
+          } else {
+            desc = parts.join(' ');
+          }
+        }
+
+        parsedRows.push({
+          id: `vat-batch-${Date.now()}-${parsedRows.length}-${Math.random().toString(36).substring(2, 5)}`,
+          description: desc || `รายการที่ ${startIndex + parsedRows.length}`,
+          amount: amt > 0 ? amt : '',
+          quantity: qty > 0 ? qty : 1,
+          note: '',
+        });
+        return;
+      }
+    }
+
+    // Pattern 2: Comma or Semicolon or Pipe separated (CSV style)
+    if (/[,;|]/.test(line)) {
+      const parts = line.split(/[,;|]/).map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        const numLast = parseNum(parts[parts.length - 1]);
+        const numSecLast = parts.length >= 3 ? parseNum(parts[parts.length - 2]) : null;
+
+        let desc = '';
+        let amt: number = 0;
+        let qty: number = 1;
+
+        if (numSecLast !== null && numLast !== null) {
+          desc = parts.slice(0, parts.length - 2).join(' ');
+          amt = numSecLast;
+          qty = numLast > 0 ? numLast : 1;
+        } else if (numLast !== null) {
+          desc = parts.slice(0, parts.length - 1).join(' ');
+          amt = numLast;
+        } else {
+          desc = parts.join(' ');
+        }
+
+        parsedRows.push({
+          id: `vat-batch-${Date.now()}-${parsedRows.length}-${Math.random().toString(36).substring(2, 5)}`,
+          description: desc || `รายการที่ ${startIndex + parsedRows.length}`,
+          amount: amt > 0 ? amt : '',
+          quantity: qty > 0 ? qty : 1,
+          note: '',
+        });
+        return;
+      }
+    }
+
+    // Pattern 3: Number with multiplier at end e.g. "ค่าอาหาร 250 x 3" or "เบียร์ 180 * 2" or "250x3"
+    const multMatch = line.match(/^(.*?)\s*([0-9,.]+)\s*(?:x|\*|\@|จำนวน)\s*([0-9,.]+)\s*(?:บาท|.-|฿)?$/i);
+    if (multMatch) {
+      const desc = multMatch[1].trim();
+      const amt = parseNum(multMatch[2]);
+      const qty = parseNum(multMatch[3]);
+      parsedRows.push({
+        id: `vat-batch-${Date.now()}-${parsedRows.length}-${Math.random().toString(36).substring(2, 5)}`,
+        description: desc || `รายการที่ ${startIndex + parsedRows.length}`,
+        amount: amt !== null && amt > 0 ? amt : '',
+        quantity: qty !== null && qty > 0 ? qty : 1,
+        note: '',
+      });
+      return;
+    }
+
+    // Pattern 4: Text with trailing number e.g. "ค่ากาแฟและอาหารว่าง 450" or "1. ค่าอาหาร 1500"
+    const textNumMatch = line.match(/^(?:(?:\d+[\.\)\-:]\s*)|(?:-|\*)\s*)?(.*?)\s+([0-9,]+(?:\.[0-9]{1,2})?)\s*(?:บาท|.-|฿)?$/i);
+    if (textNumMatch) {
+      const desc = textNumMatch[1].trim();
+      const amt = parseNum(textNumMatch[2]);
+      if (amt !== null) {
+        parsedRows.push({
+          id: `vat-batch-${Date.now()}-${parsedRows.length}-${Math.random().toString(36).substring(2, 5)}`,
+          description: desc || `รายการที่ ${startIndex + parsedRows.length}`,
+          amount: amt > 0 ? amt : '',
+          quantity: 1,
+          note: '',
+        });
+        return;
+      }
+    }
+
+    // Pattern 5: Pure Number on a line e.g. "1500" or "1,250.50"
+    const pureNum = parseNum(line);
+    if (pureNum !== null && pureNum > 0) {
+      parsedRows.push({
+        id: `vat-batch-${Date.now()}-${parsedRows.length}-${Math.random().toString(36).substring(2, 5)}`,
+        description: `รายการที่ ${startIndex + parsedRows.length}`,
+        amount: pureNum,
+        quantity: 1,
+        note: '',
+      });
+      return;
+    }
+
+    // Pattern 6: Fallback text only
+    parsedRows.push({
+      id: `vat-batch-${Date.now()}-${parsedRows.length}-${Math.random().toString(36).substring(2, 5)}`,
+      description: line.replace(/^(?:\d+[\.\)\-:]\s*)/, ''),
+      amount: '',
+      quantity: 1,
+      note: '',
+    });
+  });
+
+  return parsedRows;
+};
 
 interface VatCalculatorModalProps {
   isOpen: boolean;
@@ -56,9 +246,78 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
   // Quick Single Amount Input for fast calculation
   const [quickAmount, setQuickAmount] = useState<number | ''>('');
 
+  // Batch Paste Multiple Items Modal State
+  const [isBatchPasteOpen, setIsBatchPasteOpen] = useState<boolean>(false);
+  const [batchPasteText, setBatchPasteText] = useState<string>('');
+  const [batchPasteMode, setBatchPasteMode] = useState<'replace' | 'append'>('replace');
+  const [pasteSuccessToast, setPasteSuccessToast] = useState<string | null>(null);
+
   // Toast / Copied Feedback
   const [copied, setCopied] = useState<boolean>(false);
   const [appliedNotice, setAppliedNotice] = useState<boolean>(false);
+
+  // Computed preview of batch paste text
+  const parsedBatchPreview = useMemo(() => {
+    return parseBatchPasteText(batchPasteText, batchPasteMode === 'append' ? items.length + 1 : 1);
+  }, [batchPasteText, batchPasteMode, items.length]);
+
+  const batchPreviewTotal = useMemo(() => {
+    return parsedBatchPreview.reduce((sum, row) => {
+      const a = typeof row.amount === 'number' ? row.amount : parseFloat(row.amount || '0') || 0;
+      const q = typeof row.quantity === 'number' ? row.quantity : parseFloat(row.quantity || '0') || 0;
+      return sum + a * q;
+    }, 0);
+  }, [parsedBatchPreview]);
+
+  const handleApplyBatchPaste = () => {
+    if (parsedBatchPreview.length === 0) return;
+    if (batchPasteMode === 'replace') {
+      setItems(parsedBatchPreview);
+    } else {
+      const existing = items.filter((it) => (it.description && it.description.trim()) || (typeof it.amount === 'number' && it.amount > 0));
+      setItems(existing.length > 0 ? [...existing, ...parsedBatchPreview] : parsedBatchPreview);
+    }
+    setQuickAmount('');
+    setIsBatchPasteOpen(false);
+    setBatchPasteText('');
+    setPasteSuccessToast(`วางสำเร็จ ${parsedBatchPreview.length} รายการ (ยอดรวม ฿${batchPreviewTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })})`);
+    setTimeout(() => setPasteSuccessToast(null), 3500);
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          setBatchPasteText(text);
+        }
+      }
+    } catch (e) {
+      /* ignore */
+    }
+  };
+
+  const handleLoadExample = (exampleType: 'excel' | 'numbers' | 'text') => {
+    if (exampleType === 'excel') {
+      setBatchPasteText(
+        `ค่าอาหารชุด Nan Seasons Special Dinner\t1500\t1\n` +
+        `เครื่องดื่มต้อนรับ สมุนไพรเลมอนกราส\t120\t2\n` +
+        `เค้กมะพร้าวอ่อน น่าน บูทีค\t95\t3\n` +
+        `บริการ Room Service ถึงวิลล่า\t300\t1\n` +
+        `กาแฟสด อาราบิก้าน่าน\t85\t4`
+      );
+    } else if (exampleType === 'numbers') {
+      setBatchPasteText(`1250\n450\n380\n950.50\n1800\n620\n2400`);
+    } else {
+      setBatchPasteText(
+        `กาแฟสด เอสเปรสโซ่ 95 x 2\n` +
+        `ข้าวผัดกุ้งสด Nan Seasons 180 x 3\n` +
+        `น้ำดื่มบริสุทธิ์ 25 x 4\n` +
+        `ชุดชาบ่าย Afternoon Tea Set 590\n` +
+        `ค่าบริการจัดเลี้ยงพิเศษ 1200`
+      );
+    }
+  };
 
   // Add Row
   const handleAddItem = () => {
@@ -511,6 +770,17 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
                   </span>
                   <button
                     type="button"
+                    onClick={() => {
+                      setIsBatchPasteOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer ring-1 ring-indigo-300"
+                    title="วางหลายรายการพร้อมกันจาก Excel, Google Sheets, LINE หรือรายการตัวเลข"
+                  >
+                    <ClipboardPaste className="w-4 h-4 text-indigo-100" />
+                    <span>วางหลายรายการ (Batch Paste)</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleAddItem}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                   >
@@ -536,6 +806,23 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Paste Success Toast Alert */}
+              {pasteSuccessToast && (
+                <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between gap-3 text-emerald-900 text-xs font-bold animate-in fade-in zoom-in-95">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{pasteSuccessToast}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPasteSuccessToast(null)}
+                    className="text-emerald-700 hover:text-emerald-950 p-1 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
 
               {/* Quick Single Amount Field */}
               <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -802,6 +1089,230 @@ export const VatCalculatorModal: React.FC<VatCalculatorModalProps> = ({
 
         </div>
       </div>
+
+      {/* Batch Paste Multiple Items Sub-Modal Dialog */}
+      {isBatchPasteOpen && (
+        <div className="no-print fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Batch Paste Header */}
+            <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-950 text-white p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-500/20 text-indigo-300 rounded-2xl border border-indigo-500/30">
+                  <ClipboardPaste className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-bold">
+                      วางข้อมูลหลายรายการ (Batch Paste Items)
+                    </h3>
+                    <span className="bg-indigo-500 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                      Smart Parser
+                    </span>
+                  </div>
+                  <p className="text-xs text-indigo-200/80 mt-0.5">
+                    คัดลอกจาก Excel, Google Sheets, LINE Chat หรือรายการตัวเลขเพื่อนำเข้าตาราง VAT อัตโนมัติ
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBatchPasteOpen(false)}
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Batch Paste Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 bg-slate-50/50">
+              
+              {/* Toolbar & Templates */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={handlePasteFromClipboard}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 transition-all cursor-pointer shadow-2xs"
+                  title="อ่านข้อความจากคลิปบอร์ดที่คัดลอกไว้มาวางทันที"
+                >
+                  <ClipboardList className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>วางจากคลิปบอร์ด (Paste Clipboard)</span>
+                </button>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="text-slate-400 text-[11px] font-medium mr-1">ตัวอย่าง:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleLoadExample('excel')}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 cursor-pointer transition-colors"
+                  >
+                    📊 ตาราง Excel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLoadExample('numbers')}
+                    className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 text-[11px] font-bold border border-blue-200 cursor-pointer transition-colors"
+                  >
+                    🔢 ตัวเลขล้วน
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLoadExample('text')}
+                    className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-800 text-[11px] font-bold border border-purple-200 cursor-pointer transition-colors"
+                  >
+                    📝 ข้อความ & ตัวคูณ (x, *)
+                  </button>
+                </div>
+              </div>
+
+              {/* Textarea Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                  <span>วางข้อความของคุณที่นี่ (Text Input Area)</span>
+                  <span className="text-[11px] text-slate-400 font-normal">
+                    {batchPasteText.split(/\r?\n/).filter((l) => l.trim()).length} บรรทัด
+                  </span>
+                </label>
+                <textarea
+                  rows={6}
+                  value={batchPasteText}
+                  onChange={(e) => setBatchPasteText(e.target.value)}
+                  placeholder={`วางข้อมูลจาก Excel / LINE / เอกสารข้อความได้เลย เช่น:\nค่าอาหารชุดพิเศษ\t1500\t1\nเครื่องดื่มสมุนไพร\t120\t2\nกาแฟสด เอสเปรสโซ่ 95 x 2\nหรือพิมพ์ตัวเลขบรรทัดละยอด:\n1250\n450\n780`}
+                  className="w-full bg-white border border-slate-300 focus:border-indigo-500 rounded-2xl p-3 text-xs font-mono text-slate-900 leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-inner resize-y"
+                  autoFocus
+                />
+              </div>
+
+              {/* Mode Selector */}
+              <div className="bg-white p-3 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-indigo-600" />
+                  รูปแบบการนำเข้าสู่ตารางคำนวณ:
+                </span>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border cursor-pointer select-none font-bold transition-colors text-xs bg-slate-50 border-slate-200 has-checked:bg-indigo-50 has-checked:border-indigo-500 has-checked:text-indigo-900">
+                    <input
+                      type="radio"
+                      name="batchPasteMode"
+                      value="replace"
+                      checked={batchPasteMode === 'replace'}
+                      onChange={() => setBatchPasteMode('replace')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>แทนที่รายการเดิมทั้งหมด (Replace All)</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border cursor-pointer select-none font-bold transition-colors text-xs bg-slate-50 border-slate-200 has-checked:bg-indigo-50 has-checked:border-indigo-500 has-checked:text-indigo-900">
+                    <input
+                      type="radio"
+                      name="batchPasteMode"
+                      value="append"
+                      checked={batchPasteMode === 'append'}
+                      onChange={() => setBatchPasteMode('append')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>เพิ่มต่อท้ายรายการเดิม (Append)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Real-time Parsed Preview */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    ตัวอย่างผลลัพธ์ที่จะถูกนำเข้า (Parsed Preview)
+                  </span>
+                  {parsedBatchPreview.length > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <span className="bg-indigo-100 text-indigo-800 font-bold px-2 py-0.5 rounded-lg text-[11px]">
+                        ตรวจพบ {parsedBatchPreview.length} รายการ
+                      </span>
+                      <span className="bg-emerald-100 text-emerald-800 font-bold font-mono px-2 py-0.5 rounded-lg text-[11px]">
+                        รวม ฿{batchPreviewTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-400 text-[11px]">ยังไม่มีรายการที่สามารถแปลงได้</span>
+                  )}
+                </div>
+
+                {parsedBatchPreview.length > 0 ? (
+                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs max-h-48 overflow-y-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="sticky top-0 bg-slate-100 text-slate-700 font-bold border-b border-slate-200 text-[11px]">
+                        <tr>
+                          <th className="py-2 px-2.5 text-center w-10">#</th>
+                          <th className="py-2 px-2.5">รายการ (Description)</th>
+                          <th className="py-2 px-2.5 text-right w-24">ราคาต่อหน่วย</th>
+                          <th className="py-2 px-2.5 text-center w-16">จำนวน</th>
+                          <th className="py-2 px-2.5 text-right w-24">ยอดรวม</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {parsedBatchPreview.map((item, idx) => {
+                          const amt = typeof item.amount === 'number' ? item.amount : parseFloat(item.amount || '0') || 0;
+                          const qty = typeof item.quantity === 'number' ? item.quantity : parseFloat(item.quantity || '0') || 0;
+                          const total = amt * qty;
+                          return (
+                            <tr key={idx} className="hover:bg-indigo-50/40">
+                              <td className="py-1.5 px-2.5 text-center font-bold text-slate-400">{idx + 1}</td>
+                              <td className="py-1.5 px-2.5 font-medium text-slate-800">{item.description}</td>
+                              <td className="py-1.5 px-2.5 text-right font-mono text-slate-700">
+                                {amt > 0 ? `฿${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
+                              </td>
+                              <td className="py-1.5 px-2.5 text-center font-mono text-slate-600">{qty}</td>
+                              <td className="py-1.5 px-2.5 text-right font-mono font-bold text-emerald-700">
+                                {total > 0 ? `฿${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-slate-100/80 border border-dashed border-slate-300 text-center text-xs text-slate-500">
+                    พิมพ์หรือวางข้อความในกล่องด้านบนเพื่อดูตัวอย่างรายการที่แปลงได้อัตโนมัติ
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Batch Paste Footer */}
+            <div className="bg-slate-100 p-4 sm:p-5 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+              <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <span>รองรับทั้งคั่นด้วย Tab, Comma, สัญลักษณ์ x, * และตัวเลขเดี่ยว</span>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsBatchPasteOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                >
+                  ยกเลิก (Cancel)
+                </button>
+                <button
+                  type="button"
+                  disabled={parsedBatchPreview.length === 0}
+                  onClick={handleApplyBatchPaste}
+                  className={`inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-md cursor-pointer ${
+                    parsedBatchPreview.length > 0
+                      ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 ring-1 ring-indigo-400'
+                      : 'bg-slate-400 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <ListPlus className="w-4 h-4" />
+                  <span>นำเข้ารายการ ({parsedBatchPreview.length} รายการ)</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* Printable VAT Summary Document Sheet - 2 Column Layout */}
       {typeof document !== 'undefined' && createPortal(

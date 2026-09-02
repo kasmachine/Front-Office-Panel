@@ -17,11 +17,13 @@ import {
   Building2,
   Percent,
   ClipboardList,
+  Receipt,
+  UtensilsCrossed,
 } from 'lucide-react';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes';
-  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes') => void;
+  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'invoice' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes';
+  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'invoice' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes') => void;
   onOpenSettings: () => void;
   onOpenHistory?: () => void;
   onOpenVatCalc?: () => void;
@@ -68,6 +70,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Receipt Substitute',
       sublabel: 'ใบรับรองแทนใบเสร็จ',
       icon: FileText,
+    },
+    {
+      id: 'invoice' as const,
+      label: 'Invoice & Bill',
+      sublabel: 'Lemongrass Restaurant',
+      icon: UtensilsCrossed,
     },
     {
       id: 'dailyRevenue' as const,

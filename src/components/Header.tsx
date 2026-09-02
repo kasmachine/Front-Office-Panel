@@ -3,8 +3,8 @@ import { NanSeasonsLogo } from './NanSeasonsLogo';
 import { FileText, Calculator, CheckCircle2, Loader2, Settings, RefreshCw, BarChart3, Menu, Percent } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual';
-  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual') => void;
+  activeTab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'invoice' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes';
+  onSelectTab: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'invoice' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes') => void;
   onOpenSettings?: () => void;
   onOpenVatCalc?: () => void;
   onManualSync?: () => void;
@@ -50,10 +50,14 @@ export const Header: React.FC<HeaderProps> = ({
                   ? 'Cash Count (ตารางนับเงินประจำกะ)'
                   : activeTab === 'receiptSubstitute'
                   ? 'Receipt Substitute (ใบรับรองแทนใบเสร็จ)'
+                  : activeTab === 'invoice'
+                  ? 'Lemongrass Restaurant Invoice (ใบแจ้งหนี้ / ใบเสร็จรับเงิน)'
                   : activeTab === 'dailyRevenue'
                   ? 'Daily Revenue (ยอดขายประจำวัน)'
                   : activeTab === 'frontOfficeManual'
                   ? 'Front Office Manual (คู่มือปฏิบัติงานแผนกต้อนรับ)'
+                  : activeTab === 'meetingMinutes'
+                  ? 'Meeting Minutes (รายงานการประชุม & มติที่ประชุม)'
                   : 'Front Office Checklist (แบบฟอร์มกะเช้า & กะบ่าย)'}
               </span>
 
@@ -82,14 +86,19 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'ตารางนับเงินสดเข้า-ออกประจำกะ (Shift Cash Reconciliation Sheet)'
                 : activeTab === 'receiptSubstitute'
                 ? 'ใบรับรองแทนใบเสร็จรับเงินพร้อมแนบสำเนาบัตรประชาชน'
+                : activeTab === 'invoice'
+                ? 'Lemongrass Restaurant manage by Nan Seasons Boutique Resort - สร้างใบแจ้งหนี้ / ใบเสร็จรับเงินให้ลูกค้า'
                 : activeTab === 'dailyRevenue'
                 ? 'ยอดขายและเป้าหมายประจำวัน (Salesplan and Targets / Daily Revenue)'
                 : activeTab === 'frontOfficeManual'
                 ? 'คู่มือขั้นตอนการปฏิบัติงานมาตรฐาน (SOP), ระเบียบปฏิบัติประจำกะ และเบอร์ติดต่อฉุกเฉิน'
+                : activeTab === 'meetingMinutes'
+                ? 'บันทึกรายงานการประชุม, วาระการประชุม, มติ และติดตาม Action Items ประจำแผนก'
                 : 'แบบฟอร์มตรวจสอบรายการงานประจำกะเช้าและกะบ่าย (Front Office Shift Checklist)'}
             </p>
           </div>
         </div>
+
 
         {/* Right Header Actions */}
         {onOpenVatCalc && (

@@ -236,3 +236,51 @@ export function getInitialFrontOfficeChecklistData(targetDate?: string): import(
     updatedAt: new Date().toISOString(),
   };
 }
+
+export function getInitialInvoiceData(): import('../types').InvoiceData {
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0];
+  const randNum = String(Math.floor(1000 + Math.random() * 9000));
+  const yearMonth = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const invNumber = `INV-${yearMonth}-${randNum}`;
+
+  return {
+    id: `inv-${Date.now()}`,
+    invoiceNumber: invNumber,
+    date: dateStr,
+    dueDate: dateStr,
+    businessName: 'Lemongrass Restaurant manage by Nan Seasons Boutique Resort',
+    businessAddress: '409 Moo 3, Ban Nam Krok Mai, Tambon Muang Tid, Amphoe Phu Phiang, Nan 55000, Thailand',
+    businessTaxId: '0555561000854',
+    businessTel: '081-774-5223, 054-059-698',
+    businessEmail: 'info@nanseasons.com',
+    customerName: '',
+    customerAddress: '',
+    customerTaxId: '',
+    customerTel: '',
+    roomNumber: '',
+    items: [
+      { id: 'inv-item-1', description: 'อาหารและเครื่องดื่ม (Food & Beverage)', quantity: 1, unitPrice: 0, amount: 0 },
+      { id: 'inv-item-2', description: '', quantity: 1, unitPrice: 0, amount: 0 },
+      { id: 'inv-item-3', description: '', quantity: 1, unitPrice: 0, amount: 0 },
+    ],
+    subtotal: 0,
+    discount: 0,
+    vatType: 'included',
+    vatAmount: 0,
+    serviceChargeType: 'none',
+    serviceChargeRate: 10,
+    serviceChargeAmount: 0,
+    grandTotal: 0,
+    notes: 'ขอบคุณที่ใช้บริการ / Thank you for choosing Lemongrass Restaurant & Nan Seasons Boutique Resort',
+    paymentMethod: 'cash',
+    paymentStatus: 'paid',
+    bankInfo: 'ธนาคารกสิกรไทย (Kasikorn Bank) บัญชี: บริษัท น่าน ซีซั่นส์ บูติก จำกัด',
+    issuerName: 'นางสาว ขวัญทิชา ตั้งเสรีกล',
+    issuerSignature: null,
+    receiverSignature: null,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+}
+

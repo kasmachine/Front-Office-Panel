@@ -64,6 +64,34 @@
         "createdAt": { "type": "number" }
       },
       "required": ["code", "titleTh"]
+    },
+    "lemongrass_invoices": {
+      "title": "Lemongrass Restaurant Invoices",
+      "description": "Customer invoice records for Lemongrass Restaurant managed by Nan Seasons Boutique Resort",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "date": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "businessName": { "type": "string" },
+        "businessAddress": { "type": "string" },
+        "customerName": { "type": "string" },
+        "roomNumber": { "type": "string" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "vatType": { "type": "string" },
+        "vatAmount": { "type": "number" },
+        "serviceChargeAmount": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["invoiceNumber", "date", "customerName", "items", "grandTotal"]
     }
   }
 }
+

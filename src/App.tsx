@@ -8,14 +8,15 @@ import { DailyRevenueSheet } from './components/DailyRevenueSheet';
 import { FrontOfficeChecklist } from './components/FrontOfficeChecklist';
 import { FrontOfficeManual } from './components/FrontOfficeManual';
 import { MeetingMinutes } from './components/MeetingMinutes';
+import { InvoiceSheet } from './components/InvoiceSheet';
 import { WhatsNew } from './components/WhatsNew';
 import { HistoryModal } from './components/HistoryModal';
 import { SettingsModal } from './components/SettingsModal';
 import { StaffManagerModal } from './components/StaffManagerModal';
 import { CategoryManagerModal } from './components/CategoryManagerModal';
 import { VatCalculatorModal } from './components/VatCalculatorModal';
-import { CashCountData, ReceiptSubstituteData, ReceiptSubstituteItem, MonthlyRevenueData, RevenueHistoryRecord } from './types';
-import { getInitialCashCountData, getInitialReceiptData } from './data/defaults';
+import { CashCountData, ReceiptSubstituteData, ReceiptSubstituteItem, MonthlyRevenueData, RevenueHistoryRecord, InvoiceData } from './types';
+import { getInitialCashCountData, getInitialReceiptData, getInitialInvoiceData } from './data/defaults';
 import { safeLocalStorage } from './utils/storage';
 import { exportToPdf, printDocument } from './utils/pdfExport';
 import { downloadJsonFile, parseJsonFile } from './utils/jsonExport';
@@ -26,6 +27,9 @@ import {
   saveReceiptToFirebase,
   subscribeReceipts,
   deleteReceiptFromFirebase,
+  saveInvoiceToFirebase,
+  deleteInvoiceFromFirebase,
+  subscribeInvoices,
   subscribeRevenueHistory,
   subscribeAllMonthlyRevenues,
   deleteRevenueHistoryFromFirebase,
@@ -44,6 +48,7 @@ import {
   resetQuotaExceeded,
   canonicalStringify,
 } from './lib/firebase';
+
 import { syncMinusExpensesToReceipt, isWithin7Days, formatDateToDisplay, getTodayFormatted } from './utils/syncUtils';
 
 import { CheckCircle2, Info, Users, FolderTree, Cloud, Settings, Printer, Download, RefreshCw, ChevronDown, RotateCcw } from 'lucide-react';
@@ -119,6 +124,17 @@ export default function App() {
     } catch (e) { /* ignore */ }
     return [];
   });
+
+  const [savedInvoices, setSavedInvoices] = useState<InvoiceData[]>(() => {
+    try {
+      const local = safeLocalStorage.getItem('lemongrass_invoices_history');
+      if (local) {
+        return JSON.parse(local);
+      }
+    } catch (e) { /* ignore */ }
+    return [];
+  });
+
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -323,6 +339,15 @@ export default function App() {
       } catch (e) { /* ignore */ }
     });
 
+    const unsubInvoices = subscribeInvoices((firebaseItems) => {
+      if (firebaseItems) {
+        setSavedInvoices(firebaseItems);
+        try {
+          safeLocalStorage.setItem('lemongrass_invoices_history', JSON.stringify(firebaseItems));
+        } catch (e) { /* ignore */ }
+      }
+    });
+
     return () => {
       unsubCash();
       unsubReceipts();
@@ -330,8 +355,10 @@ export default function App() {
       unsubCats();
       unsubAllRevenues();
       unsubRevHist();
+      unsubInvoices();
     };
   }, []);
+
 
   // Helper to apply cash count draft update from remote/broadcast
   const applyCashDraftUpdate = (remoteData: any) => {
@@ -648,6 +675,27 @@ export default function App() {
     showToast('ลบรายการเรียบร้อยแล้ว');
   };
 
+  const handleSaveInvoice = async (inv: InvoiceData) => {
+    try {
+      await saveInvoiceToFirebase(inv);
+      setSavedInvoices((prev) => [inv, ...prev.filter((i) => i.id !== inv.id)]);
+      showToast(`บันทึกใบแจ้งหนี้เลขที่ ${inv.invoiceNumber} เรียบร้อยแล้ว`);
+    } catch (e) {
+      showToast('บันทึกลงเครื่องเรียบร้อยแล้ว');
+    }
+  };
+
+  const handleDeleteInvoice = async (id: string) => {
+    try {
+      await deleteInvoiceFromFirebase(id);
+    } catch (e) {
+      /* ignore */
+    }
+    setSavedInvoices((prev) => prev.filter((i) => i.id !== id));
+    showToast('ลบใบแจ้งหนี้เรียบร้อยแล้ว');
+  };
+
+
   const handleLoadRevenueHistory = (revData: MonthlyRevenueData) => {
     const docId = `revenue-${revData.year}-${String(revData.month).padStart(2, '0')}`;
     safeLocalStorage.setItem(`nan_seasons_${docId}`, JSON.stringify(revData));
@@ -840,8 +888,9 @@ export default function App() {
         {/* Main Content View Container */}
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-4">
         {/* Action Control Toolbar (Unified row for Manage Staff, Manage Topics, Save, Print/PDF) */}
-        {activeTab !== 'dailyRevenue' && (
+        {activeTab !== 'dailyRevenue' && activeTab !== 'invoice' && (
           <div className="no-print flex flex-wrap items-center justify-between gap-3 bg-white p-3 md:px-4 rounded-xl border border-slate-200 shadow-xs max-w-5xl mx-auto">
+
           {/* Left Management Group */}
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -966,9 +1015,17 @@ export default function App() {
             }}
             onOpenVatCalc={() => setIsVatModalOpen(true)}
           />
+        ) : activeTab === 'invoice' ? (
+          <InvoiceSheet
+            savedInvoices={savedInvoices}
+            onSave={handleSaveInvoice}
+            onDelete={handleDeleteInvoice}
+            onOpenVatCalc={() => setIsVatModalOpen(true)}
+          />
         ) : activeTab === 'dailyRevenue' ? (
           <DailyRevenueSheet />
         ) : activeTab === 'frontOfficeManual' ? (
+
           <FrontOfficeManual
             onNavigateTab={(tab) => setActiveTab(tab)}
           />

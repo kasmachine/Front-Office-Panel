@@ -202,3 +202,46 @@ export interface MeetingMinuteData {
   updatedAt?: number;
 }
 
+export interface InvoiceItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface InvoiceData {
+  id: string;
+  invoiceNumber: string;
+  date: string; // YYYY-MM-DD
+  dueDate?: string;
+  businessName: string;
+  businessAddress: string;
+  businessTaxId?: string;
+  businessTel?: string;
+  businessEmail?: string;
+  customerName: string;
+  customerAddress?: string;
+  customerTaxId?: string;
+  customerTel?: string;
+  roomNumber?: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  discount: number;
+  vatType: 'included' | 'excluded' | 'none'; // VAT 7%
+  vatAmount: number;
+  serviceChargeType: 'none' | 'percent' | 'fixed';
+  serviceChargeRate: number; // e.g. 10%
+  serviceChargeAmount: number;
+  grandTotal: number;
+  notes?: string;
+  paymentMethod: 'cash' | 'credit_card' | 'bank_transfer' | 'promptpay' | 'room_charge';
+  paymentStatus: 'paid' | 'unpaid' | 'pending';
+  bankInfo?: string;
+  issuerName?: string;
+  issuerSignature?: string | null;
+  receiverSignature?: string | null;
+  createdAt: number;
+  updatedAt?: number;
+}
+

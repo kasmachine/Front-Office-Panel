@@ -28,7 +28,9 @@ import {
   Sparkle,
   History,
   ClipboardList,
+  UtensilsCrossed,
 } from 'lucide-react';
+
 import {
   CashCountData,
   ReceiptSubstituteData,
@@ -49,7 +51,7 @@ const formatMoney = (val: number, decimals = 2): string => {
 };
 
 interface DashboardProps {
-  onNavigate: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes') => void;
+  onNavigate: (tab: 'dashboard' | 'cashCount' | 'receiptSubstitute' | 'invoice' | 'dailyRevenue' | 'frontOfficeChecklist' | 'whatsNew' | 'frontOfficeManual' | 'meetingMinutes') => void;
   cashCountData: CashCountData;
   receiptData: ReceiptSubstituteData;
   savedCashCounts: CashCountData[];
@@ -552,6 +554,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <ChevronRight className="w-3.5 h-3.5" />
             </div>
           </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('invoice')}
+            className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-amber-500 hover:shadow-md transition-all text-left group cursor-pointer"
+          >
+            <div className="p-3 rounded-xl bg-amber-50 text-amber-600 w-fit group-hover:bg-amber-600 group-hover:text-white transition-colors">
+              <UtensilsCrossed className="w-6 h-6" />
+            </div>
+            <div className="mt-3">
+              <div className="text-sm font-bold text-slate-900 group-hover:text-amber-600 transition-colors flex items-center gap-1.5">
+                <span>Lemongrass Invoice</span>
+                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-bold">New</span>
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5">ใบแจ้งหนี้ & ใบเสร็จร้านอาหาร</div>
+            </div>
+            <div className="mt-3 flex items-center text-xs font-bold text-amber-600 gap-1">
+              <span>Open Module</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </div>
+          </button>
+
 
           <button
             type="button"
